@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f8f4" />
+    <meta name="description" content="BreakApp, la piattaforma per i bar scolastici." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon-placeholder.svg" />
+    <title>BreakApp — Il tuo intervallo, organizzato</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Vai al contenuto</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="/" aria-label="BreakApp, torna all'inizio">
+          <span class="brand-symbol" aria-hidden="true">B</span>
+          <span>Break<span class="brand-highlight">App</span></span>
+        </a>
+        <nav aria-label="Navigazione principale" class="header-actions">
+          <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
+          <a class="button button-secondary button-small" href="#accesso">Accedi</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero container" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <span class="eyebrow"><span class="dot" aria-hidden="true"></span> Il tuo bar scolastico, a portata di mano</span>
+          <h1 id="hero-heading">La pausa giusta,<br /><span>senza la fila.</span></h1>
+          <p>Consulta i prodotti del bar, organizza i tuoi ordini e ritira durante l'intervallo. Tutto in un'unica app.</p>
+          <a class="button button-primary" href="#accesso">Inizia da qui <span aria-hidden="true">→</span></a>
+          <p class="development-note">Siamo nella Fase 1: autenticazione e collegamento ai servizi in preparazione. Ordini e pagamenti non sono ancora attivi.</p>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="art-circle art-circle-back"></div>
+          <div class="art-card art-card-top"><span class="art-emoji">🥪</span><span>Una pausa più semplice</span></div>
+          <div class="art-card art-card-center"><span class="art-emoji">☕</span><span>Il bar sempre con te</span></div>
+          <div class="art-card art-card-bottom"><span class="art-emoji">✨</span><span>Tempo per stare insieme</span></div>
+          <div class="art-circle art-circle-front"></div>
+        </div>
+      </section>
+
+      <section class="access-section" id="accesso" aria-labelledby="access-heading">
+        <div class="container access-layout">
+          <div class="access-intro">
+            <span class="eyebrow">Benvenuto su BreakApp</span>
+            <h2 id="access-heading">Pronto per il tuo prossimo intervallo?</h2>
+            <p>Accedi con il tuo account per iniziare. La scuola, il menu e i servizi disponibili saranno collegati nelle prossime milestone.</p>
+            <div id="environment-status" class="status-box" role="status" aria-live="polite">Verifica configurazione in corso…</div>
+          </div>
+
+          <div class="auth-card">
+            <div id="signed-out-view">
+              <h3>Accedi al tuo account</h3>
+              <p class="auth-subtitle">Usa email oppure un account già esistente.</p>
+              <form id="auth-form" novalidate>
+                <label for="auth-email">Indirizzo email</label>
+                <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@esempio.it" required />
+                <label for="auth-password">Password</label>
+                <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+                <div class="form-actions">
+                  <button class="button button-primary" id="login-button" type="submit">Accedi</button>
+                  <button class="button button-text" id="signup-button" type="button">Crea un account</button>
+                </div>
+              </form>
+              <div class="auth-divider"><span>oppure</span></div>
+              <div class="social-actions">
+                <button type="button" id="google-button" class="button button-secondary">Continua con Google</button>
+                <button type="button" id="microsoft-button" class="button button-secondary">Continua con Microsoft</button>
+              </div>
+            </div>
+            <div id="signed-in-view" hidden>
+              <h3>Accesso effettuato</h3>
+              <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
+              <p class="auth-subtitle">Le autorizzazioni per scuola verranno attivate dopo i test RLS.</p>
+              <button type="button" id="logout-button" class="button button-secondary">Esci dall'account</button>
+            </div>
+            <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>BreakApp · In sviluppo</span>
+        <span>Progettata per i bar scolastici</span>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/js/main.js"></script>
+  </body>
+</html>

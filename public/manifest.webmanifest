@@ -1,0 +1,19 @@
+{
+  "name": "BreakApp",
+  "short_name": "BreakApp",
+  "description": "Ordini e gestione dei bar scolastici",
+  "lang": "it",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f4",
+  "theme_color": "#28764e",
+  "icons": [
+    {
+      "src": "/icon-placeholder.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
