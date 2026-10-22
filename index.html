@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f7f8f4" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="BreakApp, la piattaforma per i bar scolastici." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/icon-placeholder.svg" />
@@ -15,12 +15,13 @@
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href="/" aria-label="BreakApp, torna all'inizio">
-          <span class="brand-symbol" aria-hidden="true">B</span>
+          <span class="brand-symbol" aria-hidden="true">B<span>.</span></span>
           <span>Break<span class="brand-highlight">App</span></span>
         </a>
         <nav aria-label="Navigazione principale" class="header-actions">
+          <a class="header-link" href="#come-funziona">Come funziona</a>
           <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
-          <a class="button button-secondary button-small" href="#accesso">Accedi</a>
+          <a class="button button-primary button-small" href="#accesso">Accedi <span aria-hidden="true">↗</span></a>
         </nav>
       </div>
     </header>
@@ -28,51 +29,79 @@
     <main id="main-content">
       <section class="hero container" aria-labelledby="hero-heading">
         <div class="hero-copy">
-          <span class="eyebrow"><span class="dot" aria-hidden="true"></span> Il tuo bar scolastico, a portata di mano</span>
-          <h1 id="hero-heading">La pausa giusta,<br /><span>senza la fila.</span></h1>
-          <p>Consulta i prodotti del bar, organizza i tuoi ordini e ritira durante l'intervallo. Tutto in un'unica app.</p>
-          <a class="button button-primary" href="#accesso">Inizia da qui <span aria-hidden="true">→</span></a>
-          <p class="development-note">Siamo nella Fase 1: autenticazione e collegamento ai servizi in preparazione. Ordini e pagamenti non sono ancora attivi.</p>
+          <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> BREAKAPP · LA TUA PAUSA, SEMPLIFICATA</span>
+          <h1 id="hero-heading">Meno attesa.<br /><span>Più intervallo.</span></h1>
+          <p>Un modo semplice per scegliere, prenotare e ritirare al bar della tua scuola. Pensato per gli studenti, organizzato per chi lavora al bancone.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#accesso">Entra in BreakApp <span aria-hidden="true">→</span></a>
+            <a class="button button-outline" href="#come-funziona">Scopri il progetto</a>
+          </div>
+          <p class="development-note"><span class="notice-dot" aria-hidden="true"></span> Versione di sviluppo: prenotazioni e pagamenti non sono ancora disponibili.</p>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="art-circle art-circle-back"></div>
-          <div class="art-card art-card-top"><span class="art-emoji">🥪</span><span>Una pausa più semplice</span></div>
-          <div class="art-card art-card-center"><span class="art-emoji">☕</span><span>Il bar sempre con te</span></div>
-          <div class="art-card art-card-bottom"><span class="art-emoji">✨</span><span>Tempo per stare insieme</span></div>
-          <div class="art-circle art-circle-front"></div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="visual-accent visual-accent-one"></div>
+          <div class="visual-accent visual-accent-two"></div>
+          <div class="journey-panel">
+            <div class="journey-heading">
+              <div class="journey-brand"><span class="journey-mark">B.</span><span>Il tuo intervallo</span></div>
+              <span class="journey-status">In sviluppo</span>
+            </div>
+            <div class="journey-title">Tutto più semplice,<br />dall'ordine al ritiro.</div>
+            <div class="journey-step"><span class="journey-number">01</span><div><strong>Scegli</strong><small>Trova il bar e consulta il menu</small></div><span class="journey-arrow">↗</span></div>
+            <div class="journey-step"><span class="journey-number">02</span><div><strong>Prenota</strong><small>Organizza il tuo intervallo</small></div><span class="journey-arrow">↗</span></div>
+            <div class="journey-step"><span class="journey-number">03</span><div><strong>Ritira</strong><small>Mostra il QR al bancone</small></div><span class="journey-arrow">↗</span></div>
+            <div class="journey-footnote">Percorso previsto · Nessun ordine attivo</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="features-section" id="come-funziona" aria-labelledby="features-heading">
+        <div class="container">
+          <div class="section-heading">
+            <span class="eyebrow">PERCHÉ BREAKAPP</span>
+            <h2 id="features-heading">Una pausa migliore per tutti.</h2>
+            <p>Stiamo costruendo un'esperienza essenziale, veloce e chiara per ogni scuola.</p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-item"><span class="feature-icon" aria-hidden="true">01</span><h3>Per gli studenti</h3><p>Un unico spazio per consultare i prodotti, scegliere quando ritirare e seguire il proprio ordine.</p></article>
+            <article class="feature-item"><span class="feature-icon" aria-hidden="true">02</span><h3>Per il personale</h3><p>Strumenti organizzati per gestire gli ordini e il servizio al bancone, senza confusione.</p></article>
+            <article class="feature-item"><span class="feature-icon" aria-hidden="true">03</span><h3>Per le scuole</h3><p>Configurazioni e dati separati per ogni istituto, con attenzione a sicurezza e privacy.</p></article>
+          </div>
         </div>
       </section>
 
       <section class="access-section" id="accesso" aria-labelledby="access-heading">
         <div class="container access-layout">
           <div class="access-intro">
-            <span class="eyebrow">Benvenuto su BreakApp</span>
-            <h2 id="access-heading">Pronto per il tuo prossimo intervallo?</h2>
-            <p>Accedi con il tuo account per iniziare. La scuola, il menu e i servizi disponibili saranno collegati nelle prossime milestone.</p>
+            <span class="eyebrow">AREA PERSONALE</span>
+            <h2 id="access-heading">Tutto inizia<br /><span>da qui.</span></h2>
+            <p>Accedi con il tuo account BreakApp. La gestione delle scuole e degli ordini verrà attivata nelle prossime fasi.</p>
             <div id="environment-status" class="status-box" role="status" aria-live="polite">Verifica configurazione in corso…</div>
           </div>
 
           <div class="auth-card">
             <div id="signed-out-view">
-              <h3>Accedi al tuo account</h3>
-              <p class="auth-subtitle">Usa email oppure un account già esistente.</p>
+              <span class="auth-tag">BENVENUTO</span>
+              <h3>Accedi a BreakApp</h3>
+              <p class="auth-subtitle">Inserisci le credenziali oppure scegli un altro metodo di accesso.</p>
               <form id="auth-form" novalidate>
                 <label for="auth-email">Indirizzo email</label>
                 <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@esempio.it" required />
                 <label for="auth-password">Password</label>
                 <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
                 <div class="form-actions">
-                  <button class="button button-primary" id="login-button" type="submit">Accedi</button>
-                  <button class="button button-text" id="signup-button" type="button">Crea un account</button>
+                  <button class="button button-primary" id="login-button" type="submit">Accedi <span aria-hidden="true">→</span></button>
+                  <button class="button button-outline" id="signup-button" type="button">Registrati</button>
                 </div>
               </form>
-              <div class="auth-divider"><span>oppure</span></div>
+              <div class="auth-divider"><span>oppure continua con</span></div>
               <div class="social-actions">
-                <button type="button" id="google-button" class="button button-secondary">Continua con Google</button>
-                <button type="button" id="microsoft-button" class="button button-secondary">Continua con Microsoft</button>
+                <button type="button" id="google-button" class="button button-secondary">Google</button>
+                <button type="button" id="microsoft-button" class="button button-secondary">Microsoft</button>
               </div>
             </div>
             <div id="signed-in-view" hidden>
+              <span class="auth-tag">ACCOUNT</span>
               <h3>Accesso effettuato</h3>
               <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
               <p class="auth-subtitle">Le autorizzazioni per scuola verranno attivate dopo i test RLS.</p>
@@ -84,12 +113,7 @@
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <span>BreakApp · In sviluppo</span>
-        <span>Progettata per i bar scolastici</span>
-      </div>
-    </footer>
+    <footer class="site-footer"><div class="container footer-inner"><span>© BreakApp · In sviluppo</span><span>Ideata per rendere più semplice l'intervallo.</span></div></footer>
 
     <script type="module" src="/src/js/main.js"></script>
   </body>

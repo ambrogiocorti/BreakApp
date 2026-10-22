@@ -3,8 +3,10 @@ const STORAGE_KEY = 'breakapp-theme';
 export function initializeTheme() {
   const button = document.querySelector('#theme-toggle');
   if (!button) return;
-  let selected = 'system';
-  try { selected = localStorage.getItem(STORAGE_KEY) || 'system'; } catch { /* no persistence */ }
+  // Il tema predefinito di BreakApp è bianco, indipendentemente dal sistema.
+  // Il valore "system" rimane supportato per preferenze già salvate.
+  let selected = 'light';
+  try { selected = localStorage.getItem(STORAGE_KEY) || 'light'; } catch { /* no persistence */ }
 
   function apply(value) {
     const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
