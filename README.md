@@ -30,6 +30,10 @@ un **nuovo progetto Supabase dedicato** a BreakApp, con URL e chiave
 `VITE_SUPABASE_PUBLISHABLE_KEY` su Vercel. Mai esporre `service_role`, chiavi
 segrete, token privati o credenziali in questa repository o nel frontend.
 
+La configurazione da un **secondo account Supabase**, interamente da browser,
+è descritta in [`docs/SUPABASE_SETUP_ONLINE.md`](docs/SUPABASE_SETUP_ONLINE.md).
+Gli script SQL da eseguire nel nuovo progetto sono in `supabase/sql/`.
+
 ## Sicurezza e roadmap
 
 Il codice pubblicato è solo il bootstrap pubblico. La specifica funzionale

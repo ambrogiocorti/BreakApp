@@ -79,7 +79,10 @@ export function initializeAuth(config) {
     const credentials = getCredentials();
     if (!credentials) return;
     const data = await runOperation(
-      () => client.auth.signUp(credentials),
+      () => client.auth.signUp({
+        ...credentials,
+        options: { emailRedirectTo: window.location.origin + '/' }
+      }),
       'Richiesta ricevuta. Se necessario, verifica l’indirizzo email per attivare l’account.'
     );
     if (data?.session?.user) showUser(data.session.user);
