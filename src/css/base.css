@@ -168,3 +168,17 @@ h1 span, .access-intro h2 span { color: var(--accent); }
   .button { transition: none; }
   .button:not(:disabled):hover { transform: none; }
 }
+
+/* Fase 1: area personale con dati reali delle appartenenze RLS. */
+.school-access-overview { margin: 1.6rem 0; padding: 1.2rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.school-access-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .65rem; }
+.school-access-header h4 { margin: 0; font-size: 1rem; letter-spacing: -.025em; }
+.school-access-status { font-size: .82rem; line-height: 1.6; color: var(--muted); }
+.school-access-status[data-type="error"] { color: #bc3345; }
+.school-access-list { display: grid; gap: .8rem; }
+.school-access-card { padding: 1rem; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; }
+.school-access-card h4 { margin: 0 0 .75rem; font-size: 1rem; }
+.school-role-list { display: flex; flex-wrap: wrap; gap: .4rem; }
+.school-role-chip { display: inline-flex; padding: .3rem .65rem; border-radius: 100px; font-size: .72rem; font-weight: 700; background: var(--accent-soft); color: var(--accent); }
+.school-bars-label, .school-access-empty, .school-admin-note { margin: .7rem 0 0; font-size: .78rem; line-height: 1.6; color: var(--muted); }
+.school-admin-note { border-left: 3px solid var(--accent); padding-left: .65rem; }

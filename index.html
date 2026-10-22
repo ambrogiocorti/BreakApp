@@ -104,7 +104,15 @@
               <span class="auth-tag">ACCOUNT</span>
               <h3>Accesso effettuato</h3>
               <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
-              <p class="auth-subtitle">Le autorizzazioni per scuola verranno attivate dopo i test RLS.</p>
+              <p class="auth-subtitle">Le scuole e i ruoli qui mostrati sono letti da Supabase e filtrati dalle policy RLS.</p>
+              <div class="school-access-overview">
+                <div class="school-access-header">
+                  <h4>Le tue scuole</h4>
+                  <button type="button" id="refresh-access-button" class="button button-outline button-small">Aggiorna</button>
+                </div>
+                <p id="school-access-status" class="school-access-status" role="status" aria-live="polite">Verifica autorizzazioni…</p>
+                <div id="school-access-list" class="school-access-list"></div>
+              </div>
               <button type="button" id="logout-button" class="button button-secondary">Esci dall'account</button>
             </div>
             <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>

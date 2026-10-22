@@ -2,15 +2,16 @@
 
 **BreakApp** è una piattaforma multitenant per la gestione dei bar scolastici.
 
-> Stato: **Fase 1 — bootstrap online**. Questa repository ospita il primo frontend
-> funzionante; non contiene ancora ordini, pagamenti, scorte, database o permessi
-> applicativi. Nessuna funzione commerciale è simulata come reale.
+> Stato: **Fase 1 — fondazioni online**. Il frontend ora visualizza scuole, bar e
+> ruoli dell'utente autenticato attraverso Supabase e relative policy RLS.
+> Non contiene ancora ordini, pagamenti, scorte o operazioni amministrative.
+> Nessuna funzione commerciale è simulata come reale.
 
 ## Stack
 
 - HTML semantico, CSS personalizzato e JavaScript vanilla (moduli ES).
 - Vite esclusivamente come strumento di build.
-- Supabase Auth/Postgres/RLS nelle milestone successive.
+- Supabase Auth/Postgres/RLS per profili, scuole, bar e ruoli in sola lettura; funzionalità mutative nelle milestone successive.
 - Vercel per l'ambiente di test temporaneo; hosting definitivo da stabilire.
 - GitHub Actions per sintassi, test e build a ogni push.
 
