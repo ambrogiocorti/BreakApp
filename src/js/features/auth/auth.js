@@ -32,7 +32,7 @@ export function initializeAuth(config) {
     controls.forEach((button) => { button.disabled = true; });
     form.querySelectorAll('input').forEach((input) => { input.disabled = true; });
     setFeedback(feedback, 'Le operazioni di accesso saranno disponibili dopo la configurazione di Supabase.');
-    return;
+    return null;
   }
 
   environment.textContent = 'Chiave pubblicabile configurata. Accesso gestito da Supabase Auth.';
@@ -227,4 +227,5 @@ export function initializeAuth(config) {
     showUser(null);
     setFeedback(feedback, 'Non è stato possibile verificare la sessione.', true);
   });
+  return client;
 }

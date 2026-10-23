@@ -2,10 +2,11 @@
 
 **BreakApp** è una piattaforma multitenant per la gestione dei bar scolastici.
 
-> Stato: **Fase 1/2 — catalogo Admin in attivazione**. Scuole e ruoli sono letti
+> Stato: **Fase 1/2 — catalogo Admin e menu pubblico online**. Scuole e ruoli sono letti
 > da Supabase. Il codice del catalogo (categorie/prodotti) e la verifica 2FA
 > TOTP Admin sono implementati; le scritture richiedono le policy della migration 03
-> da eseguire nel nuovo Supabase. Non esistono ancora vendite, ordini o pagamenti.
+> già eseguita nel nuovo Supabase. Il menu pubblico legge solo gli articoli attivi.
+> Non esistono ancora vendite, ordini o pagamenti.
 
 ## Stack
 
@@ -46,3 +47,14 @@ verifica di RLS, RBAC e isolamento tra tenant con controlli server-side.
 La shell PWA di questo incremento **non** consente operazioni offline su ordini,
 cassa o scorte.
 
+
+## Menu pubblico (senza accesso)
+
+La sezione [Menu di BreakApp](https://breakapp-smoky.vercel.app/#menu) consente di scegliere scuola e bar,
+filtrare per categoria e cercare prodotti. Legge in tempo reale le righe pubblicate
+su Supabase tramite chiave pubblica e policy RLS. Mostra uno stato vuoto corretto
+quando l'Admin non ha ancora creato categorie e prodotti. Non permette ordini
+perché la gestione delle disponibilità giornaliere non è ancora attiva.
+
+I controlli e i criteri di prova sono in
+[docs/FASE2_MENU_PUBBLICO.md](docs/FASE2_MENU_PUBBLICO.md).

@@ -19,6 +19,7 @@
           <span>Break<span class="brand-highlight">App</span></span>
         </a>
         <nav aria-label="Navigazione principale" class="header-actions">
+          <a class="header-link" href="#menu">Menu</a>
           <a class="header-link" href="#come-funziona">Come funziona</a>
           <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
           <a class="button button-primary button-small" href="#accesso">Accedi <span aria-hidden="true">↗</span></a>
@@ -34,7 +35,7 @@
           <p>Un modo semplice per scegliere, prenotare e ritirare al bar della tua scuola. Pensato per gli studenti, organizzato per chi lavora al bancone.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="#accesso">Entra in BreakApp <span aria-hidden="true">→</span></a>
-            <a class="button button-outline" href="#come-funziona">Scopri il progetto</a>
+            <a class="button button-outline" href="#menu">Esplora il menu</a>
           </div>
           <p class="development-note"><span class="notice-dot" aria-hidden="true"></span> Versione di sviluppo: prenotazioni e pagamenti non sono ancora disponibili.</p>
         </div>
@@ -70,12 +71,45 @@
         </div>
       </section>
 
+
+      <section class="menu-section" id="menu" aria-labelledby="menu-heading">
+        <div class="container">
+          <div class="section-heading">
+            <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> MENU SCOLASTICO</span>
+            <h2 id="menu-heading">Scopri cosa offre il tuo bar.</h2>
+            <p>I prodotti e i prezzi arrivano direttamente dal database del bar. Il menu è consultabile anche senza registrazione.</p>
+          </div>
+          <div class="menu-interface">
+            <div class="menu-toolbar">
+              <label for="menu-school">La tua scuola
+                <select id="menu-school" aria-label="Seleziona scuola"></select>
+              </label>
+              <label for="menu-bar">Il tuo bar
+                <select id="menu-bar" aria-label="Seleziona bar"></select>
+              </label>
+              <label for="menu-search">Cerca nel menu
+                <input id="menu-search" type="search" placeholder="Cerca un panino, una bevanda…" />
+              </label>
+              <button id="menu-refresh" class="button button-outline button-small" type="button">Aggiorna menu</button>
+            </div>
+            <div class="menu-info-line">
+              <p id="menu-status" role="status" aria-live="polite">Caricamento del menu…</p>
+              <span class="menu-preview-label">Consultazione · Ordini non ancora attivi</span>
+            </div>
+            <div id="menu-categories" class="menu-categories" role="group" aria-label="Filtra per categoria"></div>
+            <div id="menu-grid" class="menu-grid" aria-live="polite">
+              <p class="menu-empty">I prodotti pubblicati dal bar appariranno qui.</p>
+            </div>
+            <p class="catalog-help menu-disclaimer">I prezzi sono mostrati in tempo reale, ma la disponibilità per data e fascia di ritiro sarà attivata con la gestione delle scorte. Per ora non è possibile inviare ordini.</p>
+          </div>
+        </div>
+      </section>
       <section class="access-section" id="accesso" aria-labelledby="access-heading">
         <div class="container access-layout">
           <div class="access-intro">
             <span class="eyebrow">AREA PERSONALE</span>
             <h2 id="access-heading">Tutto inizia<br /><span>da qui.</span></h2>
-            <p>Accedi con il tuo account BreakApp. La gestione delle scuole e degli ordini verrà attivata nelle prossime fasi.</p>
+            <p>Accedi con il tuo account BreakApp. Consulta il menu pubblico qui sopra oppure accedi per gestire il catalogo della tua scuola.</p>
             <div id="environment-status" class="status-box" role="status" aria-live="polite">Verifica configurazione in corso…</div>
           </div>
 

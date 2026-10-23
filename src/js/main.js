@@ -2,9 +2,11 @@ import '../css/base.css';
 import { readSupabaseConfig } from './core/config.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeAuth } from './features/auth/auth.js';
+import { initializePublicMenu } from './features/menu/menu.js';
 
 initializeTheme();
-initializeAuth(readSupabaseConfig(import.meta.env));
+const client = initializeAuth(readSupabaseConfig(import.meta.env));
+initializePublicMenu(client);
 
 // Cache statica soltanto: nessuna vendita, consegna o incasso offline in Fase 1.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
