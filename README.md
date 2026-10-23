@@ -2,16 +2,16 @@
 
 **BreakApp** è una piattaforma multitenant per la gestione dei bar scolastici.
 
-> Stato: **Fase 1 — fondazioni online**. Il frontend ora visualizza scuole, bar e
-> ruoli dell'utente autenticato attraverso Supabase e relative policy RLS.
-> Non contiene ancora ordini, pagamenti, scorte o operazioni amministrative.
-> Nessuna funzione commerciale è simulata come reale.
+> Stato: **Fase 1/2 — catalogo Admin in attivazione**. Scuole e ruoli sono letti
+> da Supabase. Il codice del catalogo (categorie/prodotti) e la verifica 2FA
+> TOTP Admin sono implementati; le scritture richiedono le policy della migration 03
+> da eseguire nel nuovo Supabase. Non esistono ancora vendite, ordini o pagamenti.
 
 ## Stack
 
 - HTML semantico, CSS personalizzato e JavaScript vanilla (moduli ES).
 - Vite esclusivamente come strumento di build.
-- Supabase Auth/Postgres/RLS per profili, scuole, bar e ruoli in sola lettura; funzionalità mutative nelle milestone successive.
+- Supabase Auth/Postgres/RLS con 2FA TOTP obbligatoria per scritture Admin sul catalogo; tutte le scritture sono autorizzate server-side.
 - Vercel per l'ambiente di test temporaneo; hosting definitivo da stabilire.
 - GitHub Actions per sintassi, test e build a ogni push.
 
@@ -34,6 +34,7 @@ segrete, token privati o credenziali in questa repository o nel frontend.
 La configurazione da un **secondo account Supabase**, interamente da browser,
 è descritta in [`docs/SUPABASE_SETUP_ONLINE.md`](docs/SUPABASE_SETUP_ONLINE.md).
 Gli script SQL da eseguire nel nuovo progetto sono in `supabase/sql/`.
+Per attivare il primo catalogo reale, segui [le istruzioni SQL 03 e test online](docs/FASE1_CATALOGO_ADMIN.md).
 
 ## Sicurezza e roadmap
 

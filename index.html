@@ -113,11 +113,76 @@
                 <p id="school-access-status" class="school-access-status" role="status" aria-live="polite">Verifica autorizzazioni…</p>
                 <div id="school-access-list" class="school-access-list"></div>
               </div>
+              <div id="admin-mfa" class="admin-security" hidden>
+                <span class="auth-tag">PROTEZIONE ACCOUNT ADMIN</span>
+                <h4>Verifica in due passaggi</h4>
+                <p id="mfa-status" class="school-access-status" role="status" aria-live="polite">Controllo dello stato 2FA…</p>
+                <button id="mfa-enroll-button" type="button" class="button button-primary button-small" hidden>Attiva 2FA con QR</button>
+                <div id="mfa-qr-panel" class="admin-qr" hidden>
+                  <p>Apri Google Authenticator o Microsoft Authenticator e scansiona il codice:</p>
+                  <img id="mfa-qr" alt="QR personale per attivare la verifica in due passaggi" width="180" height="180" />
+                  <p class="catalog-help">Il QR è riservato al tuo account: non condividerlo.</p>
+                </div>
+                <form id="mfa-code-form" hidden>
+                  <label for="mfa-code">Codice temporaneo (6 cifre)</label>
+                  <input id="mfa-code" name="mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
+                  <button id="mfa-code-button" type="submit" class="button button-primary button-small">Verifica codice</button>
+                </form>
+              </div>
               <button type="button" id="logout-button" class="button button-secondary">Esci dall'account</button>
             </div>
             <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
           </div>
         </div>
+      </section>
+
+      <section id="admin-catalog" class="container catalog-section" aria-labelledby="catalog-heading" hidden>
+        <div class="section-heading">
+          <span class="eyebrow">AREA ADMIN · DATI REALI</span>
+          <h2 id="catalog-heading">Gestisci il catalogo del tuo bar.</h2>
+          <p>Categorie, prodotti e prezzi sono salvati su Supabase. Ogni modifica è verificata da autorizzazioni di scuola e 2FA direttamente nel database.</p>
+        </div>
+        <div class="catalog-toolbar">
+          <label>Scuola <select id="catalog-school" aria-label="Scuola da amministrare"></select></label>
+          <label>Bar <select id="catalog-bar" aria-label="Bar da amministrare"></select></label>
+          <button id="catalog-refresh" type="button" class="button button-outline button-small">Aggiorna dati</button>
+        </div>
+        <p id="catalog-status" class="catalog-status" role="status" aria-live="polite">Caricamento…</p>
+        <div class="catalog-columns">
+          <article class="catalog-card">
+            <h3>Categorie</h3>
+            <p class="catalog-help">Organizza il menu per tipologia.</p>
+            <form id="catalog-category-form">
+              <label for="catalog-category-name">Nome categoria</label>
+              <input id="catalog-category-name" type="text" placeholder="Es. Panini" required minlength="2" maxlength="120" />
+              <div class="catalog-form-buttons">
+                <button id="catalog-category-submit" type="submit" class="button button-primary button-small">Aggiungi categoria</button>
+                <button id="catalog-category-cancel" type="button" class="button button-outline button-small" hidden>Annulla</button>
+              </div>
+            </form>
+            <div id="catalog-categories-list" class="catalog-list"></div>
+          </article>
+          <article class="catalog-card">
+            <h3>Prodotti</h3>
+            <p class="catalog-help">Prezzi in euro, archiviazione senza eliminazioni definitive.</p>
+            <form id="catalog-product-form">
+              <label for="catalog-product-category">Categoria</label>
+              <select id="catalog-product-category" required></select>
+              <label for="catalog-product-name">Nome prodotto</label>
+              <input id="catalog-product-name" type="text" placeholder="Es. Focaccia" minlength="2" maxlength="160" required />
+              <label for="catalog-product-description">Descrizione</label>
+              <textarea id="catalog-product-description" rows="2" maxlength="1500" placeholder="Ingredienti, note…"></textarea>
+              <label for="catalog-product-price">Prezzo (€)</label>
+              <input id="catalog-product-price" type="text" inputmode="decimal" placeholder="Es. 2,50" required />
+              <div class="catalog-form-buttons">
+                <button id="catalog-product-submit" type="submit" class="button button-primary button-small">Aggiungi prodotto</button>
+                <button id="catalog-product-cancel" type="button" class="button button-outline button-small" hidden>Annulla</button>
+              </div>
+            </form>
+            <div id="catalog-products-list" class="catalog-list"></div>
+          </article>
+        </div>
+        <p class="catalog-help catalog-footer-note">Le vendite, le scorte e gli ordini non sono ancora attivi: questa sezione gestisce esclusivamente il catalogo.</p>
       </section>
     </main>
 

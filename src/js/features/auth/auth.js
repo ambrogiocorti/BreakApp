@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { loadSchoolAccess, roleLabel } from './access.js';
+import { getAdminSchools } from '../catalog/utils.js';
+import { initializeAdminCatalog } from '../catalog/catalog.js';
+import { initializeAdminMfa } from './mfa.js';
 
 function setFeedback(element, message, isError = false) {
   element.textContent = message;
@@ -38,6 +41,12 @@ export function initializeAuth(config) {
 
   let activeUser = null;
   let accessRequestId = 0;
+  let accessCache = null;
+  const catalog = initializeAdminCatalog(client);
+  const mfa = initializeAdminMfa(client, (verified) => {
+    if (verified && accessCache && activeUser) catalog.show(accessCache);
+    else catalog.hide();
+  });
 
   function renderSchoolAccess({ memberships, bars }) {
     schoolList.replaceChildren();
@@ -84,7 +93,7 @@ export function initializeAuth(config) {
       if (assignedRoles.includes('school_admin')) {
         const note = document.createElement('p');
         note.className = 'school-admin-note';
-        note.textContent = 'Ruolo Admin riconosciuto. Le modifiche saranno abilitate dopo i controlli 2FA e le policy server-side.';
+        note.textContent = 'Ruolo Admin riconosciuto. Il catalogo richiede la verifica 2FA obbligatoria e le policy RLS.';
         article.append(note);
       }
 
@@ -97,10 +106,14 @@ export function initializeAuth(config) {
     refreshAccessButton.disabled = true;
     accessSummary.textContent = 'Verifica autorizzazioni dal database in corso…';
     schoolList.replaceChildren();
+    accessCache = null;
+    mfa.hide();
     try {
       const access = await loadSchoolAccess(client, user.id);
       if (requestId !== accessRequestId) return;
+      accessCache = access;
       renderSchoolAccess(access);
+      if (getAdminSchools(access).length) void mfa.show();
     } catch (error) {
       if (requestId !== accessRequestId) return;
       accessSummary.textContent = error?.message || 'Impossibile leggere le autorizzazioni. Riprova.';
@@ -119,6 +132,8 @@ export function initializeAuth(config) {
     if (!present) {
       activeUser = null;
       accessRequestId += 1;
+      accessCache = null;
+      mfa.hide();
       schoolList.replaceChildren();
       accessSummary.textContent = '';
       return;
