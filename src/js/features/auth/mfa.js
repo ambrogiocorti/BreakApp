@@ -11,6 +11,9 @@ export function initializeAdminMfa(client, onAccessChange) {
   const codeForm = document.querySelector('#mfa-code-form');
   const codeInput = document.querySelector('#mfa-code');
   const codeButton = document.querySelector('#mfa-code-button');
+  const lostPanel = document.querySelector('#mfa-lost-panel');
+  const refreshButton = document.querySelector('#mfa-refresh-button');
+  const backupButton = document.querySelector('#mfa-backup-button');
   let factorId = null;
   let epoch = 0;
 
@@ -22,6 +25,8 @@ export function initializeAdminMfa(client, onAccessChange) {
     qrImage.removeAttribute('src');
     qrPanel.hidden = true;
     codeInput.value = '';
+    lostPanel.hidden = true;
+    backupButton.hidden = true;
   }
   function hide() {
     epoch += 1;
@@ -49,15 +54,17 @@ export function initializeAdminMfa(client, onAccessChange) {
       if (factors.error) throw factors.error;
       if (assurance.error) throw assurance.error;
       const totp = (factors.data.totp || []).find((factor) => factor.status === 'verified');
-      if (assurance.data.currentLevel === 'aal2') {
-        state('Autenticazione a due fattori verificata. Puoi gestire il catalogo.');
+      if (assurance.data.currentLevel === 'aal2' && totp) {
+        state('Autenticazione a due fattori verificata. Puoi gestire il catalogo. Per non perdere l’accesso, registra anche un Authenticator di riserva.');
+        backupButton.hidden = false;
         onAccessChange(true);
         return;
       }
       if (totp) {
         factorId = totp.id;
         codeForm.hidden = false;
-        state('Per entrare nell’area Admin inserisci il codice dell’app Authenticator.');
+        lostPanel.hidden = false;
+        state('Inserisci il codice dell’app Authenticator già associata. Il QR iniziale non può essere mostrato nuovamente.');
       } else {
         enrollButton.hidden = false;
         state('L’accesso Admin richiede la verifica 2FA. Attivala con un’app Authenticator.');
@@ -68,17 +75,34 @@ export function initializeAdminMfa(client, onAccessChange) {
     }
   }
 
-  enrollButton.addEventListener('click', async () => {
+  async function enrollNewFactor(isBackup) {
     const token = epoch;
-    enrollButton.disabled = true;
-    state('Generazione del codice QR protetto…');
+    const source = isBackup ? backupButton : enrollButton;
+    source.disabled = true;
+    state('Generazione del nuovo QR protetto…');
     try {
+      // Un secondo fattore di riserva è consentito soltanto dopo aver raggiunto AAL2.
+      if (isBackup) {
+        const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (assurance.error) throw assurance.error;
+        if (assurance.data.currentLevel !== 'aal2') {
+          throw new Error('Verifica prima la 2FA corrente per aggiungere un dispositivo di riserva.');
+        }
+      } else {
+        // Evita che un utente in AAL1 aggiri un vecchio fattore TOTP verificato.
+        const factors = await client.auth.mfa.listFactors();
+        if (factors.error) throw factors.error;
+        if (factors.data.totp?.some((item) => item.status === 'verified')) {
+          throw new Error('Il fattore esistente deve essere rimosso tramite recupero amministrativo autorizzato prima di generare un nuovo QR.');
+        }
+      }
       const { data, error } = await client.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'BreakApp Admin'
+        friendlyName: isBackup ? `BreakApp riserva ${Date.now()}` : 'BreakApp Admin'
       });
       if (error) throw error;
       if (token !== epoch) return;
+      // Il QR è generato da Supabase e non va memorizzato in localStorage o nei log.
       if (!data?.totp?.qr_code?.startsWith('data:image/')) {
         throw new Error('Impossibile ottenere il QR dalla piattaforma Auth.');
       }
@@ -87,15 +111,20 @@ export function initializeAdminMfa(client, onAccessChange) {
       qrPanel.hidden = false;
       codeForm.hidden = false;
       enrollButton.hidden = true;
-      state('Scansiona il QR con Google/Microsoft Authenticator, poi inserisci il codice di 6 cifre.');
+      backupButton.hidden = true;
+      lostPanel.hidden = true;
+      state('Nuovo QR generato. Scansionalo in Authenticator e inserisci il codice a 6 cifre per attivarlo.');
     } catch (error) {
       if (token !== epoch) return;
-      state(error?.message || 'Attivazione non riuscita.', true);
-      enrollButton.hidden = false;
+      state(error?.message || 'Impossibile generare il nuovo QR. Riprova.', true);
+      source.hidden = false;
     } finally {
-      enrollButton.disabled = false;
+      source.disabled = false;
     }
-  });
+  }
+  enrollButton.addEventListener('click', () => { void enrollNewFactor(false); });
+  backupButton.addEventListener('click', () => { void enrollNewFactor(true); });
+  refreshButton.addEventListener('click', () => { void show(); });
 
   codeForm.addEventListener('submit', async (event) => {
     event.preventDefault();

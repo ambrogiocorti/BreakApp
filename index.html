@@ -7,77 +7,120 @@
     <meta name="description" content="BreakApp, la piattaforma per i bar scolastici." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/icon-placeholder.svg" />
-    <title>BreakApp — Il tuo intervallo, organizzato</title>
+    <title>BreakApp — Accedi</title>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Vai al contenuto</a>
 
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="/" aria-label="BreakApp, torna all'inizio">
+        <a class="brand" href="/" aria-label="BreakApp">
           <span class="brand-symbol" aria-hidden="true">B<span>.</span></span>
           <span>Break<span class="brand-highlight">App</span></span>
         </a>
         <nav aria-label="Navigazione principale" class="header-actions">
-          <a class="header-link" href="#menu">Menu</a>
-          <a class="header-link" href="#come-funziona">Come funziona</a>
+          <a id="header-menu-link" class="header-link" href="#menu" hidden>Menu</a>
+          <a id="header-profile-link" class="header-link" href="#accesso" hidden>Profilo</a>
           <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
-          <a class="button button-primary button-small" href="#accesso">Accedi <span aria-hidden="true">↗</span></a>
         </nav>
       </div>
     </header>
 
-    <main id="main-content">
-      <section class="hero container" aria-labelledby="hero-heading">
-        <div class="hero-copy">
-          <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> BREAKAPP · LA TUA PAUSA, SEMPLIFICATA</span>
-          <h1 id="hero-heading">Meno attesa.<br /><span>Più intervallo.</span></h1>
-          <p>Un modo semplice per scegliere, prenotare e ritirare al bar della tua scuola. Pensato per gli studenti, organizzato per chi lavora al bancone.</p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#accesso">Entra in BreakApp <span aria-hidden="true">→</span></a>
-            <a class="button button-outline" href="#menu">Esplora il menu</a>
-          </div>
-          <p class="development-note"><span class="notice-dot" aria-hidden="true"></span> Versione di sviluppo: prenotazioni e pagamenti non sono ancora disponibili.</p>
-        </div>
-        <div class="hero-visual" aria-hidden="true">
-          <div class="visual-accent visual-accent-one"></div>
-          <div class="visual-accent visual-accent-two"></div>
-          <div class="journey-panel">
-            <div class="journey-heading">
-              <div class="journey-brand"><span class="journey-mark">B.</span><span>Il tuo intervallo</span></div>
-              <span class="journey-status">In sviluppo</span>
+    <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Sezioni BreakApp" hidden>
+      <a href="#menu" aria-current="page">▤ <span>Menu</span></a>
+      <span class="app-nav-disabled" aria-label="Ordini, non ancora disponibili">▣ <span>Ordini</span><small>In sviluppo</small></span>
+      <span class="app-nav-disabled" aria-label="Gruppi, non ancora disponibili">♧ <span>Gruppi</span><small>In sviluppo</small></span>
+      <a href="#accesso">♙ <span>Profilo</span></a>
+    </nav>
+    <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Sezioni BreakApp" hidden>
+      <a href="#menu" aria-current="page"><span aria-hidden="true">▤</span><small>Menu</small></a>
+      <span class="app-nav-disabled" aria-label="Ordini non ancora disponibili"><span aria-hidden="true">▣</span><small>Ordini</small></span>
+      <span class="app-nav-disabled" aria-label="Gruppi non ancora disponibili"><span aria-hidden="true">♧</span><small>Gruppi</small></span>
+      <a href="#accesso"><span aria-hidden="true">♙</span><small>Profilo</small></a>
+    </nav>
+    <main id="main-content" class="app-main">
+      <section class="access-section" id="accesso" aria-labelledby="access-heading">
+        <div class="container access-layout">
+          <div class="auth-card">
+            <div id="signed-out-view">
+              <span class="auth-tag">IL TUO BAR SCOLASTICO</span>
+              <h3>Accedi a BreakApp</h3>
+              <p class="auth-subtitle">Accedi per consultare il catalogo della tua scuola e gestire le funzionalità abilitate per il tuo ruolo.</p>
+              <form id="auth-form" novalidate>
+                <label for="auth-email">Indirizzo email</label>
+                <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@esempio.it" required />
+                <label for="auth-password">Password</label>
+                <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+                <div class="form-actions">
+                  <button class="button button-primary" id="login-button" type="submit">Accedi <span aria-hidden="true">→</span></button>
+                  <button class="button button-outline" id="signup-button" type="button">Registrati</button>
+                </div>
+              </form>
+              <div class="auth-divider"><span>oppure continua con</span></div>
+              <div class="social-actions">
+                <button type="button" id="google-button" class="button button-secondary">Google</button>
+                <button type="button" id="microsoft-button" class="button button-secondary">Microsoft</button>
+              </div>
             </div>
-            <div class="journey-title">Tutto più semplice,<br />dall'ordine al ritiro.</div>
-            <div class="journey-step"><span class="journey-number">01</span><div><strong>Scegli</strong><small>Trova il bar e consulta il menu</small></div><span class="journey-arrow">↗</span></div>
-            <div class="journey-step"><span class="journey-number">02</span><div><strong>Prenota</strong><small>Organizza il tuo intervallo</small></div><span class="journey-arrow">↗</span></div>
-            <div class="journey-step"><span class="journey-number">03</span><div><strong>Ritira</strong><small>Mostra il QR al bancone</small></div><span class="journey-arrow">↗</span></div>
-            <div class="journey-footnote">Percorso previsto · Nessun ordine attivo</div>
+            <div id="signed-in-view" hidden>
+              <span class="auth-tag">ACCOUNT</span>
+              <h3>Accesso effettuato</h3>
+              <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
+              <p class="auth-subtitle">Le tue scuole e i ruoli sono verificati da Supabase. Puoi consultare il menu e, se autorizzato, gestire il catalogo.</p><p><a class="text-link" href="#menu">Vai al catalogo →</a></p>
+              <div class="school-access-overview">
+                <div class="school-access-header">
+                  <h4>Le tue scuole</h4>
+                  <button type="button" id="refresh-access-button" class="button button-outline button-small">Aggiorna</button>
+                </div>
+                <p id="school-access-status" class="school-access-status" role="status" aria-live="polite">Verifica autorizzazioni…</p>
+                <div id="school-access-list" class="school-access-list"></div>
+              </div>
+              <div id="admin-mfa" class="admin-security" hidden>
+                <span class="auth-tag">PROTEZIONE ACCOUNT ADMIN</span>
+                <h4>Verifica in due passaggi</h4>
+                <p id="mfa-status" class="school-access-status" role="status" aria-live="polite">Controllo dello stato 2FA…</p>
+                <button id="mfa-enroll-button" type="button" class="button button-primary button-small" hidden>Attiva 2FA con QR</button>
+                <div id="mfa-qr-panel" class="admin-qr" hidden>
+                  <p>Apri Google Authenticator o Microsoft Authenticator e scansiona il codice:</p>
+                  <img id="mfa-qr" alt="QR personale per attivare la verifica in due passaggi" width="180" height="180" />
+                  <p class="catalog-help">Il QR è riservato al tuo account: non condividerlo né salvarlo in una chat.</p>
+                </div>
+                <form id="mfa-code-form" hidden>
+                  <label for="mfa-code">Codice temporaneo (6 cifre)</label>
+                  <input id="mfa-code" name="mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
+                  <button id="mfa-code-button" type="submit" class="button button-primary button-small">Verifica codice</button>
+                </form>
+                <div id="mfa-lost-panel" class="mfa-lost-panel" hidden>
+                  <strong>Non trovi più il codice nell'app Authenticator?</strong>
+                  <p>Il QR originale non può essere recuperato: un responsabile autorizzato del progetto Supabase BreakApp deve prima rimuovere il vecchio fattore 2FA. Il fattore non può essere reimpostato con la sola password.</p>
+                  <button type="button" id="mfa-refresh-button" class="button button-outline button-small">Ho ripristinato il fattore · Ricarica stato</button>
+                </div>
+                <button type="button" id="mfa-backup-button" class="button button-outline button-small" hidden>Aggiungi Authenticator di riserva</button>
+              </div>
+              <button type="button" id="logout-button" class="button button-secondary">Esci dall'account</button>
+            </div>
+            <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
+            <div id="environment-status" class="status-box" role="status" aria-live="polite" hidden></div>
           </div>
+          <aside class="login-art" aria-hidden="true">
+            <div class="login-art-graphic">
+              <div class="login-graphic-circle"></div>
+              <div class="login-graphic-square"></div>
+              <span class="login-graphic-mark">B.</span>
+            </div>
+            <p class="login-art-title">Il tuo intervallo,<br/>più semplice.</p>
+            <p class="login-art-note">Una piattaforma. Ogni scuola, il suo bar.</p>
+          </aside>
         </div>
       </section>
 
-      <section class="features-section" id="come-funziona" aria-labelledby="features-heading">
+
+      <section class="menu-section" id="menu" hidden aria-labelledby="menu-heading">
         <div class="container">
           <div class="section-heading">
-            <span class="eyebrow">PERCHÉ BREAKAPP</span>
-            <h2 id="features-heading">Una pausa migliore per tutti.</h2>
-            <p>Stiamo costruendo un'esperienza essenziale, veloce e chiara per ogni scuola.</p>
-          </div>
-          <div class="feature-grid">
-            <article class="feature-item"><span class="feature-icon" aria-hidden="true">01</span><h3>Per gli studenti</h3><p>Un unico spazio per consultare i prodotti, scegliere quando ritirare e seguire il proprio ordine.</p></article>
-            <article class="feature-item"><span class="feature-icon" aria-hidden="true">02</span><h3>Per il personale</h3><p>Strumenti organizzati per gestire gli ordini e il servizio al bancone, senza confusione.</p></article>
-            <article class="feature-item"><span class="feature-icon" aria-hidden="true">03</span><h3>Per le scuole</h3><p>Configurazioni e dati separati per ogni istituto, con attenzione a sicurezza e privacy.</p></article>
-          </div>
-        </div>
-      </section>
-
-
-      <section class="menu-section" id="menu" aria-labelledby="menu-heading">
-        <div class="container">
-          <div class="section-heading">
-            <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> MENU SCOLASTICO</span>
-            <h2 id="menu-heading">Scopri cosa offre il tuo bar.</h2>
-            <p>I prodotti e i prezzi arrivano direttamente dal database del bar. Il menu è consultabile anche senza registrazione.</p>
+            <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> CATALOGO SCOLASTICO</span>
+            <h2 id="menu-heading">Il menu del tuo bar.</h2>
+            <p>Consulta i prodotti realmente pubblicati dal bar selezionato. Gli ordini non sono ancora abilitati.</p>
           </div>
           <div class="menu-interface">
             <div class="menu-toolbar">
@@ -101,71 +144,6 @@
               <p class="menu-empty">I prodotti pubblicati dal bar appariranno qui.</p>
             </div>
             <p class="catalog-help menu-disclaimer">I prezzi sono mostrati in tempo reale, ma la disponibilità per data e fascia di ritiro sarà attivata con la gestione delle scorte. Per ora non è possibile inviare ordini.</p>
-          </div>
-        </div>
-      </section>
-      <section class="access-section" id="accesso" aria-labelledby="access-heading">
-        <div class="container access-layout">
-          <div class="access-intro">
-            <span class="eyebrow">AREA PERSONALE</span>
-            <h2 id="access-heading">Tutto inizia<br /><span>da qui.</span></h2>
-            <p>Accedi con il tuo account BreakApp. Consulta il menu pubblico qui sopra oppure accedi per gestire il catalogo della tua scuola.</p>
-            <div id="environment-status" class="status-box" role="status" aria-live="polite">Verifica configurazione in corso…</div>
-          </div>
-
-          <div class="auth-card">
-            <div id="signed-out-view">
-              <span class="auth-tag">BENVENUTO</span>
-              <h3>Accedi a BreakApp</h3>
-              <p class="auth-subtitle">Inserisci le credenziali oppure scegli un altro metodo di accesso.</p>
-              <form id="auth-form" novalidate>
-                <label for="auth-email">Indirizzo email</label>
-                <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@esempio.it" required />
-                <label for="auth-password">Password</label>
-                <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
-                <div class="form-actions">
-                  <button class="button button-primary" id="login-button" type="submit">Accedi <span aria-hidden="true">→</span></button>
-                  <button class="button button-outline" id="signup-button" type="button">Registrati</button>
-                </div>
-              </form>
-              <div class="auth-divider"><span>oppure continua con</span></div>
-              <div class="social-actions">
-                <button type="button" id="google-button" class="button button-secondary">Google</button>
-                <button type="button" id="microsoft-button" class="button button-secondary">Microsoft</button>
-              </div>
-            </div>
-            <div id="signed-in-view" hidden>
-              <span class="auth-tag">ACCOUNT</span>
-              <h3>Accesso effettuato</h3>
-              <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
-              <p class="auth-subtitle">Le scuole e i ruoli qui mostrati sono letti da Supabase e filtrati dalle policy RLS.</p>
-              <div class="school-access-overview">
-                <div class="school-access-header">
-                  <h4>Le tue scuole</h4>
-                  <button type="button" id="refresh-access-button" class="button button-outline button-small">Aggiorna</button>
-                </div>
-                <p id="school-access-status" class="school-access-status" role="status" aria-live="polite">Verifica autorizzazioni…</p>
-                <div id="school-access-list" class="school-access-list"></div>
-              </div>
-              <div id="admin-mfa" class="admin-security" hidden>
-                <span class="auth-tag">PROTEZIONE ACCOUNT ADMIN</span>
-                <h4>Verifica in due passaggi</h4>
-                <p id="mfa-status" class="school-access-status" role="status" aria-live="polite">Controllo dello stato 2FA…</p>
-                <button id="mfa-enroll-button" type="button" class="button button-primary button-small" hidden>Attiva 2FA con QR</button>
-                <div id="mfa-qr-panel" class="admin-qr" hidden>
-                  <p>Apri Google Authenticator o Microsoft Authenticator e scansiona il codice:</p>
-                  <img id="mfa-qr" alt="QR personale per attivare la verifica in due passaggi" width="180" height="180" />
-                  <p class="catalog-help">Il QR è riservato al tuo account: non condividerlo.</p>
-                </div>
-                <form id="mfa-code-form" hidden>
-                  <label for="mfa-code">Codice temporaneo (6 cifre)</label>
-                  <input id="mfa-code" name="mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
-                  <button id="mfa-code-button" type="submit" class="button button-primary button-small">Verifica codice</button>
-                </form>
-              </div>
-              <button type="button" id="logout-button" class="button button-secondary">Esci dall'account</button>
-            </div>
-            <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
           </div>
         </div>
       </section>
@@ -220,7 +198,7 @@
       </section>
     </main>
 
-    <footer class="site-footer"><div class="container footer-inner"><span>© BreakApp · In sviluppo</span><span>Ideata per rendere più semplice l'intervallo.</span></div></footer>
+    <footer class="site-footer"><div class="container footer-inner"><span>© BreakApp</span><span>Ambiente di test · Funzionalità abilitate progressivamente</span></div></footer>
 
     <script type="module" src="/src/js/main.js"></script>
   </body>
