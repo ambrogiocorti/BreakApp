@@ -1,5 +1,5 @@
 // Fase 1: SOLO cache di asset e shell. Nessuna operazione di business offline.
-const CACHE_NAME = 'breakapp-shell-v2';
+const CACHE_NAME = 'breakapp-shell-v3';
 const SHELL_URL = '/';
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add(SHELL_URL)));
