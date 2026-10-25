@@ -25,6 +25,13 @@ export function initializeAuth(config) {
   const accessSummary = document.querySelector('#school-access-status');
   const schoolList = document.querySelector('#school-access-list');
   const refreshAccessButton = document.querySelector('#refresh-access-button');
+  const menuSection = document.querySelector('#menu');
+  const mobileNav = document.querySelector('#app-mobile-nav');
+  const desktopNav = document.querySelector('#app-desktop-nav');
+  const headerMenu = document.querySelector('#header-menu-link');
+  const headerProfile = document.querySelector('#header-profile-link');
+  document.body.dataset.authenticated = 'false';
+
 
   if (!config.configured) {
     environment.textContent = `Ambiente di sviluppo non collegato: ${config.reason}`;
@@ -35,8 +42,8 @@ export function initializeAuth(config) {
     return null;
   }
 
-  environment.textContent = 'Chiave pubblicabile configurata. Accesso gestito da Supabase Auth.';
-  environment.dataset.type = 'success';
+  environment.textContent = '';
+  environment.hidden = true;
   const client = createClient(config.url, config.publishableKey);
 
   let activeUser = null;
@@ -127,6 +134,12 @@ export function initializeAuth(config) {
     const present = Boolean(user);
     signedIn.hidden = !present;
     signedOut.hidden = present;
+    menuSection.hidden = !present;
+    mobileNav.hidden = !present;
+    desktopNav.hidden = !present;
+    headerMenu.hidden = !present;
+    headerProfile.hidden = !present;
+    document.body.dataset.authenticated = String(present);
     emailLabel.textContent = present ? (user.email || 'account senza email') : '';
 
     if (!present) {
