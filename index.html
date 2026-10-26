@@ -764,6 +764,18 @@
               <div id="pilot-product-list" class="service-list"></div>
             </article>
             <article class="pilot-card">
+              <h4>Rimborsi Stripe verificati</h4>
+              <p class="catalog-help">Soltanto ordini individuali già consegnati e pagati online. Il rimborso torna al pagatore originario e viene confermato dal webhook Stripe.</p>
+              <form id="pilot-refund-form">
+                <label for="pilot-refund-order">UUID ordine individuale</label>
+                <input id="pilot-refund-order" required autocomplete="off"
+                 pattern="[a-fA-F0-9-]{36}" placeholder="Identificatore ordine"/>
+                <label for="pilot-refund-reason">Motivo dettagliato</label>
+                <textarea id="pilot-refund-reason" required minlength="8" maxlength="300" rows="3"></textarea>
+                <button type="submit" class="button button-primary">Richiedi rimborso completo (test)</button>
+              </form>
+            </article>
+            <article class="pilot-card">
               <h4>Personale della scuola</h4>
               <p class="catalog-help">L'utente deve avere già registrato e confermato la propria email in BreakApp. Le credenziali non vengono condivise.</p>
               <form id="pilot-staff-form">

@@ -40,6 +40,7 @@ export function initializeOrders(client) {
   let staffOrders=[];
   let staffContextSchool=null;
   const stripeAttemptKeys=new Map();
+  const stripeRefundKeys=new Map();
 
   function total(){return cartSummary(cart,context.products);}
   function showCartBar(){
@@ -227,7 +228,7 @@ export function initializeOrders(client) {
       const box=elem('article','','order-card');
       box.append(elem('h3',`Ordine #${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date||'—'} ${o.pickup_windows?.starts_at?.slice(0,5)||''}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':'Da pagare'}`));
+        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':'Da pagare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       if(!['cancelled','delivered','no_show'].includes(o.status) && o.pickup_token){
         const ticket=elem('button','Mostra QR di ritiro','button button-outline button-small');
@@ -321,7 +322,7 @@ export function initializeOrders(client) {
   async function fetchStaffOrders(){
     if(!user||!staffSchools.length)return;
     const {data,error}=await client.from('orders')
-      .select('id,school_id,display_no,status,payment_status,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
+      .select('id,school_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
       .in('school_id',staffContextSchool&&staffSchools.includes(staffContextSchool)
       ?[staffContextSchool]:staffSchools).order('created_at',{ascending:false}).limit(100);
     if(error){report(staffFeedback,error.message,true);return;}
@@ -335,7 +336,7 @@ export function initializeOrders(client) {
       const box=elem('article','','order-card');
       box.append(elem('h3',`#${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date} ${o.pickup_windows?.starts_at?.slice(0,5)}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':'Da incassare'}`));
+        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':'Da incassare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const actions=elem('div','','order-actions');
       if(o.status==='confirmed'){
@@ -356,6 +357,37 @@ export function initializeOrders(client) {
           if(!confirm('Confermi che tutti i prodotti sono stati consegnati?'))return {error:new Error('Operazione annullata')};
           return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
         });
+      }
+      if(document.body.dataset.activeRole==='school_admin' &&
+          o.payment_status==='paid'&&o.payment_method==='stripe' &&
+          ['delivered','no_show'].includes(o.status)){
+        const refund=elem('button','Richiedi rimborso Stripe (test)','button button-outline button-small');
+        refund.type='button';
+        refund.addEventListener('click',async()=>{
+          const reason=prompt('Motivo del rimborso completo di '+formatEuro(o.total_cents)+
+            '. Sarà accreditato sul pagamento Stripe originale:');
+          if(reason===null)return;
+          if(reason.trim().length<8||reason.length>300)
+            return report(staffFeedback,'Specifica un motivo di almeno 8 caratteri.',true);
+          if(!confirm('Confermi la richiesta di rimborso completo in modalità test?'))return;
+          const requestKey=stripeRefundKeys.get(o.id)||crypto.randomUUID();
+          stripeRefundKeys.set(o.id,requestKey);
+          refund.disabled=true;
+          try{
+            const {data,error}=await client.functions.invoke('stripe-full-refund',{
+              body:{order_id:o.id,request_key:requestKey,reason:reason.trim()}
+            });
+            if(error)throw error;
+            if(data?.error)throw new Error(data.error);
+            report(staffFeedback,'Rimborso Stripe: '+data.status+
+              '. L’esito contabile definitivo arriva dal webhook firmato.');
+            await fetchStaffOrders();
+          }catch(e){
+            report(staffFeedback,'Rimborso non completato: '+(e.message||'Stripe non disponibile'),true);
+            refund.disabled=false;
+          }
+        });
+        actions.append(refund);
       }
       box.append(actions);staffList.append(box);
     });

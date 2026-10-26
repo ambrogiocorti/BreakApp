@@ -22,6 +22,7 @@ export function initializePlatformPilot(client){
   readiness=$('pilot-readiness');
  let allowed=false,schools=[],bars=[],products=[],categories=[],staff=[],hours=[],windows=[],stocks=[],token=0;
  let currentUser=null,authEpoch=0;
+ const refundRequestKeys=new Map();
 
  for(const [id] of [['pilot-window-date'],['pilot-stock-date']]){
    $(id).value=todayRome();
@@ -309,7 +310,27 @@ export function initializePlatformPilot(client){
      say('Prodotto, prezzo e ingredienti salvati su Supabase.');
    });
  });
- $('pilot-staff-form').addEventListener('submit',event=>{
+ $('pilot-refund-form').addEventListener('submit',event=>{
+   event.preventDefault();void run(event.currentTarget,async()=>{
+     const order=$('pilot-refund-order').value.trim();
+     const reason=$('pilot-refund-reason').value.trim();
+     if(!/^[0-9a-f-]{36}$/i.test(order)||reason.length<8)
+       throw new Error('Identificativo ordine o motivo non validi.');
+     if(!confirm('Confermi il rimborso COMPLETO sul pagamento Stripe originale (test)?'))
+       throw new Error('Richiesta annullata.');
+     const requestKey=refundRequestKeys.get(order)||crypto.randomUUID();
+     refundRequestKeys.set(order,requestKey);
+     const {data,error}=await client.functions.invoke('stripe-full-refund',{
+       body:{order_id:order,request_key:requestKey,reason}
+     });
+     if(error)throw error;
+     if(data?.error)throw new Error(data.error);
+     $('pilot-refund-order').value='';$('pilot-refund-reason').value='';
+     say('Rimborso Stripe in '+data?.status+
+       '. L’esito contabile definitivo viene registrato dal webhook firmato.');
+   });
+ });
+  $('pilot-staff-form').addEventListener('submit',event=>{
    event.preventDefault();void run(event.currentTarget,async()=>{
      const {error}=await client.rpc('platform_assign_school_staff',{
        p_school_id:schoolSelect.value,

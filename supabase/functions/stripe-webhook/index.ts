@@ -44,6 +44,29 @@ Deno.serve(async request=>{
   const evt=JSON.parse(raw) as Record<string,any>;
   if(!/^evt_[A-Za-z0-9]+$/.test(evt.id||'')||evt.livemode!==false)
    return respond({error:'Evento Stripe non valido per il test'},400);
+  if(evt.type==='refund.updated'){
+    const refund=evt.data?.object;
+    if(!refund||refund.object!=='refund'||
+      !['succeeded','failed'].includes(refund.status)||
+      !/^re_[A-Za-z0-9]+$/.test(refund.id||'')||
+      !/^pi_[A-Za-z0-9]+$/.test(refund.payment_intent||'')||
+      !/^acct_[A-Za-z0-9]+$/.test(evt.account||'')||
+      !/^[0-9a-f-]{36}$/i.test(refund.metadata?.breakapp_refund_id||'')||
+      !Number.isSafeInteger(refund.amount)||refund.amount<=0||refund.currency!=='eur')
+      return respond({error:'Evento rimborso incompleto o incongruente'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data,error}=await admin.rpc('finalize_verified_stripe_refund',{
+      p_event_id:evt.id,p_stripe_account:evt.account,
+      p_refund_id:refund.metadata.breakapp_refund_id,
+      p_stripe_refund:refund.id,p_payment_intent:refund.payment_intent,
+      p_amount:refund.amount,p_currency:refund.currency,p_status:refund.status
+    });
+    if(error)return respond({error:'Rimborso non riconciliato'},500);
+    return respond({received:true,result:data},200);
+  }
   if(evt.type!=='checkout.session.completed')
    return respond({received:true,handled:false},200);
   const session=evt.data?.object;
