@@ -1,0 +1,33 @@
+name: Push dispatcher schedule
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check secret configuration
+        id: check
+        env:
+          DISPATCH_TOKEN: ${{ secrets.PUSH_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$DISPATCH_TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::PUSH_DISPATCH_TOKEN not configured in GitHub Actions secrets. No request sent."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Invoke Supabase private push dispatcher
+        if: steps.check.outputs.configured == 'true'
+        env:
+          DISPATCH_TOKEN: ${{ secrets.PUSH_DISPATCH_TOKEN }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            --retry 2 --retry-delay 5 \
+            --request POST \
+            --header "x-breakapp-dispatch-token: ${DISPATCH_TOKEN}" \
+            "https://ynvswdyirngvdpudcikl.supabase.co/functions/v1/push-dispatch"
