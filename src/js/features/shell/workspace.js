@@ -78,8 +78,9 @@ export function chooseInitialContext(contexts,stored) {
  if(!contexts.length)return null;
  const preference=contexts.find(c=>c.key===stored);
  if(preference)return preference;
- return contexts.find(c=>c.role==='customer'&&c.verified) ||
-  contexts.find(c=>c.verified)||contexts[0];
+ return ['school_admin','bartender','warehouse_manager','platform_admin','customer']
+  .map(role=>contexts.find(c=>c.role===role&&c.verified))
+  .find(Boolean)||contexts[0];
 }
 export function initializeWorkspace(client){
  if(!client)return;
@@ -117,7 +118,7 @@ export function initializeWorkspace(client){
  }
  function renderLinks(){
    nav.replaceChildren();mobile.replaceChildren();moreContainer.replaceChildren();
-   const available=SCREENS[active?.role]||[];
+   const available=active?.verified?SCREENS[active?.role]||[]:[['accesso','Profilo e sicurezza','UserRound']];
    function linkOf(screen,compact=false){
      const [id,label,icon]=screen;
      const a=create('a',compact?'workspace-link mobile-link':'workspace-link');
