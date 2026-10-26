@@ -566,3 +566,11 @@ body[data-workspace="true"] .menu-interface{background:transparent;}
 @media(prefers-reduced-motion:reduce){
  .workspace-link{transition:none;}
 }
+
+/* [hidden] must win over role/desktop display rules even during auth races. */
+body[data-workspace="true"] #workspace-sidebar[hidden],
+body[data-workspace="true"] #app-desktop-nav[hidden],
+body[data-workspace="true"] #app-mobile-nav[hidden],
+body[data-workspace="true"] #workspace-page-head[hidden]{
+  display:none!important;
+}
