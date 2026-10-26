@@ -66,7 +66,7 @@
               <span class="auth-tag">ACCOUNT</span>
               <h3>Accesso effettuato</h3>
               <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
-              <p class="auth-subtitle">Le tue scuole e i ruoli sono verificati da Supabase. Puoi consultare il menu e, se autorizzato, gestire il catalogo.</p><p><a class="text-link" href="#menu">Vai al catalogo →</a></p>
+              <p class="auth-subtitle">Le tue scuole e i ruoli sono verificati da Supabase. Puoi consultare il menu e, se autorizzato, gestire il catalogo.</p><p><a class="text-link" href="#menu">Vai al catalogo →</a> · <a class="text-link" href="#support-center">Centro assistenza e ticket</a></p>
               <div class="school-access-overview">
                 <div class="school-access-header">
                   <h4>Le tue scuole</h4>
@@ -178,6 +178,79 @@
       </section>
 
 
+
+
+      <section id="support-center" class="container orders-section support-center" aria-labelledby="support-heading" hidden>
+        <div class="section-heading">
+          <span class="eyebrow">PROFILO · ASSISTENZA</span>
+          <h2 id="support-heading">Centro assistenza</h2>
+          <p>Richieste collegate al tuo ordine o al servizio della scuola. Conversazioni e allegati protetti per autore e personale autorizzato.</p>
+        </div>
+        <div class="staff-toolbar">
+          <button type="button" id="support-refresh" class="button button-outline button-small">Aggiorna richieste</button>
+          <a href="#accesso" class="text-link">Torna al Profilo</a>
+        </div>
+        <p id="support-feedback" role="status" aria-live="polite" class="catalog-status"></p>
+        <div class="support-grid">
+          <article class="catalog-card">
+            <h3>Apri una richiesta</h3>
+            <form id="support-create-form">
+              <label for="support-school">Scuola</label>
+              <select id="support-school" required></select>
+              <label for="support-category">Argomento</label>
+              <select id="support-category">
+                <option value="order">Ordine</option>
+                <option value="product">Prodotto</option>
+                <option value="payment">Pagamento</option>
+                <option value="service">Servizio del bar</option>
+                <option value="other">Altro</option>
+              </select>
+              <label for="support-order-reference">Ordine associato (facoltativo)</label>
+              <select id="support-order-reference"><option value="">Nessun ordine specifico</option></select>
+              <label for="support-subject">Oggetto</label>
+              <input id="support-subject" minlength="4" maxlength="160" required placeholder="Es. Prodotto mancante" />
+              <label for="support-message">Descrivi il problema</label>
+              <textarea id="support-message" rows="4" required maxlength="4000" minlength="1"></textarea>
+              <label for="support-create-file">Fotografia facoltativa (JPG, PNG, WebP, massimo 4 MB)</label>
+              <input id="support-create-file" type="file" accept="image/jpeg,image/png,image/webp" />
+              <button class="button button-primary" id="support-create-button" type="submit">Invia richiesta</button>
+            </form>
+          </article>
+          <article class="catalog-card">
+            <h3>Le richieste e i ticket autorizzati</h3>
+            <div id="support-ticket-list" class="service-list"></div>
+          </article>
+          <article class="catalog-card support-conversation" id="support-detail-panel" hidden>
+            <h3 id="support-detail-title">Conversazione</h3>
+            <p id="support-detail-status" class="catalog-help"></p>
+            <div id="support-thread" class="support-thread" aria-live="polite"></div>
+            <form id="support-reply-form">
+              <label for="support-reply-body">Nuovo messaggio</label>
+              <textarea id="support-reply-body" maxlength="4000" rows="3" required></textarea>
+              <label for="support-reply-file">Fotografia facoltativa (JPG, PNG, WebP, massimo 4 MB)</label>
+              <input id="support-reply-file" type="file" accept="image/jpeg,image/png,image/webp" />
+              <button type="submit" class="button button-primary" id="support-reply-button">Invia messaggio</button>
+            </form>
+            <form id="support-reopen-form" hidden>
+              <label for="support-reopen-reason">Perché richiedi la riapertura?</label>
+              <textarea id="support-reopen-reason" rows="2" required minlength="8" maxlength="1000"></textarea>
+              <button class="button button-outline" type="submit">Richiedi riapertura</button>
+            </form>
+            <div id="support-admin-actions" hidden>
+              <label for="support-admin-state">Stato del ticket · Admin scuola con 2FA</label>
+              <select id="support-admin-state">
+                <option value="open">Aperto</option>
+                <option value="in_progress">In lavorazione</option>
+                <option value="awaiting_customer">In attesa del cliente</option>
+                <option value="resolved">Risolto</option>
+                <option value="closed">Chiuso</option>
+              </select>
+              <button type="button" id="support-admin-save" class="button button-outline">Salva stato</button>
+              <div id="support-reopen-requests" class="service-list"></div>
+            </div>
+          </article>
+        </div>
+      </section>
 
       <section id="bar-operations" class="container orders-section" aria-labelledby="bar-operations-title" hidden>
         <div class="section-heading">
