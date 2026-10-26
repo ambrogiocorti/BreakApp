@@ -281,7 +281,7 @@ begin
     p_observed_at is null or p_observed_at < now()-interval '2 minutes' or p_observed_at > now()+interval '15 seconds' then
     raise exception 'Posizione non verificabile o non sufficientemente precisa';
   end if;
-  v_distance := 6371000 * 2 * pg_catalog.asin(pg_catalog.least(1.0,
+  v_distance := 6371000 * 2 * pg_catalog.asin(pg_catalog.least(1.0::double precision,
     pg_catalog.sqrt(
       pg_catalog.power(pg_catalog.sin(pg_catalog.radians(p_latitude-v_school.latitude)/2),2)
       + pg_catalog.cos(pg_catalog.radians(v_school.latitude))*pg_catalog.cos(pg_catalog.radians(p_latitude))
