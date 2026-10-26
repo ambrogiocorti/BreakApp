@@ -50,7 +50,7 @@ select public.submit_individual_order(
 
 do $$
 begin
- if (select count(*) from public.orders where id=:'order_id'::uuid) <> 1 then
+ if (select count(*) from public.orders where customer_id=auth.uid()) <> 1 then
   raise exception 'Ordine cliente assente';
  end if;
 end; $$;
