@@ -54,6 +54,7 @@ export function initializeAuth(config) {
   const operations = initializeAdminOrderSetup(client);
   const mfa = initializeAdminMfa(client, (verified) => {
     if (verified && accessCache && activeUser) {
+      window.dispatchEvent(new Event('breakapp:mfa-verified'));
       catalog.show(accessCache);
       void operations.show(accessCache);
     } else {
@@ -127,6 +128,7 @@ export function initializeAuth(config) {
       if (requestId !== accessRequestId) return;
       accessCache = access;
       renderSchoolAccess(access);
+      window.dispatchEvent(new Event('breakapp:access-updated'));
       if (getAdminSchools(access).length) void mfa.show();
     } catch (error) {
       if (requestId !== accessRequestId) return;
