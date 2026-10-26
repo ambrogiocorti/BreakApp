@@ -65,14 +65,14 @@ declare denied boolean:=false;
 begin
  begin
   perform public.finalize_verified_stripe_refund(
-   'evt_refund_bad123','acct_1UUniH2RLt7x5EeZ',
+   'evt_refundbad123','acct_1UUniH2RLt7x5EeZ',
    current_setting('app.refund_id')::uuid,
    're_testing123456789','pi_abcdefg1234',249,'eur','succeeded');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Wrong refund amount accepted';end if;
 end;$wrong_refund_amount$;
 select public.finalize_verified_stripe_refund(
- 'evt_refund_good123','acct_1UUniH2RLt7x5EeZ',
+ 'evt_refundgood123','acct_1UUniH2RLt7x5EeZ',
  current_setting('app.refund_id')::uuid,
  're_testing123456789','pi_abcdefg1234',250,'eur','succeeded') as completed_refund \gset
 reset role;
