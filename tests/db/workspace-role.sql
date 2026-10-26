@@ -5,6 +5,12 @@ values('44444444-4444-4444-8444-444444444444');
 set role authenticated;
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',false);
 select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
+do $platform_membership_aal1$
+begin
+ if not public.has_current_platform_admin_role() then
+  raise exception 'Cannot detect own Super Admin membership before MFA';end if;
+end;
+$platform_membership_aal1$;
 do $aal1_platform$
 begin
  if public.is_current_platform_admin() then
@@ -19,6 +25,12 @@ begin
 end;
 $aal2_platform$;
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+do $not_assigned$
+begin
+ if public.has_current_platform_admin_role() then
+  raise exception 'Leaked global role membership';end if;
+end;
+$not_assigned$;
 do $non_platform$
 begin
  if public.is_current_platform_admin() then
