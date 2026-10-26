@@ -27,6 +27,6 @@ initializeWorkspace(client);
 // Cache statica soltanto: nessuna vendita, consegna o incasso offline in Fase 1.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => { /* l'app online resta utilizzabile */ });
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => { /* l'app online resta utilizzabile */ });
   });
 }
