@@ -112,3 +112,8 @@ begin
  end if;
 end;
 $assert_race$;
+
+-- Restore the same extension surface that the real production schema has.
+-- dblink_connect_u is an extension SECURITY DEFINER outside app ownership,
+-- and must not remain installed when checking application RPC privileges.
+drop extension dblink;
