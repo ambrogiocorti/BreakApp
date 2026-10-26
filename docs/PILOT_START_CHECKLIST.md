@@ -25,9 +25,9 @@
 | Barista, pagamento al ritiro, ritiro QR | Flussi reali, richiedono account Barista e test su dispositivo |
 | Supporto | Ticket individuali e allegati, senza notifiche push |
 | Chiusure | Blocco sicuro se sono coinvolti incassi già registrati |
-| Pagamenti online Stripe | **NON IMPLEMENTATI** |
-| Gruppi e pagatori separati | **NON IMPLEMENTATI** |
-| Modalità offline con lease/revoche/sync | **NON IMPLEMENTATA** |
+| Pagamenti online Stripe | Checkout individuale e rimborso completo implementati in test; merchant, secrets, webhook e collaudo da attivare |
+| Gruppi e pagatori separati | Bozze gruppo implementate; pagamenti per riga e finalizzazione non implementati |
+| Modalità offline con lease/revoche/sync | Lease e staging con quarantena implementati; esecuzione e riconciliazione di vendite offline non implementate |
 | Promozioni, report completi, stampa fiscale | **NON IMPLEMENTATI** |
 
 ## Condizioni che impediscono il go-live completo
