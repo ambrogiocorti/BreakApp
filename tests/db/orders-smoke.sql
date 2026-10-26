@@ -67,7 +67,7 @@ select case when :'order_id'=:'repeat_id' then 'OK idempotence'
 
 -- Con ordini attivi l'Admin non può cambiare l'orario con un UPDATE diretto.
 reset role;
-do $
+do $guard_test$
 declare denied boolean:=false;
 begin
  begin
@@ -78,7 +78,7 @@ begin
    else raise; end if;
  end;
  if not denied then raise exception 'Fascia modificata nonostante ordine attivo'; end if;
-end; $;
+end; $guard_test$;
 set role authenticated;
 
 -- Altro cliente: non può vedere ordine di A e non deve superare stock=1.
