@@ -595,3 +595,35 @@ body[data-authenticated="true"] #header-menu-link,
 body[data-authenticated="true"] #header-profile-link{
   display:none!important;
 }
+
+/* Super Admin: pilot configuration is a real workspace, not a marketing page. */
+.platform-pilot-tools{margin:2rem 0;padding:1.5rem;border:1px solid var(--border);border-radius:18px;background:var(--surface);}
+.platform-pilot-heading{display:flex;gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:1rem;}
+.platform-pilot-heading h3{font-size:1.24rem;letter-spacing:-.025em;margin:0 0 .35rem;}
+.platform-pilot-heading p{font-size:.83rem;color:var(--muted);margin:0;}
+.pilot-context,.pilot-two-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1rem 0;}
+.pilot-context label,.pilot-card label{display:grid;gap:.4rem;font-size:.81rem;font-weight:720;}
+.platform-pilot-tools input,.platform-pilot-tools select,.platform-pilot-tools textarea{
+  padding:.7rem;width:100%;min-height:44px;border:1px solid var(--border);
+  border-radius:10px;background:var(--surface);color:var(--text);font:inherit;}
+.platform-pilot-tools textarea{min-height:92px;resize:vertical;}
+.pilot-readiness{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.65rem;margin:1.15rem 0;}
+.pilot-readiness>strong{grid-column:1/-1;font-size:.9rem;}
+.pilot-check{padding:.6rem .75rem;border:1px solid var(--border);border-radius:10px;font-size:.77rem;font-weight:650;color:var(--muted);}
+.pilot-check.is-ready{color:#0c7440;border-color:#68a685;}
+.pilot-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr));gap:1rem;align-items:start;margin-top:1.3rem;}
+.pilot-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.4rem;}
+.pilot-card h4{font-size:1.08rem;margin:0 0 .6rem;}
+.pilot-card form{display:grid;gap:.65rem;}
+.pilot-card form .button{width:100%;margin-top:.55rem;}
+.pilot-card fieldset{border:1px solid var(--border);padding:.9rem;border-radius:10px;}
+.pilot-card legend{font-size:.77rem;font-weight:800;}
+.pilot-allergen-grid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;}
+.pilot-allergen-label{display:flex!important;flex-direction:row;gap:.35rem;align-items:center;font-weight:500!important;font-size:.74rem!important;}
+.pilot-allergen-label input{min-height:18px!important;width:18px!important;height:18px!important;flex-shrink:0;}
+.pilot-staff-row{display:flex;justify-content:space-between;gap:.8rem;align-items:center;border-top:1px solid var(--border);padding:.75rem 0;}
+.pilot-staff-info{display:flex;flex-direction:column;gap:.25rem;min-width:0;overflow-wrap:anywhere;}
+.pilot-staff-info strong{font-size:.77rem;}
+.pilot-staff-info span{font-size:.71rem;color:var(--muted);}
+#pilot-status[data-type="error"]{color:#b42334;}
+@media(max-width:680px){.pilot-context,.pilot-two-cols,.pilot-allergen-grid{grid-template-columns:1fr;}.platform-pilot-tools{padding:1rem;}}
