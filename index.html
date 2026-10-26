@@ -598,6 +598,49 @@
           <p id="pilot-status" class="catalog-status" role="status" aria-live="polite"></p>
           <div class="pilot-grid">
             <article class="pilot-card">
+              <h4>Categorie del catalogo</h4>
+              <p class="catalog-help">Crea categorie o modifica quelle esistenti. Non vengono cancellate le categorie collegate a ordini o prodotti.</p>
+              <form id="pilot-category-form">
+                <label for="pilot-category-edit">Categoria da modificare</label>
+                <select id="pilot-category-edit"></select>
+                <label for="pilot-category-name">Nome categoria</label>
+                <input id="pilot-category-name" type="text" minlength="2" maxlength="120" required placeholder="Es. Panini" />
+                <label class="pilot-inline-check" for="pilot-category-active">
+                  <input id="pilot-category-active" type="checkbox" checked /> Categoria visibile
+                </label>
+                <button class="button button-primary" type="submit">Salva categoria</button>
+              </form>
+              <div id="pilot-category-list" class="service-list"></div>
+            </article>
+            <article class="pilot-card">
+              <h4>Prodotti e prezzi</h4>
+              <p class="catalog-help">Crea o modifica i prodotti del bar. Un prodotto pubblicato deve contenere ingredienti e dichiarazione allergeni corretti.</p>
+              <form id="pilot-product-form">
+                <label for="pilot-product-edit">Prodotto da modificare</label>
+                <select id="pilot-product-edit"></select>
+                <label for="pilot-product-category">Categoria</label>
+                <select id="pilot-product-category" required></select>
+                <label for="pilot-product-name">Nome prodotto</label>
+                <input id="pilot-product-name" required minlength="2" maxlength="160" placeholder="Es. Panino mozzarella" />
+                <label for="pilot-product-description">Descrizione</label>
+                <textarea id="pilot-product-description" rows="2" maxlength="1500"></textarea>
+                <label for="pilot-product-price">Prezzo (€)</label>
+                <input id="pilot-product-price" inputmode="decimal" required placeholder="2,50" />
+                <label for="pilot-product-ingredients">Ingredienti documentati</label>
+                <textarea id="pilot-product-ingredients" rows="3" maxlength="3000" placeholder="Leggi la scheda del fornitore"></textarea>
+                <fieldset><legend>Allergeni dichiarati</legend>
+                  <div id="pilot-product-allergens" class="pilot-allergen-grid"></div>
+                </fieldset>
+                <label for="pilot-product-image">Fotografia facoltativa (max 2 MB)</label>
+                <input id="pilot-product-image" type="file" accept="image/jpeg,image/png,image/webp" />
+                <label class="pilot-inline-check" for="pilot-product-active">
+                  <input id="pilot-product-active" type="checkbox" checked /> Prodotto pubblicato
+                </label>
+                <button class="button button-primary" type="submit">Salva prodotto</button>
+              </form>
+              <div id="pilot-product-list" class="service-list"></div>
+            </article>
+            <article class="pilot-card">
               <h4>Personale della scuola</h4>
               <p class="catalog-help">L'utente deve avere già registrato e confermato la propria email in BreakApp. Le credenziali non vengono condivise.</p>
               <form id="pilot-staff-form">
