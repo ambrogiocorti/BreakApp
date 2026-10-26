@@ -13,6 +13,7 @@ const SCREENS = Object.freeze({
  bartender:[
   ['staff-orders-section','Ordini da preparare','ClipboardList'],
   ['bar-operations','Servizio e orari','CalendarDays'],
+  ['offline-terminal','Operazioni offline','Boxes'],
   ['support-center','Assistenza','MessageSquareText'],
   ['accesso','Profilo','UserRound']
  ],

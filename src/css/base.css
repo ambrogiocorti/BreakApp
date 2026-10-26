@@ -667,3 +667,11 @@ gap:.55rem;padding:.35rem 0;font-size:.78rem!important;font-weight:650;}
 .notice-row strong{font-size:.75rem;color:var(--muted);}
 .notice-row p{margin:0;font-size:.9rem;overflow-wrap:anywhere;}
 .notice-row a,.notice-row button{justify-self:start;}
+
+/* Barista offline: pending-only encrypted staging, never a live cash receipt. */
+.offline-queue-card{margin:1.25rem 0;}
+.offline-queue-actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-bottom:1rem;}
+#offline-status{padding:.85rem 1rem;border:1px solid var(--border);border-radius:10px;font-size:.85rem;}
+#offline-status[data-type="error"]{color:#b42334;}
+#offline-lease-summary{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere;}
+#offline-entry-form:disabled{opacity:.5;}
