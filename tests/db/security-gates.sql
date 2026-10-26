@@ -22,7 +22,9 @@ begin
   where n.nspname in ('public','app_private') and p.prosecdef
     and not exists (
       select 1 from pg_catalog.unnest(coalesce(p.proconfig,array[]::text[])) cfg
-      where cfg='search_path='
+      -- PostgreSQL serializes an empty GUC either as the empty suffix
+      -- or as two quote characters (search_path="").
+      where cfg in ('search_path=','search_path=""')
     );
   if v_path is not null then
     raise exception 'SECURITY DEFINER functions without empty search_path: %',v_path;
