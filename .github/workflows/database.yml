@@ -92,3 +92,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/20_checkout_expiry_reconciliation.sql
       - name: Test cash refusal until signed Stripe expiry
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-expiry-cash.sql
+      - name: Apply signed Stripe asynchronous outcome migration 21
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/21_stripe_async_reconciliation.sql
+      - name: Test async payment success, failure, cash release and idempotency
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-async.sql
