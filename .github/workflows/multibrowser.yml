@@ -24,7 +24,7 @@ jobs:
         env:
           GITHUB_PAGES_BASE: /BreakApp/
           VITE_SUPABASE_URL: https://ynvswdyirngvdpudcikl.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_3QzE7OSAtpx-AmXMRd9IkA_rRpe1qhI
         run: |
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
           npm run verify
