@@ -36,3 +36,18 @@ self.addEventListener('fetch', (event) => {
     })));
   }
 });
+
+// Foreground-initiated notifications: clicking opens an app-controlled URL.
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  const raw=event.notification.data?.url||BASE_PATH;
+  let target;
+  try{target=new URL(raw,self.location.origin);}
+  catch{target=new URL(BASE_PATH,self.location.origin);}
+  if(target.origin!==self.location.origin)target=new URL(BASE_PATH,self.location.origin);
+  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
+    const open=clients.find(c=>c.url.startsWith(self.location.origin+BASE_PATH));
+    if(open){await open.focus();return;}
+    await self.clients.openWindow(target.href);
+  }));
+});
