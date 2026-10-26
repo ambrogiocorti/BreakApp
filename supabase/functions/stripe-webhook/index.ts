@@ -3,6 +3,7 @@
 // Authentication is Stripe-Signature verification over RAW body bytes;
 // STRIPE_WEBHOOK_SECRET is stored in Supabase Edge Function secrets only.
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
+import { classifyCheckoutSessionEvent } from './checkout-events.mjs';
 const respond=(value:unknown,status:number)=>new Response(JSON.stringify(value),{
  status,headers:{'content-type':'application/json','cache-control':'no-store'}
 });
@@ -87,19 +88,27 @@ Deno.serve(async request=>{
     if(error)return respond({error:'Rimborso non riconciliato'},500);
     return respond({received:true,result:data},200);
   }
-  if(evt.type!=='checkout.session.completed')
-   return respond({received:true,handled:false},200);
-  const session=evt.data?.object;
-  if(!session||session.object!=='checkout.session'||
-   session.mode!=='payment'||session.payment_status!=='paid'||
-   session.currency!=='eur'||session.amount_total<=0||
-   typeof session.payment_intent!=='string'||session.metadata?.attempt_id!==session.client_reference_id||
-   !/^acct_[A-Za-z0-9]+$/.test(evt.account||''))
-   return respond({error:'Evento pagamento incompleto o incongruente'},400);
+  const checkout=classifyCheckoutSessionEvent(evt);
+  if(checkout.kind==='ignored')return respond({received:true,handled:false},200);
+  if(checkout.kind==='invalid')
+   return respond({error:'Evento Checkout incompleto o incongruente'},400);
+  if(checkout.kind==='pending')
+   return respond({received:true,handled:true,result:'pending_async_payment'},200);
+  const session=checkout.session;
   const url=Deno.env.get('SUPABASE_URL'),
    key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if(!url||!key)return respond({error:'Backend non configurato'},503);
   const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  if(checkout.kind==='failed'){
+   const {data,error}=await admin.rpc('reconcile_signed_checkout_failure',{
+    p_event_id:evt.id,p_stripe_account:evt.account,
+    p_session:session.id,p_intent:session.payment_intent,
+    p_attempt:session.client_reference_id,p_amount:session.amount_total,
+    p_currency:session.currency
+   });
+   if(error)return respond({error:'Fallimento asincrono non riconciliato'},500);
+   return respond({received:true,result:data},200);
+  }
   const {data,error}=await admin.rpc('finalize_verified_checkout',{
    p_event_id:evt.id,p_event_account:evt.account,
    p_session:session.id,p_intent:session.payment_intent,
