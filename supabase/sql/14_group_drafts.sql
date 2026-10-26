@@ -244,12 +244,12 @@ create or replace function public.group_draft_details(p_group_id uuid)
 returns jsonb language plpgsql security definer set search_path=''
 as $details$
 declare v_group public.group_drafts%rowtype;v_user uuid:=auth.uid();
- v_role text;v_totals jsonb;v_my_lines jsonb;v_members jsonb;
+ v_role text;v_ready boolean;v_totals jsonb;v_my_lines jsonb;v_members jsonb;
 begin
  if v_user is null then raise exception 'Accesso richiesto';end if;
  select * into v_group from public.group_drafts where id=p_group_id;
  if not found then raise exception 'Gruppo non trovato';end if;
- select status into v_role from public.group_members
+ select status,ready into v_role,v_ready from public.group_members
    where group_id=p_group_id and user_id=v_user;
  if v_role is null then raise exception 'Non fai parte di questo gruppo';end if;
  select jsonb_build_object('count',coalesce(sum(i.quantity),0),
@@ -277,7 +277,7 @@ begin
  return jsonb_build_object('id',v_group.id,'title',v_group.title,
  'school_id',v_group.school_id,'bar_id',v_group.bar_id,
  'pickup_window_id',v_group.pickup_window_id,'status',v_group.status,
- 'my_status',v_role,'coordinator',v_group.coordinator_id=v_user,
+ 'my_status',v_role,'my_ready',v_ready,'coordinator',v_group.coordinator_id=v_user,
  'invite_token',case when v_group.coordinator_id=v_user then v_group.invite_token else null end,
  'requires_approval',v_group.requires_approval,'accepting_members',v_group.accepting_members,
  'max_members',v_group.max_members,'expires_at',v_group.updated_at+interval '24 hours',
