@@ -1,4 +1,6 @@
 -- Group draft integration, run after migration 14.
+-- Capture inventory baseline after all previous integration tests.
+select set_config('app.group_stock_before', (select allocated::text from public.daily_stock where product_id='aaaaaaaa-0000-4000-8000-000000000003' limit 1),false);
 set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
@@ -86,7 +88,7 @@ reset role;
 do $stock_untouched$
 begin
  if (select allocated from public.daily_stock
-    where product_id='aaaaaaaa-0000-4000-8000-000000000003')<>1
+    where product_id='aaaaaaaa-0000-4000-8000-000000000003')<>current_setting('app.group_stock_before')::integer
  then raise exception 'Draft group reserved stock';end if;
 end;$stock_untouched$;
 
