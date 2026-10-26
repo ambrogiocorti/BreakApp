@@ -73,7 +73,8 @@ begin
  join auth.users u on u.id=m.user_id
  join public.role_assignments r on r.membership_id=m.id
  where m.school_id=p_school_id and r.role_code in
- ('school_admin','bartender','warehouse_manager');
+ ('school_admin','bartender','warehouse_manager')
+ and not exists(select 1 from app_private.platform_admins pa where pa.user_id=u.id);
  return v_result;
 end;
 $list_staff$;
