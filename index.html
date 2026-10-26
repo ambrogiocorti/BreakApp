@@ -28,13 +28,13 @@
 
     <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Sezioni BreakApp" hidden>
       <a href="#menu" aria-current="page">▤ <span>Menu</span></a>
-      <span class="app-nav-disabled" aria-label="Ordini, non ancora disponibili">▣ <span>Ordini</span><small>In sviluppo</small></span>
+      <a href="#orders">▣ <span>Ordini</span></a>
       <span class="app-nav-disabled" aria-label="Gruppi, non ancora disponibili">♧ <span>Gruppi</span><small>In sviluppo</small></span>
       <a href="#accesso">♙ <span>Profilo</span></a>
     </nav>
     <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Sezioni BreakApp" hidden>
       <a href="#menu" aria-current="page"><span aria-hidden="true">▤</span><small>Menu</small></a>
-      <span class="app-nav-disabled" aria-label="Ordini non ancora disponibili"><span aria-hidden="true">▣</span><small>Ordini</small></span>
+      <a href="#orders"><span aria-hidden="true">▣</span><small>Ordini</small></a>
       <span class="app-nav-disabled" aria-label="Gruppi non ancora disponibili"><span aria-hidden="true">♧</span><small>Gruppi</small></span>
       <a href="#accesso"><span aria-hidden="true">♙</span><small>Profilo</small></a>
     </nav>
@@ -148,6 +148,79 @@
         </div>
       </section>
 
+
+      <section id="orders" class="container orders-section" aria-labelledby="orders-title" hidden>
+        <div class="section-heading">
+          <span class="eyebrow">LE TUE PRENOTAZIONI</span>
+          <h2 id="orders-title">I miei ordini</h2>
+          <p>Ordini confermati e registrati nel database. Lo stato viene aggiornato dal personale autorizzato.</p>
+        </div>
+        <button type="button" class="button button-outline button-small" id="orders-refresh">Aggiorna ordini</button>
+        <p id="orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div id="orders-list" class="orders-list"></div>
+      </section>
+      <section id="staff-orders-section" class="container orders-section" aria-labelledby="staff-orders-title" hidden>
+        <div class="section-heading">
+          <span class="eyebrow">AREA OPERATIVA · ACCESSO CONTROLLATO</span>
+          <h2 id="staff-orders-title">Ordini del bar</h2>
+          <p>Stati di preparazione, incassi al banco e consegne verificati dal server. Il sistema di cassa fiscale esterna e la scansione QR saranno integrati in un incremento successivo.</p>
+        </div>
+        <div class="staff-toolbar">
+          <label for="staff-search">Numero ordine</label>
+          <input id="staff-search" type="search" inputmode="numeric" placeholder="Cerca numero..." />
+          <button type="button" class="button button-outline button-small" id="staff-refresh">Aggiorna e verifica ruolo</button>
+        </div>
+        <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div id="staff-orders-list" class="orders-list"></div>
+      </section>
+
+      <dialog id="product-dialog" class="ba-dialog" aria-labelledby="product-name">
+        <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
+        <span class="auth-tag">PRODOTTO</span>
+        <h2 id="product-name"></h2>
+        <p id="product-description" class="catalog-help"></p>
+        <p id="product-price" class="ba-price"></p>
+        <label for="product-quantity">Quantità</label>
+        <input type="number" id="product-quantity" min="1" max="1000" step="1" value="1"/>
+        <button type="button" id="product-add" class="button button-primary ba-block">Aggiungi al carrello</button>
+      </dialog>
+      <dialog id="cart-dialog" class="ba-dialog" aria-labelledby="cart-heading">
+        <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
+        <h2 id="cart-heading">Il tuo carrello</h2>
+        <div id="cart-lines" class="ba-order-lines"></div>
+        <p id="cart-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <button type="button" class="button button-primary ba-block" id="cart-checkout" disabled>Continua con il ritiro</button>
+      </dialog>
+      <dialog id="order-stepper" class="ba-dialog" aria-labelledby="stepper-title">
+        <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
+        <span id="order-step-label" class="auth-tag">Passaggio 1 di 4</span>
+        <h2 id="stepper-title">Conferma prenotazione</h2>
+        <section data-step="1" aria-label="Carrello">
+          <h3>1. Carrello</h3>
+          <p>Hai scelto i prodotti nel catalogo. Il server ne verificherà prezzi e disponibilità al momento della conferma.</p>
+        </section>
+        <section data-step="2" aria-label="Ritiro" hidden>
+          <h3>2. Data e fascia di ritiro</h3>
+          <label for="order-window">Scegli una fascia tra quelle effettivamente configurate</label>
+          <select id="order-window" required></select>
+        </section>
+        <section data-step="3" aria-label="Pagamento" hidden>
+          <h3>3. Metodo di pagamento</h3>
+          <p><strong>Al ritiro</strong> — contanti o POS esterno, come consentito dal bar.</p>
+          <p class="catalog-help">Il pagamento online Stripe non è ancora integrato: non vengono effettuati addebiti online.</p>
+        </section>
+        <section data-step="4" aria-label="Riepilogo" hidden>
+          <h3>4. Verifica finale</h3>
+          <div id="order-review"></div>
+        </section>
+        <p id="order-checkout-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div class="order-actions">
+          <button type="button" class="button button-outline" id="order-back" hidden>Indietro</button>
+          <button type="button" class="button button-primary" id="order-next">Continua</button>
+          <button type="button" class="button button-primary" id="order-submit" hidden>Verifica posizione e conferma ordine</button>
+        </div>
+      </dialog>
+
       <section id="admin-catalog" class="container catalog-section" aria-labelledby="catalog-heading" hidden>
         <div class="section-heading">
           <span class="eyebrow">AREA ADMIN · DATI REALI</span>
@@ -197,6 +270,12 @@
         <p class="catalog-help catalog-footer-note">Le vendite, le scorte e gli ordini non sono ancora attivi: questa sezione gestisce esclusivamente il catalogo.</p>
       </section>
     </main>
+    <div id="cart-strip" class="cart-strip" hidden>
+      <button type="button" id="cart-open" class="button button-primary ba-block">
+        <span>Carrello · <span id="cart-count">0</span> articoli</span>
+        <strong id="cart-total">€ 0,00</strong>
+      </button>
+    </div>
 
     <footer class="site-footer"><div class="container footer-inner"><span>© BreakApp</span><span>Ambiente di test · Funzionalità abilitate progressivamente</span></div></footer>
 
