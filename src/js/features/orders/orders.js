@@ -39,6 +39,7 @@ export function initializeOrders(client) {
   let step=1,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
   let staffOrders=[];
   let staffContextSchool=null;
+  const stripeAttemptKeys=new Map();
 
   function total(){return cartSummary(cart,context.products);}
   function showCartBar(){
@@ -237,6 +238,35 @@ export function initializeOrders(client) {
           }));
         });
         box.append(ticket);
+      }
+      if(!['cancelled','delivered','no_show'].includes(o.status)&&
+        o.payment_status==='due'&&o.total_cents>0){
+        const stripe=elem('button','Paga online con Stripe (test)','button button-primary button-small');
+        stripe.type='button';
+        stripe.addEventListener('click',async()=>{
+          if(!confirm('Aprire Stripe Checkout in modalità test per '+formatEuro(o.total_cents)+'?')){
+            return;
+          }
+          stripe.disabled=true;
+          const key=stripeAttemptKeys.get(o.id)||crypto.randomUUID();
+          stripeAttemptKeys.set(o.id,key);
+          try{
+            const {data,error}=await client.functions.invoke('stripe-checkout-individual',{
+              body:{order_id:o.id,request_key:key}
+            });
+            if(error)throw error;
+            if(data?.error)throw new Error(data.error);
+            if(!data?.checkout_url||
+                !data.checkout_url.startsWith('https://checkout.stripe.com/')){
+              throw new Error('URL Stripe non verificato: transazione interrotta');
+            }
+            window.location.assign(data.checkout_url);
+          }catch(err){
+            report(feedback,'Pagamento test non avviato: '+(err.message||'Stripe non configurato'),true);
+            stripe.disabled=false;
+          }
+        });
+        box.append(stripe);
       }
       if(o.status==='confirmed'&&o.payment_status==='due'){
         const cancel=elem('button','Annulla ordine','button button-outline button-small');
