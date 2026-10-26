@@ -79,9 +79,10 @@ select public.finalize_verified_checkout(
  'cs_test_abcdefghijklmnopqrstuvwxyz','pi_abcdefg1234',
  current_setting('app.stripe_attempt')::uuid,250,'eur',true,'{}'::jsonb)
  as duplicate_result \gset
+select set_config('app.stripe_duplicate_result',:'duplicate_result',false);
 do $dedupe$
 begin
- if :'duplicate_result'<>'duplicate' then
+ if current_setting('app.stripe_duplicate_result')<>'duplicate' then
   raise exception 'Webhook event processed twice';end if;
  if (select count(*) from public.order_audit
   where order_id=current_setting('app.stripe_test_order')::uuid
