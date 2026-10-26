@@ -16,13 +16,13 @@ La versione precedente rendeva tutte le sezioni nella stessa pagina in verticale
 
 | Ruolo | Voci effettivamente navigabili |
 |---|---|
-| Cliente | Menu, I miei ordini, Profilo (assistenza raggiungibile da Profilo/ordine) |
+| Cliente | Menu, I miei ordini, Gruppi (bozze), Profilo (assistenza raggiungibile da Profilo/ordine) |
 | Barista | Ordini da preparare, Servizio e orari, Assistenza, Profilo |
 | Magazziniere | Scorte giornaliere, Profilo |
 | Admin scuola (AAL2) | Panoramica, Gestione ordini, Catalogo, Magazzino, Impostazioni bar, Calendario, Centro ticket, Profilo |
 | Super Admin (AAL2) | Piattaforma, Profilo |
 
-Non vengono create pagine finte per Stripe, gruppi, gestione globale scuole, cassa/offline e notifiche: sono ancora requisiti del Prompt Master non completati.
+Non vengono create pagine finte per Stripe, conferma/pagamenti di gruppo, gestione globale scuole, cassa/offline e notifiche: sono ancora requisiti del Prompt Master non completati.
 
 ## Funzionalità reali aggiunte
 

@@ -64,3 +64,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/13_platform_catalog.sql
       - name: Test platform product/catalogue management
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/platform-catalog.sql
+      - name: Apply group drafts migration 14
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/14_group_drafts.sql
+      - name: Test group membership, privacy and draft stock invariants
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-drafts.sql

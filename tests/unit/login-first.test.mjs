@@ -20,7 +20,7 @@ test('il menu reale resta invisibile agli utenti non autenticati', () => {
   assert.ok(auth.includes("document.body.dataset.authenticated = String(present);"));
 });
 
-test('workspace role-based: sidebar fissa, viste dedicate e gruppi non simulati', () => {
+test('workspace role-based: sidebar fissa, viste dedicate e bozze gruppo vere', () => {
   const shell = readFileSync(new URL('../../src/js/features/shell/workspace.js', import.meta.url), 'utf8');
   assert.ok(html.includes('id="app-mobile-nav"'));
   assert.ok(html.includes('id="app-desktop-nav"'));
@@ -32,7 +32,7 @@ test('workspace role-based: sidebar fissa, viste dedicate e gruppi non simulati'
   assert.ok(html.includes('id="order-stepper"'));
   assert.ok(shell.includes("['orders','I miei ordini'"));
   assert.ok(shell.includes("['warehouse-inventory','Scorte giornaliere'"));
-  assert.ok(!shell.includes("['groups','Gruppi'"));
+  assert.ok(shell.includes("['groups','Gruppi'"));
 });
 
 test('il nuovo QR TOTP non scavalca il fattore gia verificato', () => {

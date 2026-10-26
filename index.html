@@ -199,6 +199,67 @@
 
 
 
+      <section id="groups" class="container orders-section workspace-page" hidden aria-labelledby="groups-heading">
+        <div class="section-heading">
+          <span class="eyebrow">CLIENTE · GRUPPI</span>
+          <h2 id="groups-heading">I miei gruppi</h2>
+          <p>Organizza un ordine con i compagni. Una bozza non riserva scorte; la conferma e i pagamenti saranno disponibili solo dopo le verifiche finanziarie.</p>
+        </div>
+        <p id="groups-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div class="pilot-grid">
+          <article class="pilot-card">
+            <h3>Crea un gruppo</h3>
+            <form id="groups-create-form">
+              <label for="groups-create-title">Nome del gruppo</label>
+              <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Classe 5A" />
+              <label for="groups-school">Scuola</label><select id="groups-school" required></select>
+              <label for="groups-bar">Bar</label><select id="groups-bar" required></select>
+              <label for="groups-window">Data e fascia di ritiro</label><select id="groups-window" required></select>
+              <label for="groups-entry-mode">Accesso con invito</label>
+              <select id="groups-entry-mode"><option value="open">Ingresso diretto</option><option value="approval">Richiede approvazione coordinatore</option></select>
+              <label for="groups-limit">Numero massimo partecipanti (facoltativo)</label>
+              <input id="groups-limit" type="number" min="1" max="100" placeholder="Senza limite" />
+              <button class="button button-primary" type="submit">Crea bozza gruppo</button>
+            </form>
+          </article>
+          <article class="pilot-card">
+            <h3>Entra in un gruppo</h3>
+            <p class="catalog-help">All'ingresso viene richiesta la posizione una sola volta, per verificare che ti trovi vicino alla scuola.</p>
+            <form id="groups-join-form">
+              <label for="groups-invite-token">Link o codice invito</label>
+              <input id="groups-invite-token" required placeholder="Incolla il link ricevuto" />
+              <button class="button button-primary" type="submit">Verifica posizione e partecipa</button>
+            </form>
+            <h3>Gruppi recenti</h3>
+            <button type="button" id="groups-refresh" class="button button-outline button-small">Aggiorna elenco</button>
+            <div id="groups-list" class="service-list"></div>
+          </article>
+        </div>
+        <article id="group-detail" class="pilot-card group-detail" hidden>
+          <div class="section-heading"><h3 id="group-detail-title">Dettaglio gruppo</h3><p id="group-detail-meta"></p></div>
+          <div id="group-invite" class="group-invite" hidden>
+            <label for="group-invite-link">Link da condividere</label>
+            <input id="group-invite-link" readonly />
+            <button id="group-invite-copy" type="button" class="button button-outline button-small">Copia invito</button>
+          </div>
+          <div id="group-aggregate" class="service-summary"></div>
+          <div id="group-personal" hidden>
+            <h4>Il mio carrello</h4>
+            <p class="catalog-help">Ogni partecipante può modificare soltanto il proprio carrello, finché non seleziona «Ho finito».</p>
+            <form id="group-cart-form">
+              <div id="group-products" class="warehouse-items"></div>
+              <button class="button button-primary" type="submit">Salva il mio carrello</button>
+            </form>
+            <button id="group-ready" type="button" class="button button-outline">Ho finito</button>
+          </div>
+          <div id="group-coordinator-panel" hidden>
+            <h4>Coordinatore · richieste e avanzamento</h4>
+            <div id="group-members" class="service-list"></div>
+          </div>
+          <p class="catalog-help">Conferma definitiva, pagamenti Stripe e ritiro unico non sono ancora disponibili in questo incremento. Non è possibile effettuare un incasso dalla bozza.</p>
+        </article>
+      </section>
+
       <section id="support-center" class="container orders-section support-center" aria-labelledby="support-heading" hidden>
         <div class="section-heading">
           <span class="eyebrow">PROFILO · ASSISTENZA</span>

@@ -8,6 +8,7 @@ test('role navigation never exposes another role\'s workspace',()=>{
  assert.equal(allowedRoute('bartender','admin-catalog'),false);
  assert.equal(allowedRoute('school_admin','admin-catalog'),true);
  assert.equal(allowedRoute('customer','orders'),true);
+ assert.equal(allowedRoute('customer','groups'),true);
  assert.equal(allowedRoute('platform_admin','platform-overview'),true);
 });
 test('contexts are derived from returned memberships not a local claimed role',()=>{
