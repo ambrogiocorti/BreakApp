@@ -135,7 +135,7 @@ create table if not exists public.order_audit (
 -- La gestione d'impatto/annullamenti dovrà passare da un workflow dedicato.
 create or replace function app_private.prevent_booked_window_shift()
 returns trigger language plpgsql set search_path=''
-as $
+as $window_guard$
 begin
   if (new.starts_at is distinct from old.starts_at
       or new.ends_at is distinct from old.ends_at)
@@ -147,7 +147,7 @@ begin
   end if;
   return new;
 end;
-$;
+$window_guard$;
 drop trigger if exists pickup_window_shift_guard on public.pickup_windows;
 create trigger pickup_window_shift_guard before update on public.pickup_windows
 for each row execute function app_private.prevent_booked_window_shift();
@@ -510,7 +510,7 @@ create or replace function public.configure_school_booking(
   p_max_unpaid integer, p_approval_product_threshold integer,
   p_approval_amount_threshold_cents integer
 ) returns void language plpgsql security definer set search_path=''
-as $
+as $admin_config$
 begin
   if auth.uid() is null or (auth.jwt()->>'aal')<>'aal2' then
     raise exception 'È richiesta autenticazione Admin con 2FA';
@@ -538,7 +538,7 @@ begin
   where id=p_school_id;
   if not found then raise exception 'Scuola non disponibile'; end if;
 end;
-$;
+$admin_config$;
 
 revoke all on function public.configure_school_booking(
   uuid,double precision,double precision,integer,integer,integer,integer,integer,integer
