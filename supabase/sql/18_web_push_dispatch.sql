@@ -16,7 +16,13 @@ revoke all on app_private.notification_deliveries from public,anon,authenticated
 -- endpoint: SSRF guard for known browser push providers.
 alter table public.push_subscriptions add constraint subscription_known_push_vendor
 check(
- endpoint ~ '^https://(fcm.googleapis.com|updates.push.services.mozilla.com|push.services.mozilla.com|web.push.apple.com|.*\.notify.windows.com)(/|$)'
+ split_part(endpoint,'/',1)='https:' and
+ (
+  split_part(endpoint,'/',3) in (
+    'fcm.googleapis.com','updates.push.services.mozilla.com',
+    'push.services.mozilla.com','web.push.apple.com'
+  ) or split_part(endpoint,'/',3) like '%.notify.windows.com'
+ )
 );
 alter table public.push_subscriptions add constraint subscription_safe_keys
 check(length(p256dh) between 30 and 200 and length(auth_key) between 10 and 100);
@@ -51,13 +57,13 @@ begin
  with selected as (
   select j.id from app_private.notification_jobs j
   join public.push_subscriptions s on s.id=j.subscription_id
-  where j.status in ('pending','retry') and j.next_attempt_at<=now()
+  where j.status in ('pending','retry','sending') and j.next_attempt_at<=now()
     and j.attempts<6 and s.disabled_at is null
   order by j.next_attempt_at,j.created_at for update of j skip locked
   limit p_limit
  ), claimed as (
   update app_private.notification_jobs j set status='sending',
-   attempts=j.attempts+1
+   attempts=j.attempts+1,next_attempt_at=now()+interval '5 minutes'
   from selected where j.id=selected.id
   returning j.id,j.subscription_id,j.notice_id,j.attempts
  )
