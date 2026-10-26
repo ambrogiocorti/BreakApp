@@ -15,7 +15,7 @@ select public.create_group_draft(
  'Gruppo classe A',true,3) as repeated_group \gset
 select case when :'group_id'=:'repeated_group' then 'OK' else (1/0)::text end as group_idempotence;
 select set_config('app.test_invite',
- (select invite_token::text from public.group_drafts where id=:'group_id'::uuid),false);
+ (public.group_draft_details(:'group_id'::uuid)->>'invite_token'),false);
 -- group_drafts is intentionally not directly accessible even to its coordinator.
 do $no_direct_table$
 declare denied boolean:=false;
@@ -38,7 +38,7 @@ begin
  exception when others then denied:=true;end;
  if not denied then raise exception 'Distant participant joined';end if;
 end;$geo_denied$;
-select public.join_group_draft(:'app.test_invite'::uuid,45,9,10,now());
+select public.join_group_draft(current_setting('app.test_invite')::uuid,45,9,10,now());
 do $join_pending$
 declare status_text text;
 begin
