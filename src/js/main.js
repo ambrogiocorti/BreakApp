@@ -11,6 +11,7 @@ import { initializeWorkspace } from './features/shell/workspace.js';
 import { initializeWarehouseInventory } from './features/warehouse/inventory.js';
 import { initializeWorkspaceDashboards } from './features/shell/dashboards.js';
 import { initializePlatformPilot } from './features/shell/platform-pilot.js';
+import { initializeGroupDrafts } from './features/groups/groups.js';
 
 initializeTheme();
 const client = initializeAuth(readSupabaseConfig(import.meta.env));
@@ -22,6 +23,7 @@ initializeSupportCenter(client);
 initializeWarehouseInventory(client);
 initializeWorkspaceDashboards(client);
 initializePlatformPilot(client);
+initializeGroupDrafts(client);
 initializeWorkspace(client);
 
 // Cache statica soltanto: nessuna vendita, consegna o incasso offline in Fase 1.
