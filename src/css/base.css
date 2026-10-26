@@ -651,3 +651,19 @@ gap:.55rem;padding:.35rem 0;font-size:.78rem!important;font-weight:650;}
 #group-cart-form{display:grid;gap:1rem;}
 #group-coordinator-panel{margin:1.5rem 0;}
 @media(max-width:620px){.group-invite{grid-template-columns:1fr;}.group-invite label{grid-column:auto;}}
+
+/* Private real-time notice center. No claim of closed-browser Web Push. */
+.notice-button{position:relative;font-size:1.25rem;}
+.notice-count{position:absolute;top:-5px;right:-6px;border-radius:99px;background:#165be7;color:white;
+ font-size:.6rem;font-weight:800;min-width:18px;min-height:18px;padding:2px;display:grid;place-items:center;}
+.notice-count[hidden],.notice-button[hidden]{display:none!important;}
+.notice-dialog{width:min(94vw,550px);max-height:88dvh;overflow:auto;border-radius:16px;border:1px solid var(--border);
+ padding:1.3rem;background:var(--surface);color:var(--text);}
+.notice-dialog::backdrop{background:rgba(14,25,49,.55);}
+.notice-dialog .dialog-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.notice-dialog .dialog-header h2{font-size:1.3rem;margin:0;}
+.notice-row{padding:.85rem 1rem;border:1px solid var(--border);border-radius:11px;display:grid;gap:.45rem;}
+.notice-row.notice-unread{border-left:3px solid #1458ed;}
+.notice-row strong{font-size:.75rem;color:var(--muted);}
+.notice-row p{margin:0;font-size:.9rem;overflow-wrap:anywhere;}
+.notice-row a,.notice-row button{justify-self:start;}
