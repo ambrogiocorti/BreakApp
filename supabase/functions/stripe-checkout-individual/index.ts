@@ -29,7 +29,7 @@ async function stripe(endpoint:string,account:string,key:string,init?:RequestIni
  return data;
 }
 Deno.serve(async(req)=>{
- if(req.method==='OPTIONS')return json({},204);
+ if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':origin,'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'authorization, apikey, content-type','vary':'Origin'}});
  if(req.method!=='POST')return json({error:'Metodo non consentito'},405);
  if(req.headers.get('Origin')!==origin)return json({error:'Origine non autorizzata'},403);
  try{
