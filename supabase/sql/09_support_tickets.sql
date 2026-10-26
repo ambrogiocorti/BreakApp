@@ -93,6 +93,10 @@ as $support_acl$
      and m.membership_status='active' and r.role_code='school_admin');
 $support_acl$;
 revoke all on function app_private.can_manage_support_school(uuid) from public,anon,authenticated;
+-- RLS authenticated deve poter eseguire la helper solo nel namespace privato,
+-- non esposto alla Data API. La funzione ritorna esclusivamente boolean.
+grant usage on schema app_private to authenticated;
+grant execute on function app_private.can_manage_support_school(uuid) to authenticated;
 
 create policy support_tickets_owner_or_admin on public.support_tickets
 for select to authenticated using (
