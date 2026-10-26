@@ -174,6 +174,7 @@ create or replace function public.set_bar_weekly_hours(
 as $hours$
 declare v_bar public.bars%rowtype; v_period record;
  v_last_end time without time zone;
+ v_tz text;
 begin
  if p_weekday not between 0 and 6 or p_periods is null or
     jsonb_typeof(p_periods)<>'array' or jsonb_array_length(p_periods)>8 then
@@ -199,11 +200,12 @@ begin
    v_last_end := v_period.ends_at;
  end loop;
 
+ select timezone into v_tz from public.schools where id=v_bar.school_id;
  -- Una modifica non può lasciare fasce future già pubblicate senza apertura.
  if exists(
    select 1 from public.pickup_windows w
    where w.bar_id=p_bar_id and w.is_active
-     and w.service_date >= (now() at time zone 'Europe/Rome')::date
+     and w.service_date >= (now() at time zone v_tz)::date
      and extract(dow from w.service_date)::int = p_weekday
      and not exists(
        select 1 from jsonb_to_recordset(p_periods) x(starts_at time,ends_at time)
