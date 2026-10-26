@@ -15,7 +15,7 @@
 - Vite esclusivamente come strumento di build.
 - Supabase Auth/Postgres/RLS con 2FA TOTP obbligatoria per scritture Admin sul catalogo; tutte le scritture sono autorizzate server-side.
 - GitHub Pages come hosting frontend scelto il 26 ottobre 2026; Vercel è stato
-  l'ambiente di prova temporaneo. L'attivazione Pages è ancora un passaggio esterno.
+  l'ambiente di prova temporaneo. GitHub Pages è già attivo; il monitoraggio esterno statico è abilitato.
 - GitHub Actions per sintassi, test e build a ogni push.
 
 ## Verifiche automatiche
