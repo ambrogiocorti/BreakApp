@@ -181,6 +181,11 @@ export function initializePickupQr(client) {
       report(err.message||'Non è stato possibile aprire la fotocamera.',true);
     }finally{cameraBtn.disabled=false;}
   }
+  window.addEventListener('breakapp:workspace-context',()=>{
+    // Role/school switches invalidate a visible scanner and release its camera.
+    if(scanDialog.open)scanDialog.close();
+    stopCamera();
+  });
   cameraBtn.addEventListener('click',()=>void startCamera());
   manual.addEventListener('submit',event=>{
     event.preventDefault();
