@@ -6,6 +6,7 @@ import { initializePublicMenu } from './features/menu/menu.js';
 import { initializeOrders } from './features/orders/orders.js';
 import { initializePickupQr } from './features/orders/pickup-qr.js';
 import { initializeBarService } from './features/operations/bar-service.js';
+import { initializeSupportCenter } from './features/support/support.js';
 
 initializeTheme();
 const client = initializeAuth(readSupabaseConfig(import.meta.env));
@@ -13,6 +14,7 @@ initializePublicMenu(client);
 initializeOrders(client);
 initializePickupQr(client);
 initializeBarService(client);
+initializeSupportCenter(client);
 
 // Cache statica soltanto: nessuna vendita, consegna o incasso offline in Fase 1.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
