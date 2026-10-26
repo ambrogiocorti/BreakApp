@@ -65,6 +65,22 @@ select public.submit_individual_order(
 select case when :'order_id'=:'repeat_id' then 'OK idempotence'
   else (1/0)::text end as check_idempotence;
 
+-- Con ordini attivi l'Admin non può cambiare l'orario con un UPDATE diretto.
+reset role;
+do $
+declare denied boolean:=false;
+begin
+ begin
+   update public.pickup_windows set starts_at=time '10:51'
+   where id='aaaaaaaa-0000-4000-8000-000000000005';
+ exception when others then
+   if position('La fascia ha ordini attivi' in sqlerrm)>0 then denied:=true;
+   else raise; end if;
+ end;
+ if not denied then raise exception 'Fascia modificata nonostante ordine attivo'; end if;
+end; $;
+set role authenticated;
+
 -- Altro cliente: non può vedere ordine di A e non deve superare stock=1.
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
 do $$
@@ -110,5 +126,39 @@ begin
  end if;
  if (select count(*) from public.counter_payments)<>1 then
    raise exception 'Incasso non idempotente';
+ end if;
+end; $$;
+
+-- Solo un Admin della scuola con AAL2 può configurare posizione e prenotazioni.
+insert into auth.users(id,email)
+values('44444444-4444-4444-8444-444444444444','admin-a@example.invalid');
+insert into public.school_memberships(id,school_id,user_id)
+values('aaaaaaaa-0000-4000-8000-000000000006',
+'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','44444444-4444-4444-8444-444444444444');
+insert into public.role_assignments(membership_id,role_code)
+values('aaaaaaaa-0000-4000-8000-000000000006','school_admin');
+set role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',false);
+select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
+do $$
+declare denied boolean:=false;
+begin
+ begin
+   perform public.configure_school_booking(
+     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',45,9,1000,30,10,3,null,null);
+ exception when others then
+   if position('2FA' in sqlerrm)>0 then denied:=true; else raise; end if;
+ end;
+ if not denied then raise exception 'Admin without MFA changed configuration'; end if;
+end; $$;
+select set_config('request.jwt.claims','{"aal":"aal2","is_anonymous":false}',false);
+select public.configure_school_booking(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',45,9,900,30,10,3,null,null);
+reset role;
+do $$
+begin
+ if (select pickup_radius_m from public.schools where id=
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')<>900 then
+  raise exception 'Admin configuration was not saved';
  end if;
 end; $$;
