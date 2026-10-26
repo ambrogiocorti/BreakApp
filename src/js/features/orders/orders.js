@@ -217,7 +217,7 @@ export function initializeOrders(client) {
     if(!user)return;
     report(feedback,'Caricamento ordini…');
     const {data,error}=await client.from('orders')
-      .select('id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
+      .select('id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
       .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(50);
     if(error){report(feedback,'Ordini non disponibili: '+error.message,true);return;}
     history.replaceChildren();
@@ -247,6 +247,14 @@ export function initializeOrders(client) {
           await loadOrders();
         });box.append(cancel);
       }
+      const help=elem('button','Richiedi assistenza','button button-outline button-small');
+      help.type='button';
+      help.addEventListener('click',()=>{
+        window.dispatchEvent(new CustomEvent('breakapp:support-order',{
+          detail:{schoolId:o.school_id,orderId:o.id}
+        }));
+      });
+      box.append(help);
       history.append(box);
     }
     if(!history.childElementCount)history.append(elem('p','Nessun ordine effettuato.'));
