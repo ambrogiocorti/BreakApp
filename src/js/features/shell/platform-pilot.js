@@ -21,7 +21,7 @@ export function initializePlatformPilot(client){
   windowsList=$('pilot-windows-list'),stockSummary=$('pilot-stock-summary'),
   readiness=$('pilot-readiness');
  let allowed=false,schools=[],bars=[],products=[],categories=[],staff=[],hours=[],windows=[],stocks=[],token=0;
- let currentUser=null;
+ let currentUser=null,authEpoch=0;
 
  for(const [id] of [['pilot-window-date'],['pilot-stock-date']]){
    $(id).value=todayRome();
@@ -375,11 +375,20 @@ export function initializePlatformPilot(client){
  $('pilot-reload').addEventListener('click',()=>void refresh());
 
  async function enter(){
-   if(!currentUser)return;
+   const seq=++authEpoch;
+   // A workspace context can arrive before this module's initial getUser().
+   // Always validate the session now, never let an older async result re-open UI.
+   const session=await client.auth.getUser();
+   if(seq!==authEpoch)return;
+   currentUser=!session.error?session.data?.user||null:null;
+   if(!currentUser){
+     allowed=false;section.hidden=true;return;
+   }
    const [role,level]=await Promise.all([
      client.rpc('is_current_platform_admin'),
      client.auth.mfa.getAuthenticatorAssuranceLevel()
    ]);
+   if(seq!==authEpoch)return;
    allowed=!role.error&&role.data===true&&!level.error&&level.data?.currentLevel==='aal2';
    section.hidden=!allowed;
    if(allowed)await refresh();
@@ -387,11 +396,11 @@ export function initializePlatformPilot(client){
  }
  window.addEventListener('breakapp:workspace-context',event=>{
    if(event.detail?.role==='platform_admin')void enter();
-   else {allowed=false;section.hidden=true;}
+   else {authEpoch++;allowed=false;section.hidden=true;}
  });
  client.auth.onAuthStateChange((_e,session)=>queueMicrotask(()=>{
    currentUser=session?.user||null;
-   if(!currentUser){token++;allowed=false;section.hidden=true;schools=[];bars=[];}
+   if(!currentUser){authEpoch++;token++;allowed=false;section.hidden=true;schools=[];bars=[];}
  }));
  client.auth.getUser().then(({data,error})=>{if(!error)currentUser=data?.user||null;});
 }
