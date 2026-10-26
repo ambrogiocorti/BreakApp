@@ -28,12 +28,14 @@ jobs:
           persist-credentials: false
       - name: Bootstrap Supabase Auth stub
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/bootstrap.sql
-      - name: Apply migrations 01, 03, 04, 05 and 06
+      - name: Apply migrations 01, 03, 04, 05, 06 and 07
         run: |
-          for file in supabase/sql/01_breakapp_foundations.sql supabase/sql/03_catalog_admin.sql supabase/sql/04_individual_orders_core.sql supabase/sql/05_food_info_media.sql supabase/sql/06_fix_storage_object_scope.sql; do
+          for file in supabase/sql/01_breakapp_foundations.sql supabase/sql/03_catalog_admin.sql supabase/sql/04_individual_orders_core.sql supabase/sql/05_food_info_media.sql supabase/sql/06_fix_storage_object_scope.sql supabase/sql/07_bar_service_calendar.sql; do
             docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
           done
       - name: Test isolation, idempotence and stock
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/orders-smoke.sql
       - name: Test catalog metadata and tenant media permissions
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/catalog-media.sql
+      - name: Test opening hours, pause, closures and customer notices
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/service-calendar.sql
