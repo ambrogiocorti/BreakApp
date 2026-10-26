@@ -61,6 +61,7 @@ select public.platform_create_pickup_window(
  (now() at time zone 'Europe/Rome')::date+2,
  time '10:40',time '10:50'
 ) as window_id \gset
+select set_config('app.pilot_window_id',:'window_id',false);
 select public.platform_set_stock(
  'aaaaaaaa-0000-4000-8000-000000000001',
  'aaaaaaaa-0000-4000-8000-000000000003',
@@ -74,7 +75,7 @@ select public.platform_set_product_foodinfo(
 do $check_operations$
 begin
  if not exists(select 1 from public.pickup_windows
-   where id=:'window_id'::uuid) then raise exception 'Window not saved';end if;
+   where id=current_setting('app.pilot_window_id')::uuid) then raise exception 'Window not saved';end if;
  if not exists(select 1 from public.daily_stock
    where product_id='aaaaaaaa-0000-4000-8000-000000000003'
    and capacity=100 and service_date=(now() at time zone 'Europe/Rome')::date+2)
