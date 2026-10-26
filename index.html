@@ -346,6 +346,54 @@
         </div>
       </section>
 
+      <section id="offline-terminal" class="container workspace-page" hidden aria-labelledby="offline-terminal-title">
+        <div class="section-heading">
+          <span class="eyebrow">BARISTA · DISPOSITIVO AUTORIZZATO</span>
+          <h2 id="offline-terminal-title">Operazioni offline in attesa</h2>
+          <p>Registrazioni locali cifrate, non contabilizzate e non considerate consegnate finché il server non ne completa la verifica.</p>
+        </div>
+        <p id="offline-status" role="status" aria-live="polite"></p>
+        <div class="pilot-grid">
+          <article class="pilot-card">
+            <h3>Autorizzazione e blocco</h3>
+            <p id="offline-lease-summary">Nessun dispositivo autorizzato.</p>
+            <form id="offline-activate-form">
+              <label for="offline-activate-pin">PIN dispositivo (6–12 cifre)</label>
+              <input id="offline-activate-pin" type="password" inputmode="numeric"
+                autocomplete="new-password" minlength="6" maxlength="12" required pattern="[0-9]{6,12}"/>
+              <button type="submit" class="button button-primary">Autorizza questo dispositivo online</button>
+            </form>
+            <form id="offline-unlock-form" hidden>
+              <label for="offline-unlock-pin">PIN per sbloccare la coda locale</label>
+              <input id="offline-unlock-pin" type="password" inputmode="numeric"
+                autocomplete="off" minlength="6" maxlength="12" required pattern="[0-9]{6,12}"/>
+              <button type="submit" class="button button-primary">Sblocca il dispositivo</button>
+            </form>
+            <button id="offline-lock" type="button" class="button button-outline button-small">Blocca adesso</button>
+          </article>
+          <article class="pilot-card">
+            <h3>Nuova operazione da verificare</h3>
+            <p class="catalog-help">Inserisci solo un riepilogo tecnico, senza nomi o dati degli studenti. La cifra non viene incassata o registrata nella cassa del server.</p>
+            <form id="offline-entry-form">
+              <label for="offline-entry-amount">Importo dichiarato (€)</label>
+              <input id="offline-entry-amount" inputmode="decimal" placeholder="2,50" required/>
+              <label for="offline-entry-note">Riferimento interno (facoltativo, senza dati personali)</label>
+              <input id="offline-entry-note" maxlength="120" placeholder="Es. vendita banco"/>
+              <button type="submit" class="button button-primary">Salva bozza cifrata sul dispositivo</button>
+            </form>
+          </article>
+        </div>
+        <article class="pilot-card offline-queue-card">
+          <h3>Coda locale e riconnessione</h3>
+          <p class="catalog-help">Una volta inviati, gli eventi vengono messi in quarantena sul server. La registrazione definitiva richiede una riconciliazione separata: **non sono ricevute**.</p>
+          <div class="offline-queue-actions">
+            <button id="offline-refresh" type="button" class="button button-outline button-small">Aggiorna coda</button>
+            <button id="offline-sync" type="button" class="button button-primary button-small">Invia al server per verifica</button>
+          </div>
+          <div id="offline-queue" class="service-list"></div>
+        </article>
+      </section>
+
       <section id="bar-operations" class="container orders-section" aria-labelledby="bar-operations-title" hidden>
         <div class="section-heading">
           <span class="eyebrow">PERSONALE AUTORIZZATO · STATO DEL SERVIZIO</span>
