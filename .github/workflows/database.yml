@@ -55,3 +55,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/11_superadmin_not_customer.sql
       - name: Test Super Admin customer-order prohibition
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/superadmin-not-customer.sql
+      - name: Apply pilot platform provisioning migration
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/12_pilot_superadmin_operations.sql
+      - name: Test privileged staff and service setup
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/platform-pilot.sql
