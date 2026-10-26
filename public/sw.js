@@ -1,6 +1,7 @@
 // Fase 1: SOLO cache di asset e shell. Nessuna operazione di business offline.
-const CACHE_NAME = 'breakapp-shell-v3';
-const SHELL_URL = '/';
+const CACHE_NAME = 'breakapp-shell-v4';
+const BASE_PATH = new URL('./', self.location.href).pathname;
+const SHELL_URL = BASE_PATH;
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add(SHELL_URL)));
   self.skipWaiting();
@@ -25,7 +26,7 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => caches.match(SHELL_URL)));
     return;
   }
-  if (url.pathname.startsWith('/assets/') || url.pathname === '/icon-placeholder.svg') {
+  if (url.pathname.startsWith(BASE_PATH+'assets/') || url.pathname === BASE_PATH+'icon-placeholder.svg') {
     event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
       if (response.ok) {
         const copy = response.clone();
