@@ -59,3 +59,8 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/12_pilot_superadmin_operations.sql
       - name: Test privileged staff and service setup
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/platform-pilot.sql
+
+      - name: Apply platform catalogue migration 13
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/13_platform_catalog.sql
+      - name: Test platform product/catalogue management
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/platform-catalog.sql
