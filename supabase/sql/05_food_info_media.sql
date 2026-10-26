@@ -49,8 +49,8 @@ for insert to authenticated with check (
     from public.school_memberships m
     join public.role_assignments r on r.membership_id=m.id
     join public.bars b on b.school_id=m.school_id
-    where m.school_id::text = split_part(name,'/',1)
-      and b.id::text = split_part(name,'/',2)
+    where m.school_id::text = split_part(storage.objects.name,'/',1)
+      and b.id::text = split_part(storage.objects.name,'/',2)
       and b.is_active
       and m.user_id = (select auth.uid())
       and m.membership_status='active'
@@ -75,8 +75,8 @@ using (
     select 1 from public.school_memberships m
     join public.role_assignments r on r.membership_id=m.id
     join public.bars b on b.school_id=m.school_id
-    where m.school_id::text=split_part(name,'/',1)
-      and b.id::text=split_part(name,'/',2)
+    where m.school_id::text=split_part(storage.objects.name,'/',1)
+      and b.id::text=split_part(storage.objects.name,'/',2)
       and m.user_id=(select auth.uid())
       and m.membership_status='active'
       and r.role_code='school_admin'
