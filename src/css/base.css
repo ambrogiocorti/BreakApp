@@ -574,3 +574,10 @@ body[data-workspace="true"] #app-mobile-nav[hidden],
 body[data-workspace="true"] #workspace-page-head[hidden]{
   display:none!important;
 }
+
+.workspace-profile-switcher{padding:1.05rem 1.15rem;background:var(--surface-soft);
+ border:1px solid var(--border);border-radius:13px;margin:1.2rem 0;}
+.workspace-profile-switcher label{display:block;font-size:.8rem;font-weight:800;margin-bottom:.55rem;}
+.workspace-profile-switcher select{width:100%;min-height:45px;background:var(--surface);
+ color:var(--text);border:1px solid var(--border);border-radius:10px;padding:.7rem;}
+.workspace-profile-switcher p{margin:.65rem 0 0;font-size:.73rem;}
