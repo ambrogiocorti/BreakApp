@@ -1,4 +1,5 @@
 import { parseWeeklyPeriods, formatWeeklyPeriods, WEEKDAY_LABELS } from '../operations/calendar-core.js';
+import { parseEuroToCents, formatEuro } from '../catalog/utils.js';
 
 const $=id=>document.getElementById(id);
 const textNode=(tag,text='',cls='')=>{const x=document.createElement(tag);x.textContent=text;x.className=cls;return x;};
@@ -19,7 +20,7 @@ export function initializePlatformPilot(client){
   staffList=$('pilot-staff-list'),hoursList=$('pilot-hours-list'),
   windowsList=$('pilot-windows-list'),stockSummary=$('pilot-stock-summary'),
   readiness=$('pilot-readiness');
- let allowed=false,schools=[],bars=[],products=[],staff=[],hours=[],windows=[],stocks=[],token=0;
+ let allowed=false,schools=[],bars=[],products=[],categories=[],staff=[],hours=[],windows=[],stocks=[],token=0;
  let currentUser=null;
 
  for(const [id] of [['pilot-window-date'],['pilot-stock-date']]){
@@ -30,6 +31,12 @@ export function initializePlatformPilot(client){
    const wrapper=textNode('label','', 'pilot-allergen-label');
    const check=document.createElement('input');check.type='checkbox';check.value=code;
    wrapper.append(check,textNode('span',label));checklist.append(wrapper);
+ }
+ const productAllergens=$('pilot-product-allergens');
+ for(const [code,label] of allergens){
+   const wrapper=textNode('label','','pilot-allergen-label');
+   const check=document.createElement('input');check.type='checkbox';check.value=code;
+   wrapper.append(check,textNode('span',label));productAllergens.append(wrapper);
  }
  const say=(msg,error=false)=>{status.textContent=msg;status.dataset.type=error?'error':'information';};
  const school=()=>schools.find(s=>s.id===schoolSelect.value);
@@ -96,6 +103,52 @@ export function initializePlatformPilot(client){
        w.service_date+' · '+w.starts_at.slice(0,5)+'–'+w.ends_at.slice(0,5),
        'service-list-item'));
  }
+ function renderCatalog(){
+   const catEdit=$('pilot-category-edit'),productEdit=$('pilot-product-edit');
+   const oldCategory=catEdit.value,oldProduct=productEdit.value;
+   replaceOptions(catEdit,[['','Nuova categoria'],...categories.map(x=>[x.id,x.name])],oldCategory);
+   replaceOptions(productEdit,[['','Nuovo prodotto'],...products.map(x=>[x.id,x.name])],oldProduct);
+   replaceOptions($('pilot-product-category'),
+     categories.filter(x=>x.is_active).map(x=>[x.id,x.name]),
+     $('pilot-product-category').value);
+   const catList=$('pilot-category-list'),productList=$('pilot-product-list');
+   catList.replaceChildren();productList.replaceChildren();
+   if(!categories.length)catList.append(textNode('p','Non ci sono ancora categorie.'));
+   for(const category of categories){
+     const row=textNode('div','','service-list-item');
+     row.append(textNode('strong',category.name),
+       textNode('span',category.is_active?'Visibile':'Nascosta'));
+     catList.append(row);
+   }
+   if(!products.length)productList.append(textNode('p','Non ci sono ancora prodotti.'));
+   for(const p of products){
+     const row=textNode('div','','service-list-item');
+     row.append(textNode('strong',p.name+' · '+formatEuro(p.price_cents)),
+       textNode('span',(p.is_active?'Pubblicato':'Non pubblicato')+
+         ' · '+(categories.find(c=>c.id===p.category_id)?.name||'Categoria assente')));
+     productList.append(row);
+   }
+   fillSelectedCategory();fillSelectedProduct();
+ }
+ function fillSelectedCategory(){
+   const c=categories.find(c=>c.id===$('pilot-category-edit').value);
+   $('pilot-category-name').value=c?.name||'';
+   $('pilot-category-active').checked=c?.is_active??true;
+ }
+ function fillSelectedProduct(){
+   const p=products.find(p=>p.id===$('pilot-product-edit').value);
+   $('pilot-product-category').value=p?.category_id||
+     $('pilot-product-category').options[0]?.value||'';
+   $('pilot-product-name').value=p?.name||'';
+   $('pilot-product-description').value=p?.description||'';
+   $('pilot-product-price').value=p?String(p.price_cents/100).replace('.',','):'';
+   $('pilot-product-ingredients').value=p?.ingredients||'';
+   $('pilot-product-active').checked=p?.is_active??true;
+   $('pilot-product-image').value='';
+   productAllergens.querySelectorAll('input[type="checkbox"]').forEach(x=>{
+     x.checked=Boolean(p?.allergens?.includes(x.value));
+   });
+ }
  function renderProducts(){
    replaceOptions($('pilot-stock-product'),products.map(p=>[p.id,p.name]),
     $('pilot-stock-product').value);
@@ -153,12 +206,14 @@ export function initializePlatformPilot(client){
    readiness.prepend(msg);
  }
  async function updateBar(){
-   const b=bar();products=[];hours=[];windows=[];stocks=[];staff=[];
-   if(!b){renderProducts();renderWindows();renderHours();renderReadiness();return;}
+   const b=bar();products=[];categories=[];hours=[];windows=[];stocks=[];staff=[];
+   if(!b){renderCatalog();renderProducts();renderWindows();renderHours();renderReadiness();return;}
    const myToken=++token;
    say('Verifica impostazioni e registrazioni su Supabase…');
-   const [p,h,w,st]=await Promise.all([
-     client.from('products').select('id,name,ingredients,allergens,is_active')
+   const [p,c,h,w,st]=await Promise.all([
+     client.from('products').select('id,category_id,name,description,price_cents,ingredients,allergens,image_path,is_active')
+       .eq('school_id',b.school_id).eq('bar_id',b.id).order('name'),
+     client.from('categories').select('id,name,is_active')
        .eq('school_id',b.school_id).eq('bar_id',b.id).order('name'),
      client.from('bar_opening_hours').select('weekday,starts_at,ends_at')
        .eq('school_id',b.school_id).eq('bar_id',b.id).order('weekday').order('starts_at'),
@@ -170,12 +225,12 @@ export function initializePlatformPilot(client){
        .gte('service_date',todayRome()).order('service_date').limit(200)
    ]);
    if(myToken!==token)return;
-   const error=p.error||h.error||w.error||st.error;
+   const error=p.error||c.error||h.error||w.error||st.error;
    if(error){say('Lettura configurazione fallita: '+error.message,true);return;}
-   products=p.data||[];hours=h.data||[];windows=w.data||[];stocks=st.data||[];
+   products=p.data||[];categories=c.data||[];hours=h.data||[];windows=w.data||[];stocks=st.data||[];
    try{await fetchSchoolStaff();}catch(err){say(err.message,true);return;}
    if(myToken!==token)return;
-   renderHours();renderWindows();renderProducts();renderReadiness();
+   renderHours();renderWindows();renderCatalog();renderProducts();renderReadiness();
    say('Dati operativi verificati sul progetto BreakApp.');
  }
  async function refresh(){
@@ -202,6 +257,58 @@ export function initializePlatformPilot(client){
    catch(err){say(err.message||'Operazione non riuscita.',true);}
    finally{button.disabled=false;}
  }
+ $('pilot-category-edit').addEventListener('change',fillSelectedCategory);
+ $('pilot-product-edit').addEventListener('change',fillSelectedProduct);
+ $('pilot-category-form').addEventListener('submit',event=>{
+   event.preventDefault();void run(event.currentTarget,async()=>{
+     const {error}=await client.rpc('platform_save_category',{
+       p_bar_id:barSelect.value,
+       p_category_id:$('pilot-category-edit').value||null,
+       p_name:$('pilot-category-name').value.trim(),
+       p_active:$('pilot-category-active').checked
+     });
+     if(error)throw error;
+     say('Categoria salvata su Supabase.');
+   });
+ });
+ $('pilot-product-form').addEventListener('submit',event=>{
+   event.preventDefault();void run(event.currentTarget,async()=>{
+     const b=bar(),school=schools.find(s=>s.id===b?.school_id);
+     if(!b||!school)throw new Error('Seleziona il bar prima di salvare il prodotto.');
+     const file=$('pilot-product-image').files[0]||null;
+     const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file?.type];
+     if(file&&(!ext||file.size>2097152||file.size<=0))
+       throw new Error('Fotografia non valida: JPG, PNG o WebP fino a 2 MB.');
+     const allergensSelected=[...productAllergens.querySelectorAll('input:checked')].map(x=>x.value);
+     const {data:id,error}=await client.rpc('platform_save_product',{
+       p_bar_id:b.id,p_product_id:$('pilot-product-edit').value||null,
+       p_category_id:$('pilot-product-category').value,
+       p_name:$('pilot-product-name').value.trim(),
+       p_description:$('pilot-product-description').value.trim(),
+       p_price_cents:parseEuroToCents($('pilot-product-price').value),
+       p_ingredients:$('pilot-product-ingredients').value.trim(),
+       p_allergens:allergensSelected,p_active:$('pilot-product-active').checked
+     });
+     if(error)throw error;
+     if(file){
+       const path=school.id+'/'+b.id+'/'+crypto.randomUUID()+'.'+ext;
+       const upload=await client.storage.from('breakapp-product-images')
+         .upload(path,file,{contentType:file.type,upsert:false});
+       if(upload.error){
+         say('Prodotto salvato. Caricamento fotografia fallito: '+upload.error.message,true);
+         return;
+       }
+       const link=await client.rpc('platform_set_product_image',{
+         p_bar_id:b.id,p_product_id:id,p_object_path:path
+       });
+       if(link.error){
+         say('Prodotto salvato; foto caricata ma non associata: '+link.error.message,true);
+         return;
+       }
+     }
+     say('Prodotto, prezzo e ingredienti salvati su Supabase.');
+   });
+ });
  $('pilot-staff-form').addEventListener('submit',event=>{
    event.preventDefault();void run(event.currentTarget,async()=>{
      const {error}=await client.rpc('platform_assign_school_staff',{
