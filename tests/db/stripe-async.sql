@@ -118,3 +118,45 @@ begin
   action='stripe_checkout_verified')<>1
  then raise exception 'Async success recorded twice';end if;
 end;$async_settled_once$;
+
+-- Recognize the syntactic live-session prefix as well as test sessions.
+-- This uses only synthetic IDs in the disposable CI database; NOT a live charge.
+reset role;
+insert into public.orders(school_id,bar_id,customer_id,pickup_window_id,request_key,
+ status,payment_status,total_cents)
+values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ 'aaaaaaaa-0000-4000-8000-000000000001',
+ '11111111-1111-4111-8111-111111111111',
+ 'aaaaaaaa-0000-4000-8000-000000000005',
+ '11111111-0000-4000-8000-000000000306','ready','due',275)
+returning id as live_format_order \gset
+select set_config('app.live_format_order',:'live_format_order',false);
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
+select public.begin_individual_stripe_checkout(
+ current_setting('app.live_format_order')::uuid,
+ '11111111-0000-4000-8000-000000000307') as live_format_checkout \gset
+select set_config('app.live_format_attempt',
+ (:'live_format_checkout'::jsonb->>'attempt_id'),false);
+set role service_role;
+select set_config('request.jwt.claims','{"role":"service_role"}',false);
+select public.attach_stripe_checkout_session(
+ current_setting('app.live_format_attempt')::uuid,'cs_live_synthetic123456');
+select public.reconcile_signed_checkout_failure(
+ 'evt_liveformat123','acct_1UUniH2RLt7x5EeZ',
+ 'cs_live_synthetic123456','pi_liveformat123',
+ current_setting('app.live_format_attempt')::uuid,275,'eur');
+reset role;
+do $live_prefix_guard$
+begin
+ if (select status from public.payment_attempts
+  where id=current_setting('app.live_format_attempt')::uuid)<>'failed' then
+  raise exception 'Verified live-format session failure was rejected';
+ end if;
+ if (select payment_status from public.orders
+  where id=current_setting('app.live_format_order')::uuid)<>'due' then
+  raise exception 'Fake live-format failure must never mark order paid';
+ end if;
+end;
+$live_prefix_guard$;
