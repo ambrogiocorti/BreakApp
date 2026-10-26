@@ -55,6 +55,16 @@ export function allowedRoute(role,section){
     (role!=='platform_admin' && section==='support-center'));
 }
 export function contextsFromMemberships(memberships,schools,aal2,platform=false){
+ // A global Super Admin is exclusively a platform operator. School memberships,
+ // including legacy customer assignments, must never create a customer UI context.
+ // Check the platform role server-side, even before MFA; AAL2 controls its access.
+ if(platform)return [{
+   key:'platform:platform_admin',
+   schoolId:null,
+   schoolName:'Tutte le scuole',
+   role:'platform_admin',
+   verified:aal2
+ }];
  const result=[];
  const knownSchools=new Map(schools.map(s=>[s.id,s]));
  for(const school of schools){
@@ -71,8 +81,6 @@ export function contextsFromMemberships(memberships,schools,aal2,platform=false)
        role:r.role_code,verified:r.role_code!=='school_admin'||aal2});
    }
  }
- if(platform)result.push({key:'platform:platform_admin',schoolId:null,
-   schoolName:'Tutte le scuole',role:'platform_admin',verified:aal2});
  return result;
 }
 export function chooseInitialContext(contexts,stored) {
@@ -233,7 +241,8 @@ export function initializeWorkspace(client){
    ]);
    if(token!==epoch||user?.id!==userNext.id)return;
    if(access.status!=='fulfilled'||sch.status!=='fulfilled'||
-      assurance.status!=='fulfilled'||sch.value.error||assurance.value.error) {
+      assurance.status!=='fulfilled'||platform.status!=='fulfilled'||
+      sch.value.error||assurance.value.error||platform.value.error) {
      // On request error: fail closed. Do not render stale roles from local state.
      active=null;nav.replaceChildren();mobile.replaceChildren();
      routeSections.forEach(s=>s.classList.remove('is-route-active'));
@@ -254,7 +263,10 @@ export function initializeWorkspace(client){
    const previous=active?.key;
    const selected=contexts.find(x=>x.key===previous)||chooseInitialContext(contexts,safelyStored());
    sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
-   profileSwitcher.hidden=false;
+   // A sole Super Admin context must not offer a meaningless role switcher.
+   profileSwitcher.hidden=contexts.length<2;
+   select.disabled=contexts.length<2;
+   profileSelect.disabled=contexts.length<2;
    document.body.dataset.workspace='true';ready=true;
    setContext(selected,{restoreRoute:!!previous});
  }

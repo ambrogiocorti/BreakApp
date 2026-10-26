@@ -51,3 +51,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/10_workspace_platform_identity.sql
       - name: Test platform role and MFA
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/workspace-role.sql
+      - name: Apply exclusive Super Admin order guard
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/11_superadmin_not_customer.sql
+      - name: Test Super Admin customer-order prohibition
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/superadmin-not-customer.sql

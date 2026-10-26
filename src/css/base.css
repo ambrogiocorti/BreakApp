@@ -586,3 +586,12 @@ body[data-workspace="true"] #workspace-page-head[hidden]{
 body[data-workspace="true"]:not([data-active-role="customer"]) .cart-strip{
  display:none!important;
 }
+
+/* During role verification never flash the default customer menu to a Super Admin. */
+body[data-authenticated="true"]:not([data-workspace="true"]) .app-main > section:not(#accesso){
+  display:none!important;
+}
+body[data-authenticated="true"] #header-menu-link,
+body[data-authenticated="true"] #header-profile-link{
+  display:none!important;
+}
