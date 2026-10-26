@@ -20,13 +20,19 @@ test('il menu reale resta invisibile agli utenti non autenticati', () => {
   assert.ok(auth.includes("document.body.dataset.authenticated = String(present);"));
 });
 
-test('navigazione student: ordini collegati al modulo reale e gruppi non disponibili', () => {
+test('workspace role-based: sidebar fissa, viste dedicate e gruppi non simulati', () => {
+  const shell = readFileSync(new URL('../../src/js/features/shell/workspace.js', import.meta.url), 'utf8');
   assert.ok(html.includes('id="app-mobile-nav"'));
   assert.ok(html.includes('id="app-desktop-nav"'));
-  assert.ok(html.includes('href="#orders"'));
+  assert.ok(html.includes('id="workspace-sidebar"'));
+  assert.ok(html.includes('id="workspace-context-select"'));
+  assert.ok(html.includes('id="warehouse-inventory"'));
+  assert.ok(html.includes('id="admin-overview"'));
   assert.ok(html.includes('id="orders"'));
   assert.ok(html.includes('id="order-stepper"'));
-  assert.ok(html.includes('Gruppi non ancora disponibili'));
+  assert.ok(shell.includes("['orders','I miei ordini'"));
+  assert.ok(shell.includes("['warehouse-inventory','Scorte giornaliere'"));
+  assert.ok(!shell.includes("['groups','Gruppi'"));
 });
 
 test('il nuovo QR TOTP non scavalca il fattore gia verificato', () => {

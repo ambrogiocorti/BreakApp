@@ -154,6 +154,9 @@ export function initializeAdminOrderSetup(client) {
     access=nextAccess;
     school.replaceChildren();
     for(const s of admins)school.add(new Option(s.name,s.id));
+    const contextual=document.body.dataset.activeRole==='school_admin'
+      ?document.body.dataset.activeSchool:null;
+    if(contextual && admins.some(s=>s.id===contextual))school.value=contextual;
     fillBars();
     panel.hidden=false;
     enableForms(false);

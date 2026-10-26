@@ -129,7 +129,11 @@ export function initializeAdminCatalog(client) {
     const previous = schoolSelect.value;
     schoolSelect.replaceChildren();
     for (const school of schools) schoolSelect.add(new Option(school.name, school.id));
-    if (schools.some((school) => school.id === previous)) schoolSelect.value = previous;
+    const contextual=document.body.dataset.activeRole==='school_admin'
+      ?document.body.dataset.activeSchool:null;
+    if (contextual && schools.some((school)=>school.id===contextual))
+      schoolSelect.value=contextual;
+    else if (schools.some((school) => school.id === previous)) schoolSelect.value = previous;
     fillBars();
     void refresh();
   }

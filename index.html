@@ -26,18 +26,32 @@
       </div>
     </header>
 
-    <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Sezioni BreakApp" hidden>
-      <a href="#menu" aria-current="page">▤ <span>Menu</span></a>
-      <a href="#orders">▣ <span>Ordini</span></a>
-      <span class="app-nav-disabled" aria-label="Gruppi, non ancora disponibili">♧ <span>Gruppi</span><small>In sviluppo</small></span>
-      <a href="#accesso">♙ <span>Profilo</span></a>
-    </nav>
-    <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Sezioni BreakApp" hidden>
-      <a href="#menu" aria-current="page"><span aria-hidden="true">▤</span><small>Menu</small></a>
-      <a href="#orders"><span aria-hidden="true">▣</span><small>Ordini</small></a>
-      <span class="app-nav-disabled" aria-label="Gruppi non ancora disponibili"><span aria-hidden="true">♧</span><small>Gruppi</small></span>
-      <a href="#accesso"><span aria-hidden="true">♙</span><small>Profilo</small></a>
-    </nav>
+    <aside id="workspace-sidebar" class="workspace-sidebar" hidden aria-label="Navigazione di lavoro">
+      <div class="workspace-sidebar-brand">
+        <span class="workspace-sidebar-mark" aria-hidden="true">B.</span>
+        <span><strong>BreakApp</strong><small>GESTIONALE SCOLASTICO</small></span>
+      </div>
+      <div class="workspace-context">
+        <label for="workspace-context-select">STAI OPERANDO COME</label>
+        <select id="workspace-context-select" aria-label="Scuola e ruolo attivi"></select>
+        <span id="workspace-school-label" class="workspace-school-label"></span>
+      </div>
+      <div class="workspace-nav-caption">AREA DI LAVORO</div>
+      <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Menu del ruolo attivo" hidden></nav>
+      <div class="workspace-sidebar-bottom">
+        <div id="workspace-identity" class="workspace-identity"></div>
+        <button id="workspace-signout" type="button" class="workspace-signout">Esci dall'account</button>
+      </div>
+    </aside>
+    <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Menu del ruolo attivo" hidden></nav>
+    <div id="workspace-page-head" class="workspace-page-head" hidden>
+      <div>
+        <p class="workspace-eyebrow" id="workspace-page-section"></p>
+        <h1 id="workspace-page-title">BreakApp</h1>
+        <p id="workspace-page-subtitle" class="workspace-page-subtitle"></p>
+      </div>
+      <span class="workspace-page-role" id="workspace-page-role"></span>
+    </div>
     <main id="main-content" class="app-main">
       <section class="access-section" id="accesso" aria-labelledby="access-heading">
         <div class="container access-layout">
@@ -66,6 +80,11 @@
               <span class="auth-tag">ACCOUNT</span>
               <h3>Accesso effettuato</h3>
               <p>Hai effettuato l'accesso come <strong id="user-email"></strong>.</p>
+              <div id="workspace-profile-switcher" class="workspace-profile-switcher" hidden>
+                <label for="workspace-profile-context-select">Cambia scuola o ruolo</label>
+                <select id="workspace-profile-context-select" aria-label="Cambia scuola e ruolo dal Profilo"></select>
+                <p class="catalog-help">Il cambio contesto aggiorna l'interfaccia, ma non modifica i tuoi permessi nel database.</p>
+              </div>
               <p class="auth-subtitle">Le tue scuole e i ruoli sono verificati da Supabase. Puoi consultare il menu e, se autorizzato, gestire il catalogo.</p><p><a class="text-link" href="#menu">Vai al catalogo →</a> · <a class="text-link" href="#support-center">Centro assistenza e ticket</a></p>
               <div class="school-access-overview">
                 <div class="school-access-header">
@@ -530,6 +549,40 @@
         </div>
       </section>
 
+
+      <section id="admin-overview" class="container orders-section workspace-page" hidden aria-labelledby="dashboard-title">
+        <div class="section-heading"><span class="eyebrow">DASHBOARD · DATI EFFETTIVI</span>
+          <h2 id="dashboard-title">Panoramica della scuola</h2>
+          <p id="dashboard-subtitle">Statistiche lette in tempo reale dal database, limitate alla scuola autorizzata.</p>
+        </div>
+        <div id="dashboard-metrics" class="dashboard-metrics"></div>
+        <div class="dashboard-section">
+          <h3>Ordini recenti</h3>
+          <div id="dashboard-recent-orders" class="service-list"></div>
+        </div>
+        <p id="dashboard-feedback" role="status" aria-live="polite"></p>
+      </section>
+      <section id="warehouse-inventory" class="container orders-section workspace-page" hidden aria-labelledby="warehouse-heading">
+        <div class="section-heading"><span class="eyebrow">MAGAZZINO · SCORTE REALI</span>
+          <h2 id="warehouse-heading">Disponibilità per giornata</h2>
+          <p>Modifica le quantità autorizzate. Le scorte prenotate restano riservate; il server impedisce disponibilità negative.</p>
+        </div>
+        <div class="warehouse-toolbar">
+          <label for="warehouse-bar">Bar<select id="warehouse-bar"></select></label>
+          <label for="warehouse-date">Data<input id="warehouse-date" type="date" required /></label>
+          <button type="button" class="button button-outline" id="warehouse-refresh">Aggiorna</button>
+        </div>
+        <p id="warehouse-feedback" role="status" aria-live="polite"></p>
+        <div id="warehouse-items" class="warehouse-items"></div>
+      </section>
+      <section id="platform-overview" class="container orders-section workspace-page" hidden aria-labelledby="platform-heading">
+        <div class="section-heading"><span class="eyebrow">SUPER ADMIN · ACCESSO AAL2</span>
+          <h2 id="platform-heading">Piattaforma BreakApp</h2>
+          <p>Directory delle scuole e dei bar attivi. Le operazioni globali non ancora disponibili non vengono simulate.</p>
+        </div>
+        <div id="platform-school-list" class="dashboard-metrics"></div>
+        <p id="platform-feedback" role="status"></p>
+      </section>
     </main>
     <div id="cart-strip" class="cart-strip" hidden>
       <button type="button" id="cart-open" class="button button-primary ba-block">

@@ -15,7 +15,7 @@ export function initializeBarService(client) {
   const impact=byId('service-closure-impact');
   const pauseButton=byId('service-pause-button'),resumeButton=byId('service-resume-button');
   let context=[],serviceState=null,hours=[],closures=[],isAdmin=false,previewKey='';
-  let generation=0,lastUser=null;
+  let generation=0,lastUser=null,workspaceSchool=null,workspaceRole=null;
 
   const report=(message,error=false)=>{feedback.textContent=message;feedback.dataset.type=error?'error':'information';};
   const currentBar=()=>context.find(x=>x.id===barSelect.value);
@@ -122,7 +122,9 @@ export function initializeBarService(client) {
     const old=barSelect.value;
     barSelect.replaceChildren();
     for(const b of context)barSelect.add(new Option(b.name,b.id));
-    if(context.some(b=>b.id===old))barSelect.value=old;
+    const desired=context.find(b=>b.school_id===workspaceSchool);
+    if(desired)barSelect.value=desired.id;
+    else if(context.some(b=>b.id===old))barSelect.value=old;
     activateBar();
   }
   function activateBar() {
@@ -165,6 +167,14 @@ export function initializeBarService(client) {
   }
   byId('service-refresh').addEventListener('click',()=>{
     if(lastUser)void readAccess(lastUser);
+  });
+  window.addEventListener('breakapp:workspace-context',event=>{
+    workspaceSchool=event.detail?.schoolId||null;
+    workspaceRole=event.detail?.role||null;
+    const b=context.find(b=>b.school_id===workspaceSchool);
+    if(b && ['bartender','school_admin'].includes(workspaceRole)){
+      barSelect.value=b.id;activateBar();
+    }
   });
   barSelect.addEventListener('change',activateBar);
   weekday.addEventListener('change',renderWeekly);

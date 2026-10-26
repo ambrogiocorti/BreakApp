@@ -38,6 +38,7 @@ export function initializeOrders(client) {
   let user=null, context={schoolId:'',barId:'',products:[]}, cart=[], product=null;
   let step=1,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
   let staffOrders=[];
+  let staffContextSchool=null;
 
   function total(){return cartSummary(cart,context.products);}
   function showCartBar(){
@@ -291,14 +292,16 @@ export function initializeOrders(client) {
     if(!user||!staffSchools.length)return;
     const {data,error}=await client.from('orders')
       .select('id,school_id,display_no,status,payment_status,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
-      .in('school_id',staffSchools).order('created_at',{ascending:false}).limit(100);
+      .in('school_id',staffContextSchool&&staffSchools.includes(staffContextSchool)
+      ?[staffContextSchool]:staffSchools).order('created_at',{ascending:false}).limit(100);
     if(error){report(staffFeedback,error.message,true);return;}
     staffOrders=data||[];drawStaff();
   }
   function drawStaff(){
     staffList.replaceChildren();
     const q=document.querySelector('#staff-search').value.trim();
-    staffOrders.filter(o=>!q||String(o.display_no).includes(q)).forEach(o=>{
+    staffOrders.filter(o=>(!staffContextSchool||o.school_id===staffContextSchool) &&
+      (!q||String(o.display_no).includes(q))).forEach(o=>{
       const box=elem('article','','order-card');
       box.append(elem('h3',`#${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date} ${o.pickup_windows?.starts_at?.slice(0,5)}`),
@@ -341,6 +344,16 @@ export function initializeOrders(client) {
     staffPanel.hidden=!staffSchools.length;
     if(staffSchools.length)await fetchStaffOrders();
   }
+  window.addEventListener('breakapp:workspace-context',event=>{
+    const role=event.detail?.role||'customer';
+    if(role!=='customer'){
+      if(productDialog.open)productDialog.close();
+      if(cartDialog.open)cartDialog.close();
+      if(stepper.open)stepper.close();
+    }
+    staffContextSchool=event.detail?.schoolId||null;
+    if(user && staffSchools.includes(staffContextSchool))void fetchStaffOrders();
+  });
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);

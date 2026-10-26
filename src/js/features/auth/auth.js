@@ -54,6 +54,7 @@ export function initializeAuth(config) {
   const operations = initializeAdminOrderSetup(client);
   const mfa = initializeAdminMfa(client, (verified) => {
     if (verified && accessCache && activeUser) {
+      window.dispatchEvent(new Event('breakapp:mfa-verified'));
       catalog.show(accessCache);
       void operations.show(accessCache);
     } else {
@@ -127,7 +128,11 @@ export function initializeAuth(config) {
       if (requestId !== accessRequestId) return;
       accessCache = access;
       renderSchoolAccess(access);
-      if (getAdminSchools(access).length) void mfa.show();
+      window.dispatchEvent(new Event('breakapp:access-updated'));
+      const platform=await client.rpc('has_current_platform_admin_role');
+      if(requestId!==accessRequestId)return;
+      if(getAdminSchools(access).length || (!platform.error&&platform.data===true))
+        void mfa.show();
     } catch (error) {
       if (requestId !== accessRequestId) return;
       accessSummary.textContent = error?.message || 'Impossibile leggere le autorizzazioni. Riprova.';
