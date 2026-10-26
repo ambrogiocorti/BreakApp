@@ -17,7 +17,10 @@ where school_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 
 do $guard_stock$
 begin
- if not found then
+ if (select count(*) from public.daily_stock
+     where school_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+       and product_id='aaaaaaaa-0000-4000-8000-000000000003'
+       and service_date=(now() at time zone 'Europe/Rome')::date+2)<>1 then
    raise exception 'Missing test stock fixture';
  end if;
 end;
@@ -75,6 +78,8 @@ insert into race_results select 'b',order_id
  from dblink_get_result('race_b',false) as t(order_id uuid);
 select dblink_error_message('race_a') as race_a_error \gset
 select dblink_error_message('race_b') as race_b_error \gset
+select set_config('app.race_a_error', :'race_a_error', false);
+select set_config('app.race_b_error', :'race_b_error', false);
 select dblink_disconnect('race_a');
 select dblink_disconnect('race_b');
 
@@ -88,8 +93,9 @@ begin
  if v_winners <> 1 then
    raise exception 'Expected 1 successful order out of 2 concurrent buyers; observed %',v_winners;
  end if;
- v_losing_error := case when :'race_a_error'='OK' then :'race_b_error'
-                        else :'race_a_error' end;
+ v_losing_error := case when current_setting('app.race_a_error')='OK'
+  then current_setting('app.race_b_error')
+  else current_setting('app.race_a_error') end;
  if position('Scorte insufficienti' in v_losing_error)=0 then
    raise exception 'Losing request must fail with stock guard, got: %',v_losing_error;
  end if;
