@@ -17,7 +17,7 @@ alter table public.schools
 alter table public.schools
   add constraint schools_geo_valid check (
     (latitude is null and longitude is null) or
-    (latitude between -90 and 90 and longitude between -180 and 180)
+    (latitude is not null and longitude is not null and latitude between -90 and 90 and longitude between -180 and 180)
   ),
   add constraint schools_radius_valid check (pickup_radius_m between 100 and 10000),
   add constraint schools_horizon_valid check (booking_horizon_days between 1 and 365),
