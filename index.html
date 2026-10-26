@@ -581,6 +581,99 @@
           <p>Directory delle scuole e dei bar attivi. Le operazioni globali non ancora disponibili non vengono simulate.</p>
         </div>
         <div id="platform-school-list" class="dashboard-metrics"></div>
+        <div class="platform-pilot-tools" id="platform-pilot-tools">
+          <div class="platform-pilot-heading">
+            <div><h3>Attivazione del bar scolastico</h3><p>Configurazione reale del servizio. Nessun dato dimostrativo viene salvato automaticamente.</p></div>
+            <button id="pilot-reload" class="button button-outline button-small" type="button">Verifica disponibilità</button>
+          </div>
+          <div class="pilot-context">
+            <label for="pilot-school">Scuola attiva
+              <select id="pilot-school" required></select>
+            </label>
+            <label for="pilot-bar">Bar
+              <select id="pilot-bar" required></select>
+            </label>
+          </div>
+          <div id="pilot-readiness" class="pilot-readiness" role="status" aria-live="polite"></div>
+          <p id="pilot-status" class="catalog-status" role="status" aria-live="polite"></p>
+          <div class="pilot-grid">
+            <article class="pilot-card">
+              <h4>Personale della scuola</h4>
+              <p class="catalog-help">L'utente deve avere già registrato e confermato la propria email in BreakApp. Le credenziali non vengono condivise.</p>
+              <form id="pilot-staff-form">
+                <label for="pilot-staff-email">Email persona</label>
+                <input id="pilot-staff-email" type="email" autocomplete="off" required placeholder="persona@scuola.it" />
+                <label for="pilot-staff-role">Ruolo</label>
+                <select id="pilot-staff-role">
+                  <option value="school_admin">Admin scuola (2FA richiesta)</option>
+                  <option value="bartender">Barista</option>
+                  <option value="warehouse_manager">Magazziniere</option>
+                </select>
+                <button class="button button-primary" type="submit">Assegna ruolo</button>
+              </form>
+              <div id="pilot-staff-list" class="service-list"></div>
+            </article>
+            <article class="pilot-card">
+              <h4>Orari settimanali</h4>
+              <p class="catalog-help">Un intervallo per riga, ad esempio 08:00-11:30. Per un giorno chiuso, lascia vuoto.</p>
+              <form id="pilot-hours-form">
+                <label for="pilot-weekday">Giorno</label>
+                <select id="pilot-weekday">
+                  <option value="1">Lunedì</option><option value="2">Martedì</option>
+                  <option value="3">Mercoledì</option><option value="4">Giovedì</option>
+                  <option value="5">Venerdì</option><option value="6">Sabato</option>
+                  <option value="0">Domenica</option>
+                </select>
+                <label for="pilot-periods">Aperture</label>
+                <textarea id="pilot-periods" rows="4" placeholder="08:00-11:30&#10;12:00-13:00"></textarea>
+                <button class="button button-primary" type="submit">Salva orari</button>
+              </form>
+              <div id="pilot-hours-list" class="service-list"></div>
+            </article>
+            <article class="pilot-card">
+              <h4>Fasce prenotabili</h4>
+              <p class="catalog-help">Le fasce devono essere comprese negli orari settimanali e nel periodo prenotabile della scuola.</p>
+              <form id="pilot-window-form">
+                <label for="pilot-window-date">Giorno di ritiro</label>
+                <input id="pilot-window-date" type="date" required />
+                <div class="pilot-two-cols">
+                  <label for="pilot-window-start">Inizio<input id="pilot-window-start" type="time" required /></label>
+                  <label for="pilot-window-end">Fine<input id="pilot-window-end" type="time" required /></label>
+                </div>
+                <button class="button button-primary" type="submit">Crea fascia di ritiro</button>
+              </form>
+              <div id="pilot-windows-list" class="service-list"></div>
+            </article>
+            <article class="pilot-card">
+              <h4>Scorte giornaliere</h4>
+              <p class="catalog-help">La disponibilità è specifica del giorno. Lascia la quantità vuota per disponibilità illimitata, oppure inserisci un numero reale.</p>
+              <form id="pilot-stock-form">
+                <label for="pilot-stock-product">Prodotto</label>
+                <select id="pilot-stock-product" required></select>
+                <label for="pilot-stock-date">Giorno</label>
+                <input id="pilot-stock-date" type="date" required />
+                <label for="pilot-stock-capacity">Quantità totale (vuoto = illimitata)</label>
+                <input id="pilot-stock-capacity" type="number" min="0" step="1" placeholder="Inserisci una quantità reale"/>
+                <button class="button button-primary" type="submit">Salva scorte</button>
+              </form>
+              <div id="pilot-stock-summary" class="service-list"></div>
+            </article>
+            <article class="pilot-card">
+              <h4>Ingredienti e allergeni</h4>
+              <p class="catalog-help">Compila utilizzando la scheda del fornitore. Nessuna allergia viene esclusa automaticamente.</p>
+              <form id="pilot-food-form">
+                <label for="pilot-food-product">Prodotto</label>
+                <select id="pilot-food-product" required></select>
+                <label for="pilot-ingredients">Ingredienti</label>
+                <textarea id="pilot-ingredients" rows="4" minlength="3" maxlength="3000" required></textarea>
+                <fieldset><legend>Allergeni dichiarati</legend>
+                  <div id="pilot-allergens" class="pilot-allergen-grid"></div>
+                </fieldset>
+                <button class="button button-primary" type="submit">Salva informazioni alimentari</button>
+              </form>
+            </article>
+          </div>
+        </div>
         <p id="platform-feedback" role="status"></p>
       </section>
     </main>
