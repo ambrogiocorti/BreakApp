@@ -72,3 +72,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/15_realtime_notices.sql
       - name: Test realtime notification privacy and triggers
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/realtime-notices.sql
+      - name: Apply secure payment, offline and push foundations 16
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/16_payments_offline_push_foundations.sql
+      - name: Test exclusive offline barista lease and quarantined sync
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-security.sql
