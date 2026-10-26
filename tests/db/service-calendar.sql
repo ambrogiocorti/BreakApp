@@ -144,3 +144,73 @@ begin
  then raise exception 'Cancelled order resurrected';end if;
 end;
 $test_reopen$;
+
+-- Un Barista della scuola A non può mettere in pausa un bar di scuola B.
+set role authenticated;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
+do $cross_tenant$
+declare v_denied boolean:=false;
+begin
+ begin
+   perform public.set_bar_booking_pause(
+     'bbbbbbbb-0000-4000-8000-000000000001',true,'Tentativo non autorizzato');
+ exception when others then v_denied:=true;
+ end;
+ if not v_denied then raise exception 'Bartender could pause another tenant bar';end if;
+end;
+$cross_tenant$;
+
+-- Creazione di un ordine pagato in un'altra fascia: la chiusura successiva
+-- deve FALLIRE senza annullamento, perché il rimborso Stripe/cassa non è pronto.
+reset role;
+insert into public.pickup_windows(id,school_id,bar_id,service_date,starts_at,ends_at)
+values(
+ 'aaaaaaaa-0000-4000-8000-000000000098',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ 'aaaaaaaa-0000-4000-8000-000000000001',
+ (now() at time zone 'Europe/Rome')::date+2,'10:15','10:35'
+);
+set role authenticated;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select public.submit_individual_order(
+  'aaaaaaaa-0000-4000-8000-000000000001',
+  'aaaaaaaa-0000-4000-8000-000000000098',
+  '[{"product_id":"aaaaaaaa-0000-4000-8000-000000000003","quantity":1}]'::jsonb,
+  '22222222-0000-4000-8000-000000000098',45,9,10,now()
+) as paid_order \gset
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+select public.advance_individual_order(:'paid_order'::uuid,'ready');
+select public.record_individual_counter_payment(
+ :'paid_order'::uuid,'cash','33333333-0000-4000-8000-000000000098'
+);
+do $paid_protection$
+declare v_denied boolean:=false;
+begin
+ begin
+  perform public.close_bar_interval(
+    'aaaaaaaa-0000-4000-8000-000000000001',
+    (now() at time zone 'Europe/Rome')::date+2,
+    '10:15','10:35','extraordinary','Guasto con pagamenti già riscossi');
+ exception when others then
+   if position('rimborsi' in sqlerrm)>0 then v_denied:=true;
+   else raise;end if;
+ end;
+ if not v_denied then raise exception 'Paid order cancelled without refund';end if;
+end;
+$paid_protection$;
+reset role;
+do $payment_integrity$
+begin
+ if (select status from public.orders
+    where request_key='22222222-0000-4000-8000-000000000098')<>'ready'
+ then raise exception 'Paid order was incorrectly cancelled';end if;
+ if exists(select 1 from public.bar_closures
+    where starts_at=time '10:15' and ends_at=time '10:35')
+ then raise exception 'Failed closure was persisted';end if;
+ if (select count(*) from public.counter_payments
+    where order_id=(select id from public.orders
+     where request_key='22222222-0000-4000-8000-000000000098'))<>1
+ then raise exception 'Payment lost or duplicated';end if;
+end;
+$payment_integrity$;
