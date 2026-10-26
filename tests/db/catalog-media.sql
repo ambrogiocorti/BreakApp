@@ -30,7 +30,11 @@ select jsonb_build_object(
  and b.is_active and m.user_id=auth.uid()
  and m.membership_status='active' and r.role_code='school_admin'),
  'path_ok', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/aaaaaaaa-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000009.jpg' ~
- '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}\\.(webp|png|jpg|jpeg)
+ '^[0-9a-f-]{36}/[0-9a-f-]{36}/[0-9a-f-]{36}\.(webp|png|jpg|jpeg)$'
+) as debug_storage_policy;
+
+insert into storage.objects(bucket_id,name)
+values('breakapp-product-images',
 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/aaaaaaaa-0000-4000-8000-000000000001/aaaaaaaa-0000-4000-8000-000000000009.jpg');
 
 do $check_cross$
