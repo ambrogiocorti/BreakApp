@@ -627,3 +627,9 @@ body[data-authenticated="true"] #header-profile-link{
 .pilot-staff-info span{font-size:.71rem;color:var(--muted);}
 #pilot-status[data-type="error"]{color:#b42334;}
 @media(max-width:680px){.pilot-context,.pilot-two-cols,.pilot-allergen-grid{grid-template-columns:1fr;}.platform-pilot-tools{padding:1rem;}}
+
+/* Super Admin: inline visibility toggles stay compact on desktop and mobile. */
+.pilot-inline-check{display:flex!important;flex-direction:row;align-items:center;
+gap:.55rem;padding:.35rem 0;font-size:.78rem!important;font-weight:650;}
+.pilot-inline-check input[type="checkbox"]{width:19px!important;height:19px!important;min-height:19px!important;flex:0 0 19px;}
+#pilot-category-list,#pilot-product-list{max-height:20rem;overflow-y:auto;}
