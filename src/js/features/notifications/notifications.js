@@ -95,6 +95,44 @@ export function initializeInAppNotifications(client){
      .subscribe();
    poll=setInterval(()=>{if(document.visibilityState==='visible')void load();},60000);
  }
+
+ function vapidBytes(value){
+   const normalized=value.replace(/-/g,'+').replace(/_/g,'/');
+   const data=atob(normalized.padEnd(Math.ceil(normalized.length/4)*4,'='));
+   return Uint8Array.from(data,ch=>ch.charCodeAt(0));
+ }
+ async function subscribeBackground(){
+   if(!user)throw new Error('Accedi prima di attivare le push.');
+   if(!window.isSecureContext||!('Notification' in window)||
+      !('PushManager' in window)||!('serviceWorker' in navigator))
+     throw new Error('Questo dispositivo/browser non supporta le Web Push.');
+   const keyResponse=await fetch(client.supabaseUrl+'/functions/v1/push-public-key');
+   const keyData=await keyResponse.json();
+   if(!keyResponse.ok||!keyData.public_key)
+     throw new Error('Push non configurate sul server. Servono le chiavi VAPID.');
+   const grant=await Notification.requestPermission();
+   if(grant!=='granted')throw new Error('Permesso push non concesso.');
+   const sw=await navigator.serviceWorker.ready;
+   let subscription=await sw.pushManager.getSubscription();
+   if(!subscription){
+     subscription=await sw.pushManager.subscribe({
+       userVisibleOnly:true,applicationServerKey:vapidBytes(keyData.public_key)
+     });
+   }
+   const publicData=subscription.toJSON();
+   if(!publicData.endpoint||!publicData.keys?.p256dh||!publicData.keys?.auth)
+     throw new Error('Dati sottoscrizione Web Push incompleti.');
+   const payload={user_id:user.id,endpoint:publicData.endpoint,
+    p256dh:publicData.keys.p256dh,auth_key:publicData.keys.auth};
+   const result=await client.from('push_subscriptions').insert(payload);
+   if(result.error&&result.error.code!=='23505'){
+     // Do not unsubscribe a pre-existing registration because a database
+     // permission error occurred; user can retry without data loss.
+     throw result.error;
+   }
+   return 'Push registrate per questo dispositivo. La consegna richiede il dispatcher server attivo.';
+ }
+
  toggle.addEventListener('click',()=>{
    if(!user)return;
    if(!dialog.open)dialog.showModal();
@@ -102,7 +140,13 @@ export function initializeInAppNotifications(client){
  });
  byId('notifications-close').addEventListener('click',()=>dialog.close());
  byId('notifications-refresh').addEventListener('click',()=>void load());
- permission.addEventListener('click',async()=>{
+ byId('notifications-push').addEventListener('click',async()=>{
+   const button=byId('notifications-push');button.disabled=true;
+   try{report(await subscribeBackground());}
+   catch(error){report(error.message||'Registrazione push fallita.',true);}
+   finally{button.disabled=false;}
+ });
+  permission.addEventListener('click',async()=>{
    if(!('Notification' in window)){report('Il browser non supporta le notifiche di sistema.',true);return;}
    if(!window.isSecureContext){report('Le notifiche richiedono HTTPS.',true);return;}
    const status=await Notification.requestPermission();
