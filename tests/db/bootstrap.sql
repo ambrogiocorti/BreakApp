@@ -1,6 +1,7 @@
 -- Database PostgreSQL vuoto usato SOLO in GitHub CI.
 create role anon nologin;
 create role authenticated nologin;
+create role service_role nologin;
 create schema auth;
 create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz);
 create or replace function auth.uid() returns uuid language sql stable as

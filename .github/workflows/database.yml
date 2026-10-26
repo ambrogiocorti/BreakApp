@@ -76,3 +76,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/16_payments_offline_push_foundations.sql
       - name: Test exclusive offline barista lease and quarantined sync
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-security.sql
+      - name: Apply signed Stripe checkout migration 17
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/17_stripe_checkout_individual.sql
+      - name: Test Stripe checkout ownership and idempotent settlement
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-individual.sql
