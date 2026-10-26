@@ -51,7 +51,8 @@ function create(tag,cls,text=''){
  const el=document.createElement(tag);el.className=cls;el.textContent=text;return el;
 }
 export function allowedRoute(role,section){
- return Boolean(SCREENS[role]?.some(([route])=>route===section));
+ return Boolean(SCREENS[role]?.some(([route])=>route===section) ||
+    (role!=='platform_admin' && section==='support-center'));
 }
 export function contextsFromMemberships(memberships,schools,aal2,platform=false){
  const result=[];
@@ -181,6 +182,18 @@ export function initializeWorkspace(client){
    document.body.dataset.activeRole=context.role;
    document.body.dataset.activeSchool=context.schoolId||'global';
    notifyContext();
+   if(context.schoolId){
+     for(const id of context.role==='customer'
+       ?['menu-school']:context.role==='school_admin'
+       ?['catalog-school','ops-school']:[]) {
+       const target=document.getElementById(id);
+       if(target&&[...target.options].some(option=>option.value===context.schoolId)
+          &&target.value!==context.schoolId){
+         target.value=context.schoolId;
+         target.dispatchEvent(new Event('change',{bubbles:true}));
+       }
+     }
+   }
    switchRoute(restoreRoute?location.hash.slice(1):null,{history:true});
    // Guard against entering staff views with a context not verified at AAL2.
  }
@@ -219,6 +232,7 @@ export function initializeWorkspace(client){
      active=null;nav.replaceChildren();mobile.replaceChildren();
      routeSections.forEach(s=>s.classList.remove('is-route-active'));
      sidebar.hidden=true;heading.hidden=true;
+     document.body.dataset.workspace='false';
      document.getElementById('school-access-status').textContent=
        'Impossibile verificare ruolo e scuola. Riprova dal Profilo.';
      return;
