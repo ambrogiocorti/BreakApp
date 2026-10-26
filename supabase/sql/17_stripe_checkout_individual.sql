@@ -2,6 +2,9 @@
 -- Merchant must be independently configured and charges_enabled for school.
 -- No group charge or refund is allowed by these entrypoints.
 begin;
+alter table public.orders drop constraint orders_payment_method_check;
+alter table public.orders add constraint orders_payment_method_check
+ check(payment_method in ('at_pickup','stripe'));
 alter table public.payment_attempts add column stripe_checkout_session_id text unique;
 alter table public.payment_attempts add column expires_at timestamptz;
 alter table public.payment_attempts drop constraint payment_attempts_status_check;
@@ -119,12 +122,15 @@ begin
  else
    v_decision:='succeeded';
  end if;
- update public.payment_attempts set
- stripe_payment_intent_id=p_intent,status=case when v_decision='succeeded'
-   then 'succeeded' else 'review' end,updated_at=now()
- where id=v_attempt.id;
+ if v_decision<>'duplicate_payment' then
+  update public.payment_attempts set
+   stripe_payment_intent_id=p_intent,status=case when v_decision='succeeded'
+     then 'succeeded' else 'review' end,updated_at=now()
+  where id=v_attempt.id;
+ end if;
  if v_decision='succeeded' then
-  update public.orders set payment_status='paid',updated_at=now() where id=v_order.id;
+  update public.orders set payment_status='paid',
+    payment_method='stripe',updated_at=now() where id=v_order.id;
   insert into public.order_audit(order_id,school_id,actor_id,action)
   values(v_order.id,v_order.school_id,v_attempt.payer_id,'stripe_checkout_verified');
  end if;
