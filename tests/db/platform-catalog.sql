@@ -60,10 +60,10 @@ end;$assert_update$;
 -- Attempt to change a product through the wrong bar: must be rejected.
 reset role;
 insert into public.schools(id,slug,name)
-values('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','secondary-school-test','Secondary Test');
+values('cccccccc-cccc-4ccc-8ccc-cccccccccccc','secondary-school-test','Secondary Test');
 insert into public.bars(id,school_id,name)
-values('bbbbbbbb-0000-4000-8000-000000000001',
- 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','Secondary Bar');
+values('cccccccc-0000-4000-8000-000000000011',
+ 'cccccccc-cccc-4ccc-8ccc-cccccccccccc','Secondary Bar');
 set role authenticated;
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',false);
 select set_config('request.jwt.claims','{"aal":"aal2","is_anonymous":false}',false);
@@ -72,7 +72,7 @@ declare denied boolean:=false;
 begin
  begin
   perform public.platform_save_product(
-   'bbbbbbbb-0000-4000-8000-000000000001',
+   'cccccccc-0000-4000-8000-000000000011',
    current_setting('app.test_catalog_product')::uuid,
    current_setting('app.test_catalog_category')::uuid,
    'Tamper with other tenant','Una descrizione',100,'Ingredienti',
