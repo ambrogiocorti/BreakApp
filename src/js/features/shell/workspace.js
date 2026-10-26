@@ -223,7 +223,7 @@ export function initializeWorkspace(client){
      loadSchoolAccess(client,userNext.id),
      client.from('schools').select('id,name').eq('is_active',true).order('name'),
      client.auth.mfa.getAuthenticatorAssuranceLevel(),
-     client.rpc('is_current_platform_admin')
+     client.rpc('has_current_platform_admin_role')
    ]);
    if(token!==epoch||user?.id!==userNext.id)return;
    if(access.status!=='fulfilled'||sch.status!=='fulfilled'||
