@@ -163,7 +163,8 @@ export function initializeWorkspace(client){
    updateSectionVisibility();
    renderLinks();
    moreContainer.hidden=true;
-   const name=SCREENS[active.role]?.find(([id])=>id===route)?.[1]||'Profilo';
+   const name=route==='support-center'?'Centro assistenza':
+     SCREENS[active.role]?.find(([id])=>id===route)?.[1]||'Profilo';
    title.textContent=name;
    subtitle.textContent=active.verified?
      active.schoolName+' · '+LABELS[active.role]:
