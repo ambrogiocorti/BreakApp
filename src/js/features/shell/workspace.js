@@ -8,7 +8,7 @@ const LABELS = Object.freeze({
 const SCREENS = Object.freeze({
  customer:[
   ['menu','Menu','UtensilsCrossed'],['orders','I miei ordini','ClipboardList'],
-  ['accesso','Profilo','UserRound']
+  ['groups','Gruppi','UsersRound'],['accesso','Profilo','UserRound']
  ],
  bartender:[
   ['staff-orders-section','Ordini da preparare','ClipboardList'],
@@ -36,7 +36,7 @@ const SCREENS = Object.freeze({
  ]
 });
 const ICONS=Object.freeze({
- UtensilsCrossed:'▤',ClipboardList:'▣',UserRound:'◉',CalendarDays:'▦',
+ UtensilsCrossed:'▤',ClipboardList:'▣',UserRound:'◉',UsersRound:'♧',CalendarDays:'▦',
  MessageSquareText:'▢',Boxes:'▧',LayoutDashboard:'◫',
  ShoppingBag:'▥',SlidersHorizontal:'⚙',Building2:'◇'
 });
