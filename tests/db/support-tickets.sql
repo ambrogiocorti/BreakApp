@@ -9,6 +9,7 @@ select public.open_support_ticket(
  null,'order','Problema di consegna','Buongiorno, vorrei verificare il mio ordine.',
  '11111111-0000-4000-8000-000000000180'
 ) as ticket_id \gset
+select set_config('app.test_ticket_id',:'ticket_id',false);
 
 -- Same request key: no duplicate.
 select public.open_support_ticket(
@@ -40,7 +41,7 @@ begin
  if (select count(*) from public.support_messages)<>0 then
    raise exception 'Messages of other customer visible';end if;
  begin
-  perform public.post_support_message(:'ticket_id'::uuid,'Messaggio abusivo');
+  perform public.post_support_message(current_setting('app.test_ticket_id')::uuid,'Messaggio abusivo');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Other user posted on private ticket';end if;
 end;
@@ -55,7 +56,7 @@ begin
  if (select count(*) from public.support_tickets)<>0 then
   raise exception 'AAL1 admin can read sensitive ticket';end if;
  begin
-   perform public.set_support_ticket_status(:'ticket_id'::uuid,'resolved','');
+   perform public.set_support_ticket_status(current_setting('app.test_ticket_id')::uuid,'resolved','');
  exception when others then denied:=true;end;
  if not denied then raise exception 'AAL1 admin resolved ticket';end if;
 end;
@@ -69,8 +70,8 @@ begin
   raise exception 'Verified admin cannot read school ticket';end if;
 end;
 $admin_aal2$;
-select public.post_support_message(:'ticket_id'::uuid,'Verifichiamo l’accaduto.');
-select public.set_support_ticket_status(:'ticket_id'::uuid,'resolved','Risposta fornita');
+select public.post_support_message(current_setting('app.test_ticket_id')::uuid,'Verifichiamo l’accaduto.');
+select public.set_support_ticket_status(current_setting('app.test_ticket_id')::uuid,'resolved','Risposta fornita');
 
 -- Il cliente non può continuare a scrivere sul ticket risolto; richiede riapertura.
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
@@ -79,7 +80,7 @@ do $closed_write$
 declare denied boolean:=false;
 begin
  begin
-  perform public.post_support_message(:'ticket_id'::uuid,'Tentativo su ticket chiuso');
+  perform public.post_support_message(current_setting('app.test_ticket_id')::uuid,'Tentativo su ticket chiuso');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Closed ticket accepts messages';end if;
 end;
@@ -91,7 +92,7 @@ select set_config('request.jwt.claims','{"aal":"aal2","is_anonymous":false}',fal
 select public.review_support_reopen(:'reopen_id'::uuid,true,'Accettata');
 do $reopened$
 begin
- if (select status from public.support_tickets where id=:'ticket_id'::uuid)<>'open'
+ if (select status from public.support_tickets where id=current_setting('app.test_ticket_id')::uuid)<>'open'
  then raise exception 'Approved reopening did not reopen ticket';end if;
 end;
 $reopened$;
@@ -119,7 +120,7 @@ begin
  begin
   insert into storage.objects(bucket_id,name)
   values('breakapp-ticket-images',
-   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/'||:'ticket_id'||'/aaaaaaaa-0000-4000-8000-000000000191.jpg');
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/'||current_setting('app.test_ticket_id')||'/aaaaaaaa-0000-4000-8000-000000000191.jpg');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Other customer can upload into ticket';end if;
 end;
