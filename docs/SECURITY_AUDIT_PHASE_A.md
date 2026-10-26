@@ -16,6 +16,15 @@ un penetration test o un audit delle 171 decisioni.
    essere accessibili direttamente con `SELECT` ai ruoli di frontend.
 6. Un Admin della scuola A, con 2FA, non deve poter configurare la scuola B.
 
+## Correzione concreta individuata
+
+La prima esecuzione del gate ha rilevato che
+`app_private.prevent_cash_stripe_overlap()` era ancora eseguibile dal ruolo
+anonimo. Si tratta di una funzione trigger `SECURITY DEFINER`, che non ha
+bisogno di essere invocata direttamente dagli utenti. Lo script incrementale
+`supabase/sql/22_revoke_cash_trigger_execute.sql` elimina la concessione
+superflua. La CI riesegue il gate dopo aver applicato tale script.
+
 ## Come interpretare le segnalazioni dei Supabase Advisors
 
 - Le segnalazioni *authenticated SECURITY DEFINER function executable* non
