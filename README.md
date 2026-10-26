@@ -2,18 +2,20 @@
 
 **BreakApp** è una piattaforma multitenant per la gestione dei bar scolastici.
 
-> Stato: **Fase 1/2 — catalogo Admin e menu pubblico online**. Scuole e ruoli sono letti
-> da Supabase. Il codice del catalogo (categorie/prodotti) e la verifica 2FA
-> TOTP Admin sono implementati; le scritture richiedono le policy della migration 03
-> già eseguita nel nuovo Supabase. Il menu pubblico legge solo gli articoli attivi.
-> Non esistono ancora vendite, ordini o pagamenti.
+> Stato: **pilota tecnico in sviluppo — non pronto per la vendita né per l'incasso reale**.
+> Sono presenti catalogo, ruoli/MFA, ordini individuali, incassi al banco e QR;
+> Stripe Checkout e rimborsi completi sono implementati in test ma richiedono
+> merchant scolastico verificato, secret server e collaudo. Sono presenti bozze
+> gruppo e fondazioni offline, non ancora tutti i relativi flussi operativi.
+> Vedi [`ROADMAP.md`](ROADMAP.md) per lo stato puntuale delle fasi 0–7.
 
 ## Stack
 
 - HTML semantico, CSS personalizzato e JavaScript vanilla (moduli ES).
 - Vite esclusivamente come strumento di build.
 - Supabase Auth/Postgres/RLS con 2FA TOTP obbligatoria per scritture Admin sul catalogo; tutte le scritture sono autorizzate server-side.
-- Vercel per l'ambiente di test temporaneo; hosting definitivo da stabilire.
+- GitHub Pages come hosting frontend scelto il 26 ottobre 2026; Vercel è stato
+  l'ambiente di prova temporaneo. L'attivazione Pages è ancora un passaggio esterno.
 - GitHub Actions per sintassi, test e build a ogni push.
 
 ## Verifiche automatiche
@@ -26,11 +28,9 @@ controlli sintattici, test unitari e generazione della build.
 Il progetto usa `npm run build` e pubblica la directory `dist`. L'integrazione
 GitHub/Vercel aggiorna l'ambiente di test a ogni push.
 
-La schermata di autenticazione sarà abilitata soltanto dopo la configurazione di
-un **nuovo progetto Supabase dedicato** a BreakApp, con URL e chiave
-`sb_publishable_…` impostati come variabili `VITE_SUPABASE_URL` e
-`VITE_SUPABASE_PUBLISHABLE_KEY` su Vercel. Mai esporre `service_role`, chiavi
-segrete, token privati o credenziali in questa repository o nel frontend.
+Il progetto Supabase dedicato è `ynvswdyirngvdpudcikl`. Il frontend richiede
+`VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` in build; non esporre
+`service_role`, chiavi Stripe/VAPID private o token nel browser o nella repository.
 
 La configurazione da un **secondo account Supabase**, interamente da browser,
 è descritta in [`docs/SUPABASE_SETUP_ONLINE.md`](docs/SUPABASE_SETUP_ONLINE.md).
@@ -39,13 +39,12 @@ Per attivare il primo catalogo reale, segui [le istruzioni SQL 03 e test online]
 
 ## Sicurezza e roadmap
 
-Il codice pubblicato è solo il bootstrap pubblico. La specifica funzionale
-completa e i documenti di progetto riservati non vengono inclusi nella
-repository pubblica. Le funzioni multi-scuola saranno rilasciate solo dopo
-verifica di RLS, RBAC e isolamento tra tenant con controlli server-side.
+Il codice pubblicato è un pilota tecnico pubblico; la specifica completa resta
+riservata. Nessuna promessa di isolamento multitenant, affidabilità offline
+o incasso reale è valida senza test end-to-end e convalida dei controlli server.
 
-La shell PWA di questo incremento **non** consente operazioni offline su ordini,
-cassa o scorte.
+La shell PWA non consente ancora incassi offline definitivamente contabilizzati:
+gli eventi offline sono messi in quarantena in attesa di una riconciliazione sicura.
 
 
 ## Menu pubblico (senza accesso)
