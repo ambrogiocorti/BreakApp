@@ -63,7 +63,7 @@ create or replace function public.attach_stripe_checkout_session(
 ) returns void language plpgsql security definer set search_path=''
 as $attach_checkout$
 begin
- if current_user<>'service_role' then raise exception 'Service role richiesto';end if;
+ if coalesce(auth.jwt()->>'role','')<>'service_role' then raise exception 'Service role richiesto';end if;
  if p_session !~ '^cs_(test|live)_[A-Za-z0-9]+$'
  then raise exception 'Sessione Stripe non valida';end if;
  update public.payment_attempts
@@ -85,7 +85,7 @@ as $finalize_checkout$
 declare v_attempt public.payment_attempts%rowtype;v_order public.orders%rowtype;
  v_processed boolean;v_decision text;
 begin
- if current_user<>'service_role' then raise exception 'Service role richiesto';end if;
+ if coalesce(auth.jwt()->>'role','')<>'service_role' then raise exception 'Service role richiesto';end if;
  if p_event_id !~ '^evt_[A-Za-z0-9]+$' or p_session !~ '^cs_(test|live)_[A-Za-z0-9]+$'
    or p_event_account !~ '^acct_[A-Za-z0-9]+$' or p_intent !~ '^pi_[A-Za-z0-9]+$'
    or p_amount<=0 or p_currency<>'eur' or p_attempt is null or not p_paid
