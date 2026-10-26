@@ -345,6 +345,12 @@ export function initializeOrders(client) {
     if(staffSchools.length)await fetchStaffOrders();
   }
   window.addEventListener('breakapp:workspace-context',event=>{
+    const role=event.detail?.role||'customer';
+    if(role!=='customer'){
+      if(productDialog.open)productDialog.close();
+      if(cartDialog.open)cartDialog.close();
+      if(stepper.open)stepper.close();
+    }
     staffContextSchool=event.detail?.schoolId||null;
     if(user && staffSchools.includes(staffContextSchool))void fetchStaffOrders();
   });
