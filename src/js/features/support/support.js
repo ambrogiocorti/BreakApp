@@ -19,7 +19,7 @@ export function initializeSupportCenter(client) {
   const adminActions=document.getElementById('support-admin-actions');
   const reopenList=document.getElementById('support-reopen-requests');
   let user=null,schools=[],orders=[],tickets=[],current=null,adminSchools=new Set();
-  let createRequestKey=null,pendingOrder=null,generation=0;
+  let createRequestKey=null,pendingOrder=null,pendingSchool=null,generation=0;
 
   const report=(message,error=false)=>{
     feedback.textContent=message;
@@ -54,7 +54,9 @@ export function initializeSupportCenter(client) {
     const old=school.value;
     school.replaceChildren();
     for(const s of schools)school.add(new Option(s.name,s.id));
-    if(schools.some(s=>s.id===old))school.value=old;
+    if(pendingSchool && schools.some(s=>s.id===pendingSchool))school.value=pendingSchool;
+    else if(schools.some(s=>s.id===old))school.value=old;
+    pendingSchool=null;
     fillOrderReferences();
   }
   function fillOrderReferences(){
@@ -90,10 +92,9 @@ export function initializeSupportCenter(client) {
     tickets=data||[];renderTickets();
     report('Richieste aggiornate: '+tickets.length+'.');
   }
-  async function renderAttachments(messageId) {
-    const {data,error}=await client.from('support_attachments')
-      .select('id,object_path,mime_type').eq('message_id',messageId);
-    if(error || !data?.length)return null;
+  async function renderAttachments(messageId,allAttachments) {
+    const data=allAttachments.filter(item=>item.message_id===messageId);
+    if(!data.length)return null;
     const links=element('div','','support-attachments');
     for(const photo of data) {
       const {data:signed,error:err}=await client.storage.from('breakapp-ticket-images')
@@ -133,6 +134,13 @@ export function initializeSupportCenter(client) {
     if(seq!==generation)return;
     if(messages.error){report(messages.error.message,true);return;}
     thread.replaceChildren();
+    const messageIds=(messages.data||[]).map(m=>m.id);
+    const attachments=messageIds.length
+      ?await client.from('support_attachments')
+        .select('id,message_id,object_path,mime_type').in('message_id',messageIds)
+      :{data:[],error:null};
+    if(seq!==generation)return;
+    if(attachments.error){report(attachments.error.message,true);return;}
     for(const message of messages.data||[]){
       const article=element('article','','support-message');
       article.append(
@@ -141,7 +149,7 @@ export function initializeSupportCenter(client) {
         element('p',message.body)
       );
       thread.append(article);
-      const links=await renderAttachments(message.id);
+      const links=await renderAttachments(message.id,attachments.data||[]);
       if(seq!==generation)return;
       if(links)article.append(links);
     }
@@ -272,11 +280,12 @@ export function initializeSupportCenter(client) {
     if(error){report(error.message,true);return;}
     await openTicket(t.id);await readTicketList();
   });
-  school.addEventListener('change',()=>{pendingOrder=null;fillOrderReferences();});
+  school.addEventListener('change',()=>{pendingOrder=null;pendingSchool=null;fillOrderReferences();});
   document.getElementById('support-refresh').addEventListener('click',()=>void initialData());
   window.addEventListener('breakapp:support-order',event=>{
     if(!user)return;
     const {schoolId,orderId}=event.detail||{};
+    pendingSchool=schoolId;
     if(schools.some(s=>s.id===schoolId))school.value=schoolId;
     pendingOrder=orderId;fillOrderReferences();
     document.getElementById('support-category').value='order';
