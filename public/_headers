@@ -2,8 +2,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
-  Permissions-Policy: camera=(), microphone=(), payment=()
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co
+  Permissions-Policy: camera=(self), microphone=(), payment=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://ynvswdyirngvdpudcikl.supabase.co; connect-src 'self' https://ynvswdyirngvdpudcikl.supabase.co wss://ynvswdyirngvdpudcikl.supabase.co
 
-# La policy CSP andrà aggiornata e verificata per domini Supabase personalizzati,
-# pagamenti Stripe, notifiche push e geolocalizzazione nelle milestone successive.
+# Hosted QR reading needs same-origin camera. Product images are loaded from
+# the explicitly authorized BreakApp Supabase Storage origin only.
