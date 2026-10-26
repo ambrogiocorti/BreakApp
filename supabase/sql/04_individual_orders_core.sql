@@ -477,4 +477,50 @@ grant execute on function public.advance_individual_order(uuid,text) to authenti
 grant execute on function public.record_individual_counter_payment(uuid,text,uuid) to authenticated;
 grant execute on function public.cancel_individual_order(uuid) to authenticated;
 
+
+-- Configurazione geolocalizzazione e regole prenotazione: SOLO Admin scuola AAL2.
+-- Le coordinate reali sono impostate da personale autorizzato, mai dal cliente.
+create or replace function public.configure_school_booking(
+  p_school_id uuid, p_latitude double precision, p_longitude double precision,
+  p_radius_m integer, p_horizon_days integer, p_cancel_cutoff_minutes integer,
+  p_max_unpaid integer, p_approval_product_threshold integer,
+  p_approval_amount_threshold_cents integer
+) returns void language plpgsql security definer set search_path=''
+as $
+begin
+  if auth.uid() is null or (auth.jwt()->>'aal')<>'aal2' then
+    raise exception 'È richiesta autenticazione Admin con 2FA';
+  end if;
+  if not exists (
+    select 1 from public.school_memberships m join public.role_assignments r on r.membership_id=m.id
+    where m.school_id=p_school_id and m.user_id=auth.uid()
+      and m.membership_status='active' and r.role_code='school_admin'
+  ) then raise exception 'Non sei Admin della scuola selezionata'; end if;
+  if p_latitude is null or p_longitude is null
+    or p_latitude not between -90 and 90 or p_longitude not between -180 and 180
+    or p_radius_m not between 100 and 10000
+    or p_horizon_days not between 1 and 365
+    or p_cancel_cutoff_minutes not between 0 and 1440
+    or p_max_unpaid not between 1 and 50
+    or (p_approval_product_threshold is not null and p_approval_product_threshold<=0)
+    or (p_approval_amount_threshold_cents is not null and p_approval_amount_threshold_cents<=0)
+  then raise exception 'Parametri di prenotazione non validi'; end if;
+  update public.schools set
+    latitude=p_latitude,longitude=p_longitude,pickup_radius_m=p_radius_m,
+    booking_horizon_days=p_horizon_days,cancel_cutoff_minutes=p_cancel_cutoff_minutes,
+    max_unpaid_orders_per_customer=p_max_unpaid,
+    approval_product_threshold=p_approval_product_threshold,
+    approval_amount_threshold_cents=p_approval_amount_threshold_cents
+  where id=p_school_id;
+  if not found then raise exception 'Scuola non disponibile'; end if;
+end;
+$;
+
+revoke all on function public.configure_school_booking(
+  uuid,double precision,double precision,integer,integer,integer,integer,integer,integer
+) from public,anon,authenticated;
+grant execute on function public.configure_school_booking(
+  uuid,double precision,double precision,integer,integer,integer,integer,integer,integer
+) to authenticated;
+
 commit;
