@@ -7,10 +7,10 @@
 - Orari settimanali per bar, con uno o più intervalli al giorno (Admin scuola AAL2), validati con impedimento di sovrapposizioni e di modifica retroattiva delle fasce future già pubblicate.
 - Pausa/ripresa delle **nuove prenotazioni**, effettuabile da Admin scuola AAL2 o Barista autorizzato dello stesso tenant. Gli ordini confermati non vengono modificati.
 - Chiusure programmate solo Admin AAL2; se una chiusura programmata intercetta ordini già attivi viene rifiutata.
-- Chiusure straordinarie da Admin AAL2 o Barista, con anteprima degli ordini interessati. Annullamento atomico dei soli ordini non consegnati/non riscossi nello specifico intervallo, ripristino delle loro scorte, tracciamento in audit e notifica **in-app** al proprietario ordine.
+- Chiusure straordinarie da Admin AAL2 o Barista, con anteprima degli ordini interessati. Annullamento atomico dei soli ordini non consegnati/non riscossi nello specifico intervallo, ripristino delle scorte soltanto se i prodotti non erano ancora in preparazione, tracciamento in audit e notifica **in-app** al proprietario ordine.
 - Se una chiusura interessa incassi realmente registrati, viene **bloccata** in sicurezza, non simulata: i rimborsi automatici reali via Stripe/contabilità sono un requisito ancora da implementare.
-- Riapertura anticipata, con storico e senza resurrezione degli ordini cancellati.
-- Trigger DB blocca nuove prenotazioni in pausa/chiusura/fuori apertura e la pubblicazione di nuove fasce in orari chiusi.
+- Riapertura anticipata, con storico e senza resurrezione degli ordini cancellati. I prodotti di ordini già in preparazione/pronti non tornano automaticamente vendibili: rimangono conteggiati per evitare sovravendita e richiedono riconciliazione inventariale.
+- Trigger DB blocca nuove prenotazioni in pausa/chiusura/fuori apertura e la pubblicazione di nuove fasce in orari chiusi. La migrazione 08 impedisce di disattivare direttamente fasce con ordini attivi.
 - Catalogo consultabile anche durante la pausa. Carrello e scelta ritiro leggono lo stato reale e disabilitano checkout non disponibile. Verifica server ripetuta all'invio.
 - Area personale e Admin responsive; storico azioni consultabile da personale autorizzato.
 
