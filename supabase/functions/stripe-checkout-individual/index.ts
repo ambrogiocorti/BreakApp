@@ -69,6 +69,9 @@ Deno.serve(async(req)=>{
     'line_items[0][price_data][currency]':'eur',
     'line_items[0][price_data][unit_amount]':String(attempt.amount_cents),
     'line_items[0][price_data][product_data][name]':'BreakApp · Ordine scolastico',
+    // Stripe requires a window of at least 30 minutes. No local timeout
+    // may be used to release the cash-desk payment lock.
+    expires_at:String(Math.floor(Date.now()/1000)+35*60),
     success_url:site+'#orders',
     cancel_url:site+'#orders'
    });
