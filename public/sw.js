@@ -51,3 +51,27 @@ self.addEventListener('notificationclick',event=>{
     await self.clients.openWindow(target.href);
   }));
 });
+
+// True background push: service worker can run while app tabs are closed.
+// No order/payment mutations are performed from the notification payload.
+self.addEventListener('push',event=>{
+ let data={title:'BreakApp',body:'Hai un nuovo avviso',url:BASE_PATH};
+ try{
+   if(event.data){
+     const value=event.data.json();
+     if(typeof value.title==='string')data.title=value.title.slice(0,70);
+     if(typeof value.body==='string')data.body=value.body.slice(0,200);
+     if(typeof value.url==='string')data.url=value.url;
+   }
+ }catch{/* retain safe generic message */}
+ let url=new URL(BASE_PATH,self.location.origin);
+ try{
+   const candidate=new URL(data.url,self.location.origin);
+   if(candidate.origin===self.location.origin&&candidate.pathname.startsWith(BASE_PATH))
+     url=candidate;
+ }catch{/* retain internal URL */}
+ event.waitUntil(self.registration.showNotification(data.title,{
+  body:data.body,icon:BASE_PATH+'icon-placeholder.svg',
+  tag:'breakapp-push-'+Date.now(),data:{url:url.href}
+ }));
+});
