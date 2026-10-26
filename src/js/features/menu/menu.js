@@ -83,7 +83,12 @@ export function initializePublicMenu(client) {
       const description = make('p', 'menu-product-description',
         product.description || 'Nessuna descrizione ancora disponibile.');
       const price = make('strong', 'menu-product-price', formatEuro(product.price_cents));
-      card.append(badge, title, description, price);
+      const details = make('button', 'button button-outline button-small', 'Dettagli e aggiungi');
+      details.type = 'button';
+      details.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('breakapp:product-open', { detail: { id: product.id } }));
+      });
+      card.append(badge, title, description, price, details);
       grid.append(card);
     }
   }
@@ -93,6 +98,9 @@ export function initializePublicMenu(client) {
     searchInput.value = '';
     categories = [];
     products = [];
+    window.dispatchEvent(new CustomEvent('breakapp:catalog-ready', {
+      detail: { schoolId: schoolInput.value, barId: barInput.value, products: [] }
+    }));
     categoryList.replaceChildren();
     showEmpty('Caricamento del menu…');
     if (!barInput.value) {
@@ -117,6 +125,9 @@ export function initializePublicMenu(client) {
       if (pro.error) throw pro.error;
       categories = cat.data || [];
       products = filterPublicMenu(categories, pro.data || []);
+      window.dispatchEvent(new CustomEvent('breakapp:catalog-ready', {
+        detail: { schoolId, barId, products }
+      }));
       renderFilters();
       renderProducts();
       feedback(`Menu aggiornato · ${products.length} prodotti pubblicati.`);

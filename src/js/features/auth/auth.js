@@ -3,6 +3,7 @@ import { loadSchoolAccess, roleLabel } from './access.js';
 import { getAdminSchools } from '../catalog/utils.js';
 import { initializeAdminCatalog } from '../catalog/catalog.js';
 import { initializeAdminMfa } from './mfa.js';
+import { initializeAdminOrderSetup } from '../orders/admin-setup.js';
 
 function setFeedback(element, message, isError = false) {
   element.textContent = message;
@@ -50,9 +51,15 @@ export function initializeAuth(config) {
   let accessRequestId = 0;
   let accessCache = null;
   const catalog = initializeAdminCatalog(client);
+  const operations = initializeAdminOrderSetup(client);
   const mfa = initializeAdminMfa(client, (verified) => {
-    if (verified && accessCache && activeUser) catalog.show(accessCache);
-    else catalog.hide();
+    if (verified && accessCache && activeUser) {
+      catalog.show(accessCache);
+      void operations.show(accessCache);
+    } else {
+      catalog.hide();
+      operations.hide();
+    }
   });
 
   function renderSchoolAccess({ memberships, bars }) {

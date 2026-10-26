@@ -1,0 +1,37 @@
+name: BreakApp database integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/sql/**'
+      - 'tests/db/**'
+      - '.github/workflows/database.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Bootstrap Supabase Auth stub
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/bootstrap.sql
+      - name: Apply migrations 01, 03 and 04
+        run: |
+          for file in supabase/sql/01_breakapp_foundations.sql supabase/sql/03_catalog_admin.sql supabase/sql/04_individual_orders_core.sql; do
+            docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
+          done
+      - name: Test isolation, idempotence and stock
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/orders-smoke.sql

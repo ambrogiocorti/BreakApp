@@ -20,10 +20,12 @@ test('il menu reale resta invisibile agli utenti non autenticati', () => {
   assert.ok(auth.includes("document.body.dataset.authenticated = String(present);"));
 });
 
-test('navigazione student: accessi validi e voci ancora non disponibili non interattive', () => {
+test('navigazione student: ordini collegati al modulo reale e gruppi non disponibili', () => {
   assert.ok(html.includes('id="app-mobile-nav"'));
   assert.ok(html.includes('id="app-desktop-nav"'));
-  assert.ok(html.includes('Ordini non ancora disponibili'));
+  assert.ok(html.includes('href="#orders"'));
+  assert.ok(html.includes('id="orders"'));
+  assert.ok(html.includes('id="order-stepper"'));
   assert.ok(html.includes('Gruppi non ancora disponibili'));
 });
 
