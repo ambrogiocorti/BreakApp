@@ -43,3 +43,7 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/08_calendar_safety_guards.sql
       - name: Test opening hours, pause, closures and customer notices
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/service-calendar.sql
+      - name: Apply support tickets migration 09
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/09_support_tickets.sql
+      - name: Test support privacy, MFA, messages, reopen and Storage
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/support-tickets.sql

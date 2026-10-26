@@ -389,3 +389,24 @@ body[data-authenticated="true"] { padding-bottom: 77px; }
 .service-customer-alert {border:1px solid #d49a33;background:rgba(240,181,58,.11);padding:1rem;border-radius:12px;margin-bottom:1rem;font-size:.87rem;}
 .service-notice {border-left:3px solid var(--accent);padding:.75rem 1rem;background:var(--surface);border-radius:0 8px 8px 0;}
 .service-notice p {margin:.35rem 0 0;font-size:.86rem;}
+
+/* Centro assistenza: ticket privati da Profilo, non bottom navigation. */
+.support-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:1rem;margin-top:1rem;align-items:start;}
+.support-grid .catalog-card {min-width:0;}
+.support-grid form {display:grid;gap:.6rem;}
+.support-grid label {font-size:.85rem;font-weight:650;margin-top:.5rem;}
+.support-grid input,.support-grid select,.support-grid textarea {background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.7rem;color:var(--text);font:inherit;min-height:44px;width:100%;}
+.support-grid textarea {resize:vertical;min-height:95px;}
+.support-ticket-card {border:1px solid var(--border);padding:1rem;border-radius:12px;display:flex;flex-direction:column;gap:.35rem;}
+.support-ticket-card strong {font-size:1rem;}
+.support-ticket-card span,.support-ticket-card small {font-size:.78rem;color:var(--muted);}
+.support-ticket-card button {align-self:flex-start;margin-top:.35rem;}
+.support-thread {display:grid;gap:.9rem;margin:1rem 0;max-height:60vh;overflow-y:auto;}
+.support-message {border:1px solid var(--border);border-radius:12px;padding:1rem;}
+.support-message strong {display:block;font-size:.86rem;}
+.support-message time {display:block;color:var(--muted);font-size:.74rem;margin:.25rem 0;}
+.support-message p {margin:.4rem 0;font-size:.86rem;white-space:pre-wrap;overflow-wrap:anywhere;}
+.support-attachments {display:flex;gap:.6rem;margin-top:.6rem;flex-wrap:wrap;}
+.support-conversation {grid-column:span 1;}
+#support-admin-actions {border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem;}
+@media(min-width:1180px){.support-conversation {grid-column:span 2;}}
