@@ -259,6 +259,19 @@
               <textarea id="catalog-product-description" rows="2" maxlength="1500" placeholder="Ingredienti, note…"></textarea>
               <label for="catalog-product-price">Prezzo (€)</label>
               <input id="catalog-product-price" type="text" inputmode="decimal" placeholder="Es. 2,50" required />
+              <label for="catalog-product-ingredients">Ingredienti (obbligatori per la pubblicazione)</label>
+              <textarea id="catalog-product-ingredients" rows="3" maxlength="3000" placeholder="Elenca tutti gli ingredienti con attenzione"></textarea>
+              <fieldset class="product-allergens">
+                <legend>Allergeni dichiarati</legend>
+                <p class="catalog-help">Seleziona gli allergeni presenti secondo l'etichettatura o la scheda del fornitore. L'assenza di una selezione non certifica l'assenza di allergeni.</p>
+                <div id="catalog-product-allergens" class="allergen-options"></div>
+              </fieldset>
+              <label for="catalog-product-image">Fotografia (JPG, PNG, WebP, max 2 MB)</label>
+              <input id="catalog-product-image" type="file" accept="image/jpeg,image/png,image/webp" />
+              <div id="catalog-product-preview" class="product-preview" hidden></div>
+              <label class="product-remove-image">
+                <input id="catalog-product-remove-image" type="checkbox" /> Rimuovi l'immagine attuale
+              </label>
               <div class="catalog-form-buttons">
                 <button id="catalog-product-submit" type="submit" class="button button-primary button-small">Aggiungi prodotto</button>
                 <button id="catalog-product-cancel" type="button" class="button button-outline button-small" hidden>Annulla</button>
