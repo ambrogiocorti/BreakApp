@@ -44,6 +44,26 @@ Deno.serve(async request=>{
   const evt=JSON.parse(raw) as Record<string,any>;
   if(!/^evt_[A-Za-z0-9]+$/.test(evt.id||'')||evt.livemode!==false)
    return respond({error:'Evento Stripe non valido per il test'},400);
+  if(evt.type==='checkout.session.expired'){
+    const expired=evt.data?.object;
+    if(!expired||expired.object!=='checkout.session'||
+      expired.status!=='expired'||expired.payment_status!=='unpaid'||
+      expired.metadata?.attempt_id!==expired.client_reference_id||
+      !/^[0-9a-f-]{36}$/i.test(expired.client_reference_id||'')||
+      !/^cs_(test|live)_[A-Za-z0-9]+$/.test(expired.id||'')||
+      !/^acct_[A-Za-z0-9]+$/.test(evt.account||''))
+      return respond({error:'Evento scadenza Checkout non valido'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data,error}=await admin.rpc('reconcile_signed_checkout_expiry',{
+      p_event_id:evt.id,p_stripe_account:evt.account,
+      p_session:expired.id,p_attempt:expired.client_reference_id
+    });
+    if(error)return respond({error:'Scadenza non riconciliata'},500);
+    return respond({received:true,result:data},200);
+  }
   if(evt.type==='refund.updated'){
     const refund=evt.data?.object;
     if(!refund||refund.object!=='refund'||
