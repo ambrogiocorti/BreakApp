@@ -20,20 +20,23 @@ select set_config('app.offline_first_gen',
 select public.transfer_my_offline_device(
  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  'aaaaaaaa-0000-4000-8000-000000000091') as new_lease \gset
+reset role;
 do $single_device$
 begin
  if (select device_id from public.staff_offline_leases
-  where barista_id=auth.uid()) <> 'aaaaaaaa-0000-4000-8000-000000000091'::uuid
+  where barista_id='33333333-3333-4333-8333-333333333333') <> 'aaaaaaaa-0000-4000-8000-000000000091'::uuid
  then raise exception 'Old device still active';end if;
  if (select generation from public.staff_offline_leases
   where barista_id=auth.uid())<=current_setting('app.offline_first_gen')::bigint
  then raise exception 'Offline transfer did not revoke first generation';end if;
 end;$single_device$;
+set role authenticated;
 select public.stage_my_offline_event(
  'aaaaaaaa-0000-4000-8000-000000000090',
  current_setting('app.offline_first_gen')::bigint,
  'aaaaaaaa-0000-4000-8000-000000000092',
  'counter_sale',now(),'{"amount_cents":200}'::jsonb) as quarantined_event \gset
+reset role;
 do $quarantined$
 begin
  if not exists(select 1 from public.offline_events_inbox
@@ -41,6 +44,7 @@ begin
    and review_reason like '%revocat%') then
   raise exception 'Revoked device event was not quarantined';end if;
 end;$quarantined$;
+set role authenticated;
 -- Customer and superadmin cannot transfer offline authorization.
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
 do $customer_denied$
