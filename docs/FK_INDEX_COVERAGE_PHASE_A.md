@@ -36,3 +36,16 @@ La migrazione e i test CI non equivalgono a deploy Supabase live.
 PR #25 introduce lo script 21; PR #26 introduce lo script 22.
 Questo incremento usa il numero 23, e deve essere applicato dopo entrambi
 quando saranno integrati.
+
+## Test reale di concorrenza nel database isolato
+
+Il test `tests/db/orders-concurrency.sql` crea due sessioni PostgreSQL indipendenti,
+ognuna con un cliente registrato differente, e le fa competere per **una sola
+unità disponibile**. Il trigger di test introduce una pausa dopo il blocco
+dello stock, rendendo riproducibile la sovrapposizione.
+
+Il criterio di superamento è: **1 ordine riuscito, 1 errore per stock
+insufficiente, capacità mai superata, 0 doppie prenotazioni**. Il test viene
+eseguito soltanto nel PostgreSQL effimero della CI e non su dati reali.
+Non sostituisce il carico sintetico di 2.000 utenti né il collaudo con
+connessione mobile instabile.
