@@ -10,6 +10,7 @@ alter table public.schools
   add column if not exists pickup_radius_m integer not null default 1000,
   add column if not exists booking_horizon_days integer not null default 30,
   add column if not exists max_unpaid_orders_per_customer integer not null default 3,
+  add column if not exists cancel_cutoff_minutes integer not null default 10,
   add column if not exists approval_product_threshold integer,
   add column if not exists approval_amount_threshold_cents integer;
 
@@ -20,6 +21,7 @@ alter table public.schools
   ),
   add constraint schools_radius_valid check (pickup_radius_m between 100 and 10000),
   add constraint schools_horizon_valid check (booking_horizon_days between 1 and 365),
+  add constraint schools_cancel_cutoff_valid check (cancel_cutoff_minutes between 0 and 1440),
   add constraint schools_unpaid_valid check (max_unpaid_orders_per_customer between 1 and 50),
   add constraint schools_approval_items_valid check
     (approval_product_threshold is null or approval_product_threshold > 0),
@@ -338,7 +340,7 @@ begin
     status,payment_method,payment_status,total_cents)
   values (v_school.id,p_bar_id,v_user,p_window_id,p_request_key,
     case when v_bar.preparation_mode='ready_made' then 'ready' else 'confirmed' end,
-    'at_pickup','due',v_total)
+    'at_pickup',case when v_total=0 then 'paid' else 'due' end,v_total)
   returning id into v_order;
 
   for v_item in
@@ -441,6 +443,7 @@ declare
   v_order public.orders%rowtype;
   v_slot public.pickup_windows%rowtype;
   v_tz text;
+  v_cutoff integer;
   v_item record;
 begin
   if v_user is null or p_order_id is null then raise exception 'Utente non autenticato'; end if;
@@ -449,8 +452,8 @@ begin
   if v_order.payment_status<>'due' or v_order.status<>'confirmed' then
     raise exception 'L''annullamento non è disponibile per questo stato'; end if;
   select * into v_slot from public.pickup_windows where id=v_order.pickup_window_id;
-  select timezone into v_tz from public.schools where id=v_order.school_id;
-  if (v_slot.service_date+v_slot.starts_at) at time zone v_tz < now()+interval '10 minutes' then
+  select timezone,cancel_cutoff_minutes into v_tz,v_cutoff from public.schools where id=v_order.school_id;
+  if (v_slot.service_date+v_slot.starts_at) at time zone v_tz < now()+make_interval(mins=>v_cutoff) then
     raise exception 'Il termine per annullare l''ordine è scaduto'; end if;
   for v_item in select product_id,quantity from public.order_items where order_id=p_order_id order by product_id loop
     update public.daily_stock set allocated=allocated-v_item.quantity,updated_at=now()
