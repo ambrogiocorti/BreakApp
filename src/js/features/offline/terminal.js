@@ -38,7 +38,9 @@ export function initializeOfflineTerminal(client){
     ' · lease fino al '+new Date(device.expiresAt).toLocaleString('it-IT')+
     (hasLease()?' · attivo localmente':' · scaduto')
    :'Nessun dispositivo registrato su questo browser.';
-  activateForm.hidden=Boolean(device);
+  // A locally expired lease must be renewable online after queued drafts
+  // have been safely handed to the server.
+  activateForm.hidden=Boolean(device&&hasLease());
   unlockForm.hidden=!device||Boolean(key);
   entryForm.hidden=!key;
   syncButton.disabled=!key||!navigator.onLine;
@@ -197,5 +199,5 @@ export function initializeOfflineTerminal(client){
      lock();renderLease();info('Blocco automatico dopo cinque minuti di inattività.');
    }
  },15000);
- window.addEventListener('pagehide',()=>{lock();clearInterval(interval);});
+ window.addEventListener('pagehide',()=>{lock();});
 }
