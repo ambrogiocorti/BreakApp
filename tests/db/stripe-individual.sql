@@ -65,6 +65,7 @@ select public.finalize_verified_checkout(
  'cs_test_abcdefghijklmnopqrstuvwxyz','pi_abcdefg1234',
  current_setting('app.stripe_attempt')::uuid,250,'eur',true,'{}'::jsonb)
  as webhook_result \gset
+reset role;
 do $settled$
 begin
  if (select payment_status from public.orders
@@ -74,12 +75,14 @@ begin
   where id=current_setting('app.stripe_attempt')::uuid)<>'succeeded'
  then raise exception 'Stripe payment attempt not settled';end if;
 end;$settled$;
+set role service_role;
 select public.finalize_verified_checkout(
  'evt_good123','acct_1UUniH2RLt7x5EeZ',
  'cs_test_abcdefghijklmnopqrstuvwxyz','pi_abcdefg1234',
  current_setting('app.stripe_attempt')::uuid,250,'eur',true,'{}'::jsonb)
  as duplicate_result \gset
 select set_config('app.stripe_duplicate_result',:'duplicate_result',false);
+reset role;
 do $dedupe$
 begin
  if current_setting('app.stripe_duplicate_result')<>'duplicate' then
