@@ -90,6 +90,23 @@ export function initializeOrders(client) {
     document.querySelector('#product-name').textContent=product.name;
     document.querySelector('#product-description').textContent=product.description||'Ingredienti e allergeni non ancora pubblicati.';
     document.querySelector('#product-price').textContent=formatEuro(product.price_cents);
+    document.querySelector('#product-ingredients').textContent=product.ingredients
+      ? 'Ingredienti: '+product.ingredients
+      : 'Ingredienti non pubblicati. Verifica direttamente con il bar.';
+    const allergenNames={
+      gluten:'Glutine',crustaceans:'Crostacei',eggs:'Uova',fish:'Pesce',
+      peanuts:'Arachidi',soy:'Soia',milk:'Latte',nuts:'Frutta a guscio',
+      celery:'Sedano',mustard:'Senape',sesame:'Sesamo',sulphites:'Solfiti',
+      lupin:'Lupini',molluscs:'Molluschi'
+    };
+    document.querySelector('#product-allergens').textContent=product.allergens?.length
+      ? 'Allergeni dichiarati: '+product.allergens.map(x=>allergenNames[x]||x).join(', ')
+      : 'Allergeni non dichiarati. Chiedi conferma al bar.';
+    const image=document.querySelector('#product-image');
+    if(product.image_path){
+      image.src=client.storage.from('breakapp-product-images').getPublicUrl(product.image_path).data.publicUrl;
+      image.alt='Foto di '+product.name;image.hidden=false;
+    }else{image.hidden=true;image.removeAttribute('src');}
     document.querySelector('#product-quantity').value='1';
     productDialog.showModal();
   });

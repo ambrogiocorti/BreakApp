@@ -1,5 +1,19 @@
 import { parseEuroToCents, formatEuro, getAdminSchools } from './utils.js';
 
+const ALLERGENS = Object.freeze([
+  ['gluten', 'Cereali contenenti glutine'], ['crustaceans', 'Crostacei'],
+  ['eggs', 'Uova'], ['fish', 'Pesce'], ['peanuts', 'Arachidi'],
+  ['soy', 'Soia'], ['milk', 'Latte'], ['nuts', 'Frutta a guscio'],
+  ['celery', 'Sedano'], ['mustard', 'Senape'], ['sesame', 'Sesamo'],
+  ['sulphites', 'Anidride solforosa e solfiti'], ['lupin', 'Lupini'],
+  ['molluscs', 'Molluschi']
+]);
+const IMAGE_BUCKET = 'breakapp-product-images';
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const IMAGE_TYPES = Object.freeze({
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp'
+});
+
 function element(tag, className, value) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -28,6 +42,28 @@ export function initializeAdminCatalog(client) {
   const productName = document.querySelector('#catalog-product-name');
   const productDescription = document.querySelector('#catalog-product-description');
   const productPrice = document.querySelector('#catalog-product-price');
+  const productIngredients = document.querySelector('#catalog-product-ingredients');
+  const allergenList = document.querySelector('#catalog-product-allergens');
+  const productFile = document.querySelector('#catalog-product-image');
+  const productPreview = document.querySelector('#catalog-product-preview');
+  const removeImage = document.querySelector('#catalog-product-remove-image');
+  for (const [code,label] of ALLERGENS) {
+    const wrap=element('label','allergen-option');
+    const check=document.createElement('input');check.type='checkbox';check.value=code;check.name='allergens';
+    wrap.append(check,element('span','',label));allergenList.append(wrap);
+  }
+  function selectedAllergens(){
+    return [...allergenList.querySelectorAll('input:checked')].map(input=>input.value);
+  }
+  function showPreview(path, name){
+    productPreview.replaceChildren();
+    productPreview.hidden=!path;
+    if(!path)return;
+    const {data}=client.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+    const img=document.createElement('img');
+    img.src=data.publicUrl;img.alt='Fotografia del prodotto '+name;
+    img.loading='lazy';productPreview.append(img);
+  }
   const productSubmit = document.querySelector('#catalog-product-submit');
   const productCancel = document.querySelector('#catalog-product-cancel');
   let access = null;
@@ -59,6 +95,7 @@ export function initializeAdminCatalog(client) {
     productForm.dataset.editId = '';
     productSubmit.textContent = 'Aggiungi prodotto';
     productCancel.hidden = true;
+    showPreview(null,'');
   }
   function resetForms() {
     resetCategoryForm();
@@ -135,6 +172,15 @@ export function initializeAdminCatalog(client) {
       description.append(heading, element('span', 'catalog-item-meta',
         `${category?.name || 'Categoria non disponibile'} · ${product.is_active ? 'Visibile' : 'Nascosto'}`));
       if (product.description) description.append(element('span', 'catalog-item-meta', product.description));
+      description.append(element('span','catalog-item-meta',
+        product.ingredients ? 'Ingredienti: '+product.ingredients : 'Ingredienti non ancora pubblicati'));
+      if (product.allergens?.length) description.append(element('span','catalog-item-meta',
+        'Allergeni: '+product.allergens.map(x=>ALLERGENS.find(y=>y[0]===x)?.[1]||x).join(', ')));
+      if (product.image_path) {
+        const url=client.storage.from(IMAGE_BUCKET).getPublicUrl(product.image_path).data.publicUrl;
+        const img=document.createElement('img');img.src=url;img.alt='Fotografia di '+product.name;
+        img.loading='lazy';img.className='catalog-product-thumbnail';row.append(img);
+      }
       const buttons = element('div', 'catalog-item-actions');
       const edit = element('button', 'button button-outline button-small', 'Modifica');
       edit.type = 'button';
@@ -144,6 +190,12 @@ export function initializeAdminCatalog(client) {
         productName.value = product.name;
         productDescription.value = product.description;
         productPrice.value = (product.price_cents / 100).toFixed(2).replace('.', ',');
+        productIngredients.value = product.ingredients || '';
+        allergenList.querySelectorAll('input[type="checkbox"]').forEach(input=>{
+          input.checked=(product.allergens||[]).includes(input.value);
+        });
+        removeImage.checked=false;
+        showPreview(product.image_path,product.name);
         productSubmit.textContent = 'Salva prodotto';
         productCancel.hidden = false;
         productName.focus();
@@ -178,7 +230,7 @@ export function initializeAdminCatalog(client) {
         client.from('categories').select('id,school_id,bar_id,name,sort_order,is_active')
           .eq('school_id', scope.school_id).eq('bar_id', scope.bar_id)
           .order('sort_order').order('name'),
-        client.from('products').select('id,school_id,bar_id,category_id,name,description,price_cents,is_active')
+        client.from('products').select('id,school_id,bar_id,category_id,name,description,price_cents,is_active,ingredients,allergens,image_path')
           .eq('school_id', scope.school_id).eq('bar_id', scope.bar_id).order('name')
       ]);
       if (token !== generation || panel.hidden) return;
@@ -197,7 +249,7 @@ export function initializeAdminCatalog(client) {
       }
     }
   }
-  async function save(table, payload, editId) {
+  async function save(table, payload, editId, uploadOptions = {}) {
     if (isBusy) return;
     isBusy = true;
     categorySubmit.disabled = true;
@@ -212,6 +264,29 @@ export function initializeAdminCatalog(client) {
       const { data, error } = await query.select('id').single();
       if (error) throw error;
       if (!data?.id) throw new Error('Nessun elemento aggiornato: controlla ruolo, 2FA e policy RLS.');
+      if (table==='products') {
+        const previous=editId?products.find(p=>p.id===editId)?.image_path:null;
+        const file=uploadOptions.file;
+        if(file) {
+          const ext=IMAGE_TYPES[file.type];
+          if (!ext || file.size > MAX_IMAGE_BYTES || file.size===0)
+            throw new Error('Immagine non valida: JPG/PNG/WebP, dimensione massima 2 MB.');
+          const path=`${scope.school_id}/${scope.bar_id}/${crypto.randomUUID()}.${ext}`;
+          const uploaded=await client.storage.from(IMAGE_BUCKET)
+            .upload(path,file,{contentType:file.type,upsert:false,cacheControl:'3600'});
+          if(uploaded.error)throw uploaded.error;
+          const saved=await client.from('products')
+            .update({image_path:path}).eq('id',data.id)
+            .eq('school_id',scope.school_id).eq('bar_id',scope.bar_id).select('id').single();
+          if(saved.error) {
+            await client.storage.from(IMAGE_BUCKET).remove([path]);
+            throw saved.error;
+          }
+          if(previous) await client.storage.from(IMAGE_BUCKET).remove([previous]);
+        } else if (uploadOptions.clear && previous) {
+          await client.storage.from(IMAGE_BUCKET).remove([previous]);
+        }
+      }
       if (token !== generation) return;
       await refresh();
       notify(editId ? 'Modifiche salvate su Supabase.' : 'Elemento creato su Supabase.');
@@ -236,14 +311,21 @@ export function initializeAdminCatalog(client) {
     event.preventDefault();
     if (!productForm.reportValidity()) return;
     try {
+      const file=productFile.files[0]||null;
+      if(file && (!IMAGE_TYPES[file.type] || file.size>MAX_IMAGE_BYTES || file.size===0))
+        throw new Error('Fotografia non valida: usa JPG, PNG o WebP, massimo 2 MB.');
       const payload = {
         category_id: productCategory.value,
         name: productName.value.trim(),
         description: productDescription.value.trim(),
-        price_cents: parseEuroToCents(productPrice.value)
+        price_cents: parseEuroToCents(productPrice.value),
+        ingredients: productIngredients.value.trim(),
+        allergens: selectedAllergens()
       };
       if (!payload.category_id) throw new Error('Devi scegliere una categoria.');
-      void save('products', payload, productForm.dataset.editId);
+      if (!payload.ingredients) throw new Error('Inserisci gli ingredienti prima di salvare il prodotto.');
+      if(removeImage.checked&&!file)payload.image_path=null;
+      void save('products', payload, productForm.dataset.editId, {file,clear:removeImage.checked});
     } catch (error) { notify(error.message, true); }
   });
   categoryCancel.addEventListener('click', resetCategoryForm);

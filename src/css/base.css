@@ -336,3 +336,19 @@ body[data-authenticated="true"] { padding-bottom: 77px; }
 @media (min-width:1100px) { .cart-strip { bottom: 1rem; left: calc(50% + 105px); } }
 @media (max-width:550px) { .ba-dialog { padding: 1.3rem; border-radius: 15px; } .cart-strip { width: calc(100% - 1rem); } }
 @media (prefers-reduced-motion:reduce) { .ba-dialog { animation: none; } }
+
+/* Informazioni alimentari, foto menu e scheda Admin. */
+.menu-product-image { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:12px; background:var(--surface-soft); order:-1; }
+.menu-product-ingredients,.menu-product-allergens { color:var(--muted); font-size:.79rem; line-height:1.5; margin:0; }
+.menu-product-allergens { font-weight:600; }
+.product-dialog-image { width:100%; height:auto; max-height:300px; object-fit:cover; border-radius:12px; background:var(--surface-soft); }
+.product-allergens { border:1px solid var(--border); border-radius:12px; padding:1rem; margin:1rem 0; }
+.product-allergens legend { font-weight:750; font-size:.88rem; padding:0 .45rem; }
+.allergen-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
+.allergen-option { display:flex!important; align-items:center; gap:.4rem; font-weight:550!important; font-size:.8rem!important; }
+.allergen-option input { width:18px!important; min-height:18px!important; height:18px; accent-color:var(--accent); }
+.product-remove-image { display:flex!important; align-items:center; gap:.6rem; }
+.product-remove-image input { width:18px!important; min-height:18px!important; height:18px; }
+.product-preview img { width:min(100%,300px); border-radius:12px; margin-top:1rem; aspect-ratio:4/3; object-fit:cover; }
+.catalog-product-thumbnail { width:76px; height:76px; flex-shrink:0; border-radius:9px; object-fit:cover; background:var(--surface-soft); }
+@media(max-width:520px) { .allergen-options {grid-template-columns:1fr;} }
