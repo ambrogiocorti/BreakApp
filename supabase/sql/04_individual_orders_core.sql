@@ -130,6 +130,30 @@ create table if not exists public.order_audit (
   created_at timestamptz not null default now()
 );
 
+
+-- Non consentire spostamenti retroattivi di una fascia con ordini attivi.
+-- La gestione d'impatto/annullamenti dovrà passare da un workflow dedicato.
+create or replace function app_private.prevent_booked_window_shift()
+returns trigger language plpgsql set search_path=''
+as $
+begin
+  if (new.starts_at is distinct from old.starts_at
+      or new.ends_at is distinct from old.ends_at)
+    and exists (
+      select 1 from public.orders o where o.pickup_window_id=old.id
+      and o.status not in ('delivered','cancelled','no_show')
+    ) then
+    raise exception 'La fascia ha ordini attivi: usa il workflow di modifica con valutazione impatti';
+  end if;
+  return new;
+end;
+$;
+drop trigger if exists pickup_window_shift_guard on public.pickup_windows;
+create trigger pickup_window_shift_guard before update on public.pickup_windows
+for each row execute function app_private.prevent_booked_window_shift();
+revoke all on function app_private.prevent_booked_window_shift()
+from public,anon,authenticated;
+
 create index if not exists pickup_windows_by_day on public.pickup_windows(bar_id,service_date,starts_at);
 create index if not exists daily_stock_by_day on public.daily_stock(bar_id,service_date);
 create index if not exists orders_staff_queue on public.orders(bar_id,status,created_at);
