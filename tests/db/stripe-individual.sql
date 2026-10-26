@@ -2,7 +2,7 @@
 reset role;
 insert into public.school_stripe_merchants(school_id,stripe_account_id,charges_enabled)
 values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
- 'acct_1UUniH2RLt7x5EeZ',true);
+ 'acct_1UUniH2RLt7x5EeZ',false);
 insert into public.orders(school_id,bar_id,customer_id,pickup_window_id,
  request_key,status,payment_status,total_cents)
 values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -26,6 +26,25 @@ begin
  exception when others then denied:=true;end;
  if not denied then raise exception 'Non-owner opened checkout';end if;
 end;$different_customer$;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
+-- A merchant record is not sufficient: the checkout must remain blocked
+-- until an operator has verified Stripe card-payment capability.
+do $merchant_inactive$
+declare denied boolean:=false;
+begin
+ begin
+  perform public.begin_individual_stripe_checkout(
+    current_setting('app.stripe_test_order')::uuid,
+    '11111111-0000-4000-8000-000000000178');
+ exception when others then denied:=true;end;
+ if not denied then raise exception 'Checkout opened for disabled merchant';end if;
+end;$merchant_inactive$;
+
+reset role;
+update public.school_stripe_merchants
+set charges_enabled=true
+where school_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+set role authenticated;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 select public.begin_individual_stripe_checkout(
  current_setting('app.stripe_test_order')::uuid,
