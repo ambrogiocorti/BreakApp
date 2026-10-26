@@ -118,17 +118,57 @@ export function initializeOrders(client) {
   });
   document.querySelector('#cart-open').addEventListener('click',()=>{renderCart();cartDialog.showModal();});
   async function fetchWindows(){
-    const seq=++version;enabled=false;windows=[];slotSelect.replaceChildren();
+    const seq=++version;
+    enabled=false;windows=[];slotSelect.replaceChildren();
+    const banner=document.querySelector('#menu-service-alert');
+    banner.hidden=true;banner.replaceChildren();
     if(!user||!context.barId)return;
-    const {data,error}=await client.from('pickup_windows')
-      .select('id,service_date,starts_at,ends_at').eq('bar_id',context.barId)
-      .eq('is_active',true).order('service_date').order('starts_at').limit(150);
+    const [win,service,closures,hours]=await Promise.all([
+      client.from('pickup_windows')
+        .select('id,service_date,starts_at,ends_at').eq('bar_id',context.barId)
+        .eq('is_active',true).order('service_date').order('starts_at').limit(150),
+      client.from('bar_service_state').select('accepting_orders,reason')
+        .eq('bar_id',context.barId).maybeSingle(),
+      client.from('bar_closures').select('service_date,starts_at,ends_at,reopened_at')
+        .eq('bar_id',context.barId).is('reopened_at',null).limit(200),
+      client.from('bar_opening_hours').select('weekday,starts_at,ends_at')
+        .eq('bar_id',context.barId)
+    ]);
     if(seq!==version)return;
-    if(error){report(cartMessage,'Il motore prenotazioni non è ancora attivo: '+error.message,true);return;}
-    enabled=true;windows=data||[];
-    windows.forEach(w=>slotSelect.add(new Option(`${w.service_date} · ${w.starts_at.slice(0,5)}-${w.ends_at.slice(0,5)}`,w.id)));
+    const failure=win.error||service.error||closures.error||hours.error;
+    if(failure){
+      report(cartMessage,'Impossibile verificare orari o disponibilità: '+failure.message,true);
+      renderCart();return;
+    }
+    const paused=service.data?.accepting_orders===false;
+    const closed=closures.data||[],open=hours.data||[];
+    const valid=(win.data||[]).filter(w=>{
+      const localDow=new Date(w.service_date+'T12:00:00Z').getUTCDay();
+      const opened=open.some(h=>h.weekday===localDow&&
+        h.starts_at<=w.starts_at&&h.ends_at>=w.ends_at);
+      const excluded=closed.some(c=>c.service_date===w.service_date
+        &&c.starts_at<w.ends_at&&c.ends_at>w.starts_at);
+      return opened&&!excluded;
+    });
+    windows=paused?[]:valid;
+    enabled=!paused && windows.length>0;
+    windows.forEach(w=>slotSelect.add(new Option(
+      w.service_date+' · '+w.starts_at.slice(0,5)+'-'+w.ends_at.slice(0,5),w.id)));
+    if(paused){
+      banner.hidden=false;
+      banner.textContent='Nuove prenotazioni temporaneamente sospese. Motivo: '+
+        (service.data.reason||'necessità operativa')+'. Il menu rimane consultabile.';
+      report(cartMessage,'Nuove prenotazioni sospese per il bar selezionato.',true);
+    }else if(!windows.length){
+      banner.hidden=false;
+      banner.textContent='Nessuna fascia prenotabile: il bar potrebbe essere chiuso oppure le fasce non sono ancora state configurate.';
+      report(cartMessage,'Nessuna fascia di ritiro attualmente prenotabile.',true);
+    }
     renderCart();
   }
+  window.addEventListener('breakapp:service-changed',event=>{
+    if(event.detail?.barId===context.barId && user)void fetchWindows();
+  });
   function drawStep(){
     stepLabel.textContent=`Passaggio ${step} di 4`;
     [...stepper.querySelectorAll('[data-step]')].forEach(x=>x.hidden=Number(x.dataset.step)!==step);
@@ -210,6 +250,22 @@ export function initializeOrders(client) {
       history.append(box);
     }
     if(!history.childElementCount)history.append(elem('p','Nessun ordine effettuato.'));
+    const noticeArea=document.querySelector('#customer-service-notices');
+    if(noticeArea){
+      const n=await client.from('customer_notifications')
+        .select('message,created_at,read_at')
+        .eq('user_id',user.id).order('created_at',{ascending:false}).limit(15);
+      noticeArea.replaceChildren();
+      if(!n.error && n.data?.length){
+        const h=elem('h3','Avvisi relativi ai tuoi ordini');
+        noticeArea.append(h);
+        n.data.forEach(row=>{
+          const card=elem('div','','service-notice');
+          card.append(elem('strong',new Date(row.created_at).toLocaleString('it-IT')),
+            elem('p',row.message));noticeArea.append(card);
+        });
+      }
+    }
     report(feedback,`Ordini caricati: ${data?.length||0}.`);
   }
   function action(box,label,callback){
