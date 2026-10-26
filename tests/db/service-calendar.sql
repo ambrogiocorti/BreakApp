@@ -214,3 +214,60 @@ begin
  then raise exception 'Payment lost or duplicated';end if;
 end;
 $payment_integrity$;
+
+-- Fascia con ordine attivo: un Admin non può disattivarla direttamente.
+set role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',false);
+select set_config('request.jwt.claims','{"aal":"aal2","is_anonymous":false}',false);
+do $booked_window_guard$
+declare v_denied boolean:=false;
+begin
+ begin
+  update public.pickup_windows set is_active=false
+  where id='aaaaaaaa-0000-4000-8000-000000000098';
+ exception when others then
+  if position('La fascia ha ordini attivi' in sqlerrm)>0 then v_denied:=true;
+  else raise;end if;
+ end;
+ if not v_denied then raise exception 'Confirmed pickup window disabled';end if;
+end;
+$booked_window_guard$;
+
+-- Un ordine pronto non ancora pagato è annullabile per chiusura, ma
+-- il suo stock NON va reintrodotto automaticamente (prodotto già preparato).
+reset role;
+insert into public.pickup_windows(id,school_id,bar_id,service_date,starts_at,ends_at)
+values('aaaaaaaa-0000-4000-8000-000000000097',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ 'aaaaaaaa-0000-4000-8000-000000000001',
+ (now() at time zone 'Europe/Rome')::date+2,'11:40','11:55');
+set role authenticated;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',false);
+select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
+select public.submit_individual_order(
+ 'aaaaaaaa-0000-4000-8000-000000000001',
+ 'aaaaaaaa-0000-4000-8000-000000000097',
+ '[{"product_id":"aaaaaaaa-0000-4000-8000-000000000003","quantity":1}]'::jsonb,
+ '22222222-0000-4000-8000-000000000097',45,9,10,now()
+) as ready_unpaid_order \gset
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
+select public.advance_individual_order(:'ready_unpaid_order'::uuid,'ready');
+select public.close_bar_interval(
+ 'aaaaaaaa-0000-4000-8000-000000000001',
+ (now() at time zone 'Europe/Rome')::date+2,
+ '11:40','11:55','extraordinary','Guasto mentre ordine già pronto');
+reset role;
+do $preserved_prepared_stock$
+begin
+ if (select status from public.orders where request_key=
+  '22222222-0000-4000-8000-000000000097')<>'cancelled'
+ then raise exception 'Ready unpaid order not cancelled';end if;
+ if (select allocated from public.daily_stock where product_id=
+  'aaaaaaaa-0000-4000-8000-000000000003')<>3
+ then raise exception 'Prepared stock reintroduced unexpectedly';end if;
+ if not exists(select 1 from public.order_audit a join public.orders o on o.id=a.order_id
+  where o.request_key='22222222-0000-4000-8000-000000000097'
+   and a.action='prepared_stock_preserved_after_closure')
+ then raise exception 'Missing audit trail for prepared stock';end if;
+end;
+$preserved_prepared_stock$;
