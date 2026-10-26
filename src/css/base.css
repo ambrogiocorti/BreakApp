@@ -581,3 +581,8 @@ body[data-workspace="true"] #workspace-page-head[hidden]{
 .workspace-profile-switcher select{width:100%;min-height:45px;background:var(--surface);
  color:var(--text);border:1px solid var(--border);border-radius:10px;padding:.7rem;}
 .workspace-profile-switcher p{margin:.65rem 0 0;font-size:.73rem;}
+
+/* Cart belongs to the Cliente workspace; no cross-role overlay. */
+body[data-workspace="true"]:not([data-active-role="customer"]) .cart-strip{
+ display:none!important;
+}
