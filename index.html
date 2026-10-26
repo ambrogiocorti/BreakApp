@@ -120,7 +120,7 @@
           <div class="section-heading">
             <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> CATALOGO SCOLASTICO</span>
             <h2 id="menu-heading">Il menu del tuo bar.</h2>
-            <p>Consulta i prodotti realmente pubblicati dal bar selezionato. Gli ordini non sono ancora abilitati.</p>
+            <p>Consulta prodotti e prezzi effettivi. La prenotazione dipende dagli orari, dalle fasce e dalle scorte configurate dal bar.</p>
           </div>
           <div class="menu-interface">
             <div class="menu-toolbar">
@@ -137,13 +137,14 @@
             </div>
             <div class="menu-info-line">
               <p id="menu-status" role="status" aria-live="polite">Caricamento del menu…</p>
-              <span class="menu-preview-label">Consultazione · Ordini non ancora attivi</span>
+              <span class="menu-preview-label">Prenotazioni verificate dal server</span>
             </div>
+            <div id="menu-service-alert" class="service-customer-alert" role="status" aria-live="polite" hidden></div>
             <div id="menu-categories" class="menu-categories" role="group" aria-label="Filtra per categoria"></div>
             <div id="menu-grid" class="menu-grid" aria-live="polite">
               <p class="menu-empty">I prodotti pubblicati dal bar appariranno qui.</p>
             </div>
-            <p class="catalog-help menu-disclaimer">I prezzi sono mostrati in tempo reale, ma la disponibilità per data e fascia di ritiro sarà attivata con la gestione delle scorte. Per ora non è possibile inviare ordini.</p>
+            <p class="catalog-help menu-disclaimer">Prezzi e disponibilità vengono verificati dal server alla conferma. Se il bar sospende le prenotazioni, il menu rimane consultabile.</p>
           </div>
         </div>
       </section>
@@ -157,6 +158,7 @@
         </div>
         <button type="button" class="button button-outline button-small" id="orders-refresh">Aggiorna ordini</button>
         <p id="orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div id="customer-service-notices" class="service-list"></div>
         <div id="orders-list" class="orders-list"></div>
       </section>
       <section id="staff-orders-section" class="container orders-section" aria-labelledby="staff-orders-title" hidden>
@@ -175,6 +177,84 @@
         <div id="staff-orders-list" class="orders-list"></div>
       </section>
 
+
+
+      <section id="bar-operations" class="container orders-section" aria-labelledby="bar-operations-title" hidden>
+        <div class="section-heading">
+          <span class="eyebrow">PERSONALE AUTORIZZATO · STATO DEL SERVIZIO</span>
+          <h2 id="bar-operations-title">Calendario e servizio del bar</h2>
+          <p>Orari, pausa prenotazioni, chiusure straordinarie e riaperture. Ogni azione è verificata dal server e registrata nello storico.</p>
+        </div>
+        <div class="staff-toolbar">
+          <label for="service-bar">Bar attivo</label>
+          <select id="service-bar" aria-label="Bar da gestire"></select>
+          <button class="button button-outline button-small" id="service-refresh" type="button">Aggiorna situazione</button>
+        </div>
+        <p id="service-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div id="service-state-summary" class="service-summary" role="status"></div>
+        <div class="service-admin-grid">
+          <article class="catalog-card">
+            <h3>Pausa nuove prenotazioni</h3>
+            <p class="catalog-help">La pausa non cancella gli ordini già confermati. Il catalogo rimane consultabile.</p>
+            <form id="service-pause-form">
+              <label for="service-pause-reason">Motivo operativo della pausa</label>
+              <input id="service-pause-reason" type="text" maxlength="500" placeholder="Es. Preparazione in ritardo" />
+              <div class="order-actions">
+                <button class="button button-primary" id="service-pause-button" type="submit">Metti in pausa</button>
+                <button class="button button-outline" id="service-resume-button" type="button">Riprendi prenotazioni</button>
+              </div>
+            </form>
+          </article>
+          <article class="catalog-card" id="service-weekly-panel" hidden>
+            <h3>Planner orari settimanali · Admin con 2FA</h3>
+            <p class="catalog-help">Uno o più intervalli al giorno, uno per riga. Per un giorno chiuso, lascia vuoto. Eventuali fasce future incompatibili bloccano la modifica.</p>
+            <form id="service-weekly-form">
+              <label for="service-weekday">Giorno della settimana</label>
+              <select id="service-weekday">
+                <option value="1">Lunedì</option><option value="2">Martedì</option>
+                <option value="3">Mercoledì</option><option value="4">Giovedì</option>
+                <option value="5">Venerdì</option><option value="6">Sabato</option>
+                <option value="0">Domenica</option>
+              </select>
+              <label for="service-weekly-periods">Intervalli (es. 08:00-12:00)</label>
+              <textarea id="service-weekly-periods" rows="4" placeholder="08:00-10:00&#10;10:30-13:00"></textarea>
+              <button class="button button-primary" type="submit">Salva orari del giorno</button>
+            </form>
+            <div id="service-weekly-list" class="service-list" aria-live="polite"></div>
+          </article>
+          <article class="catalog-card">
+            <h3>Chiusura e valutazione impatto</h3>
+            <p class="catalog-help">L'anteprima verifica gli ordini interessati. Nessun rimborso viene dichiarato completato senza una transazione effettiva.</p>
+            <form id="service-closure-form">
+              <label for="service-closure-date">Data</label>
+              <input id="service-closure-date" type="date" required />
+              <label for="service-closure-start">Dalle</label>
+              <input id="service-closure-start" type="time" value="00:00" required />
+              <label for="service-closure-end">Alle</label>
+              <input id="service-closure-end" type="time" value="23:59" required />
+              <label for="service-closure-kind">Tipo di chiusura</label>
+              <select id="service-closure-kind">
+                <option value="extraordinary">Straordinaria (Admin e Barista)</option>
+                <option value="planned">Programmata (solo Admin)</option>
+              </select>
+              <label for="service-closure-reason">Motivazione</label>
+              <textarea id="service-closure-reason" rows="2" minlength="3" maxlength="500" required></textarea>
+              <button type="button" class="button button-outline" id="service-closure-preview">Mostra impatto sugli ordini</button>
+              <div id="service-closure-impact" class="service-impact" aria-live="polite"></div>
+              <button type="submit" class="button button-primary" id="service-closure-confirm" disabled>Conferma chiusura</button>
+            </form>
+          </article>
+          <article class="catalog-card">
+            <h3>Chiusure registrate</h3>
+            <p class="catalog-help">La riapertura non ripristina gli ordini precedentemente annullati.</p>
+            <div id="service-closures-list" class="service-list"></div>
+          </article>
+          <article class="catalog-card">
+            <h3>Cronologia operativa</h3>
+            <div id="service-events-list" class="service-list"></div>
+          </article>
+        </div>
+      </section>
 
       <dialog id="customer-qr-dialog" class="ba-dialog qr-dialog" aria-labelledby="customer-qr-title">
         <form method="dialog" class="ba-dialog-close"><button type="submit" class="button button-outline button-small">Chiudi</button></form>
