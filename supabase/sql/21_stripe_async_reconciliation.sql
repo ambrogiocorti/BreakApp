@@ -13,7 +13,7 @@ begin
  then raise exception 'Service role richiesto';end if;
  if p_event_id !~ '^evt_[A-Za-z0-9]+$'
   or p_stripe_account !~ '^acct_[A-Za-z0-9]+$'
-  or p_session !~ '^cs_test_[A-Za-z0-9]+$'
+  or p_session !~ '^cs_(test|live)_[A-Za-z0-9]+$'
   or p_intent !~ '^pi_[A-Za-z0-9]+$'
   or p_attempt is null or p_amount is null or p_amount<=0 or p_currency<>'eur'
  then raise exception 'Evento asincrono fallito non valido';end if;
@@ -68,7 +68,7 @@ declare v_attempt public.payment_attempts%rowtype;v_order public.orders%rowtype;
 begin
  if coalesce(auth.jwt()->>'role','')<>'service_role'
  then raise exception 'Service role richiesto';end if;
- if p_event_id !~ '^evt_[A-Za-z0-9]+$' or p_session !~ '^cs_test_[A-Za-z0-9]+$'
+ if p_event_id !~ '^evt_[A-Za-z0-9]+$' or p_session !~ '^cs_(test|live)_[A-Za-z0-9]+$'
    or p_event_account !~ '^acct_[A-Za-z0-9]+$' or p_intent !~ '^pi_[A-Za-z0-9]+$'
    or p_amount is null or p_amount<=0 or p_currency<>'eur' or p_attempt is null
    or not p_paid or v_event_type not in(
