@@ -21,6 +21,8 @@
         <nav aria-label="Navigazione principale" class="header-actions">
           <a id="header-menu-link" class="header-link" href="#menu" hidden>Menu</a>
           <a id="header-profile-link" class="header-link" href="#accesso" hidden>Profilo</a>
+          <button type="button" class="icon-button notice-button" id="notifications-toggle"
+            aria-label="Apri notifiche" title="Notifiche" hidden>♧<span id="notifications-unread" class="notice-count" hidden></span></button>
           <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
         </nav>
       </div>
@@ -52,6 +54,17 @@
       </div>
       <span class="workspace-page-role" id="workspace-page-role"></span>
     </div>
+    <dialog id="notifications-dialog" class="auth-dialog notice-dialog" aria-labelledby="notifications-heading">
+      <div class="dialog-header"><h2 id="notifications-heading">Notifiche</h2>
+        <button id="notifications-close" class="button button-outline button-small" type="button">Chiudi</button></div>
+      <p class="catalog-help">Avvisi personali persistenti su Supabase, aggiornati in tempo reale.</p>
+      <div class="order-actions">
+        <button id="notifications-permission" type="button" class="button button-outline button-small">Attiva notifiche del browser</button>
+        <button id="notifications-refresh" type="button" class="button button-outline button-small">Aggiorna</button>
+      </div>
+      <p id="notifications-feedback" role="status" aria-live="polite"></p>
+      <div id="notifications-list" class="service-list"></div>
+    </dialog>
     <main id="main-content" class="app-main">
       <section class="access-section" id="accesso" aria-labelledby="access-heading">
         <div class="container access-layout">
