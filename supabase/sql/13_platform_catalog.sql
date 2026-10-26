@@ -87,6 +87,18 @@ begin
 end;
 $product$;
 
+-- Permit the private boolean helper to be called by RLS, never expose
+-- app_private itself through the Supabase Data API.
+grant usage on schema app_private to authenticated;
+grant execute on function app_private.platform_approved() to authenticated;
+
+-- Global Super Admin with AAL2 must see inactive products/categories to
+-- reactivate them. Public consumers still only see active catalog entries.
+create policy categories_superadmin_read on public.categories
+for select to authenticated using (app_private.platform_approved());
+create policy products_superadmin_read on public.products
+for select to authenticated using (app_private.platform_approved());
+
 -- Photos: Super Admin may upload immutable photos only into explicitly
 -- active school/bar path. Product path is set by guarded RPC after upload.
 create policy breakapp_images_superadmin_insert on storage.objects
