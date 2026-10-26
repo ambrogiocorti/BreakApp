@@ -1,6 +1,12 @@
 import { formatEuro } from '../catalog/utils.js';
 import { barsForSchool, filterPublicMenu } from './utils.js';
 
+const ALLERGEN_LABELS = Object.freeze({
+  gluten:'Glutine', crustaceans:'Crostacei', eggs:'Uova', fish:'Pesce',
+  peanuts:'Arachidi', soy:'Soia', milk:'Latte', nuts:'Frutta a guscio',
+  celery:'Sedano', mustard:'Senape', sesame:'Sesamo', sulphites:'Solfiti',
+  lupin:'Lupini', molluscs:'Molluschi'
+});
 function make(tag, className, value) {
   const element = document.createElement(tag);
   if (className) element.className = className;
@@ -83,12 +89,25 @@ export function initializePublicMenu(client) {
       const description = make('p', 'menu-product-description',
         product.description || 'Nessuna descrizione ancora disponibile.');
       const price = make('strong', 'menu-product-price', formatEuro(product.price_cents));
+      if (product.image_path) {
+        const photo=make('img','menu-product-image');
+        photo.src=client.storage.from('breakapp-product-images').getPublicUrl(product.image_path).data.publicUrl;
+        photo.alt='Foto di '+product.name;
+        photo.loading='lazy';
+        card.append(photo);
+      }
+      const ingredientInfo=make('p','menu-product-ingredients',
+        product.ingredients ? 'Ingredienti: '+product.ingredients : 'Ingredienti non ancora indicati: chiedi al bar');
+      const allergyInfo=make('p','menu-product-allergens',
+        product.allergens?.length
+          ? 'Allergeni dichiarati: '+product.allergens.map(x=>ALLERGEN_LABELS[x]||x).join(', ')
+          : 'Allergeni non dichiarati: chiedi al bar prima di consumare');
       const details = make('button', 'button button-outline button-small', 'Dettagli e aggiungi');
       details.type = 'button';
       details.addEventListener('click', () => {
         window.dispatchEvent(new CustomEvent('breakapp:product-open', { detail: { id: product.id } }));
       });
-      card.append(badge, title, description, price, details);
+      card.append(badge, title, description, ingredientInfo, allergyInfo, price, details);
       grid.append(card);
     }
   }
@@ -116,7 +135,7 @@ export function initializePublicMenu(client) {
         client.from('categories').select('id,name,sort_order,is_active')
           .eq('school_id',schoolId).eq('bar_id',barId).eq('is_active',true)
           .order('sort_order').order('name'),
-        client.from('products').select('id,name,description,price_cents,category_id,is_active')
+        client.from('products').select('id,name,description,price_cents,category_id,is_active,ingredients,allergens,image_path')
           .eq('school_id',schoolId).eq('bar_id',barId).eq('is_active',true)
           .order('name')
       ]);
