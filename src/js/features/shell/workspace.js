@@ -93,6 +93,8 @@ export function initializeWorkspace(client){
  const roleLabel=document.getElementById('workspace-page-role');
  const schoolLabel=document.getElementById('workspace-school-label');
  const pageSection=document.getElementById('workspace-page-section');
+ const profileSelect=document.getElementById('workspace-profile-context-select');
+ const profileSwitcher=document.getElementById('workspace-profile-switcher');
  const routeSections=[...root.children].filter(x=>x.tagName==='SECTION'&&x.id);
  const moreContainer=create('div','workspace-more');
  moreContainer.hidden=true;
@@ -178,6 +180,7 @@ export function initializeWorkspace(client){
    active=context;
    remember(context.key);
    select.value=context.key;
+   profileSelect.value=context.key;
    schoolLabel.textContent=context.schoolName;
    document.body.dataset.activeRole=context.role;
    document.body.dataset.activeSchool=context.schoolId||'global';
@@ -198,11 +201,12 @@ export function initializeWorkspace(client){
    // Guard against entering staff views with a context not verified at AAL2.
  }
  function renderContexts(){
-   select.replaceChildren();
+   select.replaceChildren();profileSelect.replaceChildren();
    for(const item of contexts){
      const text=LABELS[item.role]+' · '+item.schoolName+
        (!item.verified?' · Verifica 2FA':'');
      select.add(new Option(text,item.key));
+     profileSelect.add(new Option(text,item.key));
    }
  }
  function signOutUI(){
@@ -211,6 +215,7 @@ export function initializeWorkspace(client){
    document.body.removeAttribute('data-active-role');
    document.body.removeAttribute('data-active-school');
    sidebar.hidden=true;nav.hidden=true;mobile.hidden=true;heading.hidden=true;
+   profileSwitcher.hidden=true;
    moreContainer.hidden=true;
    routeSections.forEach(s=>s.classList.remove('is-route-active'));
  }
@@ -248,11 +253,16 @@ export function initializeWorkspace(client){
    const previous=active?.key;
    const selected=contexts.find(x=>x.key===previous)||chooseInitialContext(contexts,safelyStored());
    sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
+   profileSwitcher.hidden=false;
    document.body.dataset.workspace='true';ready=true;
    setContext(selected,{restoreRoute:!!previous});
  }
  select.addEventListener('change',()=>{
    const next=contexts.find(x=>x.key===select.value);
+   if(next)setContext(next);
+ });
+ profileSelect.addEventListener('change',()=>{
+   const next=contexts.find(x=>x.key===profileSelect.value);
    if(next)setContext(next);
  });
  document.getElementById('workspace-signout').addEventListener('click',()=>{
