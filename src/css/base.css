@@ -352,3 +352,15 @@ body[data-authenticated="true"] { padding-bottom: 77px; }
 .product-preview img { width:min(100%,300px); border-radius:12px; margin-top:1rem; aspect-ratio:4/3; object-fit:cover; }
 .catalog-product-thumbnail { width:76px; height:76px; flex-shrink:0; border-radius:9px; object-fit:cover; background:var(--surface-soft); }
 @media(max-width:520px) { .allergen-options {grid-template-columns:1fr;} }
+
+/* Ritiro con QR: ticket personale e scanner del personale. */
+.qr-dialog { text-align:left; }
+.qr-code { margin:1rem auto; display:grid; place-items:center; width:min(100%,250px); min-height:238px; border:1px solid var(--border); background:white; border-radius:13px; padding:10px; }
+.qr-code img,.qr-code canvas { max-width:100%; height:auto; }
+.staff-camera-video { width:100%; aspect-ratio:4/3; object-fit:cover; background:#0c1220; border-radius:12px; margin:1rem 0; }
+.staff-number-form { display:grid; grid-template-columns:1fr auto; align-items:end; gap:.6rem; margin:1rem 0; }
+.staff-number-form label { grid-column:1/-1; margin:0; }
+.staff-number-form input { min-width:0; }
+.scan-item-list { padding-left:1.2rem; line-height:1.75; }
+#staff-scan-result { margin:1rem 0; padding-top:.8rem; border-top:1px solid var(--border); }
+@media(max-width:440px) { .staff-number-form {grid-template-columns:1fr;} }

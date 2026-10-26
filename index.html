@@ -169,10 +169,34 @@
           <label for="staff-search">Numero ordine</label>
           <input id="staff-search" type="search" inputmode="numeric" placeholder="Cerca numero..." />
           <button type="button" class="button button-outline button-small" id="staff-refresh">Aggiorna e verifica ruolo</button>
+          <button type="button" class="button button-primary button-small" id="staff-scan-open">Scansiona QR / Cerca ordine</button>
         </div>
         <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div id="staff-orders-list" class="orders-list"></div>
       </section>
+
+
+      <dialog id="customer-qr-dialog" class="ba-dialog qr-dialog" aria-labelledby="customer-qr-title">
+        <form method="dialog" class="ba-dialog-close"><button type="submit" class="button button-outline button-small">Chiudi</button></form>
+        <h2 id="customer-qr-title">Biglietto di ritiro</h2>
+        <p id="customer-qr-meta" class="catalog-help"></p>
+        <div id="customer-qr-code" class="qr-code" role="img" aria-label="Codice QR personale per il ritiro"></div>
+        <p class="catalog-help">Mostra questo codice soltanto al personale del bar. Il ritiro è possibile solo dopo la preparazione e il saldo completo.</p>
+      </dialog>
+      <dialog id="staff-scan-dialog" class="ba-dialog qr-dialog" aria-labelledby="staff-scan-title">
+        <form method="dialog" class="ba-dialog-close"><button type="submit" class="button button-outline button-small">Chiudi</button></form>
+        <h2 id="staff-scan-title">Ritiro ordine</h2>
+        <p class="catalog-help">Scansiona il QR del cliente. Se la fotocamera non è disponibile, cerca manualmente il numero dell'ordine.</p>
+        <button type="button" id="staff-start-camera" class="button button-primary ba-block">Apri fotocamera</button>
+        <video id="staff-camera-video" class="staff-camera-video" autoplay muted playsinline hidden></video>
+        <form id="staff-number-form" class="staff-number-form">
+          <label for="staff-number-input">Numero dell'ordine</label>
+          <input id="staff-number-input" type="number" inputmode="numeric" min="1" step="1" required placeholder="Es. 123" />
+          <button type="submit" class="button button-outline">Cerca numero</button>
+        </form>
+        <p id="staff-scan-status" role="status" aria-live="polite" class="catalog-status"></p>
+        <div id="staff-scan-result"></div>
+      </dialog>
 
       <dialog id="product-dialog" class="ba-dialog" aria-labelledby="product-name">
         <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
@@ -363,6 +387,7 @@
 
     <footer class="site-footer"><div class="container footer-inner"><span>© BreakApp</span><span>Ambiente di test · Funzionalità abilitate progressivamente</span></div></footer>
 
+    <script src="/vendor/qrcode.min.js" defer></script>
     <script type="module" src="/src/js/main.js"></script>
   </body>
 </html>

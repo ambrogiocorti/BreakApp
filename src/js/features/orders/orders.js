@@ -177,7 +177,7 @@ export function initializeOrders(client) {
     if(!user)return;
     report(feedback,'Caricamento ordini…');
     const {data,error}=await client.from('orders')
-      .select('id,display_no,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
+      .select('id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
       .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(50);
     if(error){report(feedback,'Ordini non disponibili: '+error.message,true);return;}
     history.replaceChildren();
@@ -187,6 +187,16 @@ export function initializeOrders(client) {
         elem('p',`Ritiro ${o.pickup_windows?.service_date||'—'} ${o.pickup_windows?.starts_at?.slice(0,5)||''}`),
         elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':'Da pagare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
+      if(!['cancelled','delivered','no_show'].includes(o.status) && o.pickup_token){
+        const ticket=elem('button','Mostra QR di ritiro','button button-outline button-small');
+        ticket.type='button';
+        ticket.addEventListener('click',()=>{
+          window.dispatchEvent(new CustomEvent('breakapp:pickup-ticket',{
+            detail:{pickupToken:o.pickup_token,displayNo:o.display_no}
+          }));
+        });
+        box.append(ticket);
+      }
       if(o.status==='confirmed'&&o.payment_status==='due'){
         const cancel=elem('button','Annulla ordine','button button-outline button-small');
         cancel.addEventListener('click',async()=>{
