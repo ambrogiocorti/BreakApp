@@ -129,7 +129,10 @@ export function initializeAuth(config) {
       accessCache = access;
       renderSchoolAccess(access);
       window.dispatchEvent(new Event('breakapp:access-updated'));
-      if (getAdminSchools(access).length) void mfa.show();
+      const platform=await client.rpc('has_current_platform_admin_role');
+      if(requestId!==accessRequestId)return;
+      if(getAdminSchools(access).length || (!platform.error&&platform.data===true))
+        void mfa.show();
     } catch (error) {
       if (requestId !== accessRequestId) return;
       accessSummary.textContent = error?.message || 'Impossibile leggere le autorizzazioni. Riprova.';
