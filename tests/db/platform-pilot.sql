@@ -34,9 +34,11 @@ begin
  if not denied then raise exception 'Super Admin granted itself school staff role';end if;
 end;$deny_self$;
 
--- Existing registered and confirmed user test.
+-- Existing registered and confirmed user test (setup as postgres, not client role).
+reset role;
 update auth.users set email_confirmed_at=now()
 where id='22222222-2222-4222-8222-222222222222';
+set role authenticated;
 select public.platform_assign_school_staff(
  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  'cliente-b@example.invalid','bartender');
@@ -94,7 +96,12 @@ begin
  if exists(select 1 from public.role_assignments r join public.school_memberships m
  on m.id=r.membership_id where m.user_id='22222222-2222-4222-8222-222222222222'
  and r.role_code='bartender') then raise exception 'Role not revoked';end if;
- if (select count(*) from app_private.platform_staff_audit where role_code='bartender')<>2
- then raise exception 'Role audit missing';end if;
+
 end;$check_revoke$;
 reset role;
+reset role;
+do $audit_check$
+begin
+ if (select count(*) from app_private.platform_staff_audit where role_code='bartender')<>2
+ then raise exception 'Platform role audit incomplete';end if;
+end;$audit_check$;
