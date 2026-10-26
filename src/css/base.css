@@ -364,3 +364,28 @@ body[data-authenticated="true"] { padding-bottom: 77px; }
 .scan-item-list { padding-left:1.2rem; line-height:1.75; }
 #staff-scan-result { margin:1rem 0; padding-top:.8rem; border-top:1px solid var(--border); }
 @media(max-width:440px) { .staff-number-form {grid-template-columns:1fr;} }
+
+
+/* Calendario operativo e avvisi: dati e azioni reali. */
+.service-admin-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:1rem;margin-top:1.2rem;align-items:start; }
+.service-admin-grid .catalog-card { min-width:0; }
+.service-admin-grid form { display:grid;gap:.55rem; }
+.service-admin-grid label {font-weight:650;font-size:.85rem;margin-top:.45rem; }
+.service-admin-grid input,.service-admin-grid select,.service-admin-grid textarea,
+#service-bar {width:100%;min-height:43px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:.7rem;font:inherit; }
+.service-admin-grid textarea {resize:vertical;min-height:85px;}
+.service-admin-grid button {white-space:normal;}
+.service-summary {background:var(--accent-soft);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;flex-direction:column;gap:.35rem;}
+.service-summary[data-paused="true"] {background:rgba(240,181,58,.11);border-color:#d49a33;}
+.service-summary span {font-size:.83rem;color:var(--muted);}
+.service-list {display:grid;gap:.7rem;margin-top:1rem;}
+.service-list-item {display:flex;flex-direction:column;gap:.25rem;padding:.85rem 0;border-bottom:1px solid var(--border);}
+.service-list-item strong {font-size:.86rem;}
+.service-list-item span {font-size:.81rem;color:var(--muted);}
+.service-list-item button {align-self:flex-start;margin-top:.45rem;}
+.service-impact {border:1px dashed var(--border);padding:.85rem;border-radius:10px;display:grid;gap:.3rem;}
+.service-impact:empty {display:none;}
+.service-impact p {font-size:.83rem;margin:.15rem 0;line-height:1.45;}
+.service-customer-alert {border:1px solid #d49a33;background:rgba(240,181,58,.11);padding:1rem;border-radius:12px;margin-bottom:1rem;font-size:.87rem;}
+.service-notice {border-left:3px solid var(--accent);padding:.75rem 1rem;background:var(--surface);border-radius:0 8px 8px 0;}
+.service-notice p {margin:.35rem 0 0;font-size:.86rem;}
