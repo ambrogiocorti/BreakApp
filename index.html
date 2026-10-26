@@ -269,6 +269,74 @@
         </div>
         <p class="catalog-help catalog-footer-note">Le vendite, le scorte e gli ordini non sono ancora attivi: questa sezione gestisce esclusivamente il catalogo.</p>
       </section>
+
+      <section id="admin-order-setup" class="container orders-section" aria-labelledby="ops-heading" hidden>
+        <div class="section-heading">
+          <span class="eyebrow">ADMIN SCUOLA · 2FA OBBLIGATORIA</span>
+          <h2 id="ops-heading">Gestione servizio e magazzino</h2>
+          <p>Configura posizione della scuola, regole di prenotazione, fasce di ritiro e scorte specifiche per giornata. Le modifiche vengono salvate realmente su Supabase.</p>
+        </div>
+        <div class="catalog-toolbar">
+          <label>Scuola <select id="ops-school"></select></label>
+          <label>Bar <select id="ops-bar"></select></label>
+          <button type="button" class="button button-outline button-small" id="ops-refresh">Aggiorna</button>
+        </div>
+        <p id="ops-status" class="catalog-status" role="status" aria-live="polite"></p>
+        <div class="catalog-columns">
+          <article class="catalog-card">
+            <h3>Posizione e prenotazioni</h3>
+            <p class="catalog-help">Inserisci le coordinate reali della scuola: sono usate dal controllo geografico al checkout. Non inserire coordinate inventate.</p>
+            <form id="ops-school-form">
+              <label for="ops-latitude">Latitudine scuola</label>
+              <input type="number" id="ops-latitude" step="any" min="-90" max="90" required />
+              <label for="ops-longitude">Longitudine scuola</label>
+              <input type="number" id="ops-longitude" step="any" min="-180" max="180" required />
+              <label for="ops-radius">Raggio ordinazione (metri)</label>
+              <input type="number" id="ops-radius" min="100" max="10000" value="1000" required />
+              <label for="ops-horizon">Giorni massimi per prenotare</label>
+              <input type="number" id="ops-horizon" min="1" max="365" value="30" required />
+              <label for="ops-cutoff">Minuti limite per annullare</label>
+              <input type="number" id="ops-cutoff" min="0" max="1440" value="10" required />
+              <label for="ops-max-unpaid">Numero massimo di ordini non pagati</label>
+              <input type="number" id="ops-max-unpaid" min="1" max="50" value="3" required />
+              <label for="ops-approval-items">Soglia prodotti per approvazione (vuoto = disattiva)</label>
+              <input type="number" id="ops-approval-items" min="1" step="1" />
+              <label for="ops-approval-eur">Soglia importo approvazione (€; vuoto = disattiva)</label>
+              <input type="number" id="ops-approval-eur" step="0.01" min="0.01" />
+              <button type="submit" class="button button-primary">Salva regole scuola</button>
+            </form>
+          </article>
+          <article class="catalog-card">
+            <h3>Fasce di ritiro</h3>
+            <p class="catalog-help">Le fasce sono specifiche di bar e giorno. Nessun limite globale predefinito per fascia.</p>
+            <form id="ops-slot-form">
+              <label for="ops-slot-date">Giorno del ritiro</label>
+              <input type="date" id="ops-slot-date" required />
+              <label for="ops-slot-start">Inizio fascia</label>
+              <input type="time" id="ops-slot-start" required />
+              <label for="ops-slot-end">Fine fascia</label>
+              <input type="time" id="ops-slot-end" required />
+              <button type="submit" class="button button-primary">Aggiungi fascia</button>
+            </form>
+            <div id="ops-slot-list" class="catalog-list" style="margin-top:1rem"></div>
+          </article>
+          <article class="catalog-card">
+            <h3>Scorte del giorno</h3>
+            <p class="catalog-help">Capacità vuota = disponibilità illimitata, 0 = esaurito, valore positivo = disponibilità limitata. Le scorte già allocate non possono essere ridotte arbitrariamente.</p>
+            <form id="ops-stock-form">
+              <label for="ops-stock-date">Data di riferimento</label>
+              <input type="date" id="ops-stock-date" required />
+              <label for="ops-product">Prodotto</label>
+              <select id="ops-product" required></select>
+              <label for="ops-capacity">Capacità per la data (lascia vuoto per illimitata)</label>
+              <input type="number" id="ops-capacity" min="0" step="1" />
+              <button type="submit" class="button button-primary">Salva scorte del prodotto</button>
+            </form>
+            <div id="ops-stock-list" class="catalog-list" style="margin-top:1rem"></div>
+          </article>
+        </div>
+      </section>
+
     </main>
     <div id="cart-strip" class="cart-strip" hidden>
       <button type="button" id="cart-open" class="button button-primary ba-block">
