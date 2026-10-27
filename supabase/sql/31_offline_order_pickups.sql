@@ -182,8 +182,9 @@ begin
  return query select r.id,a.stripe_account_id,a.stripe_payment_intent_id,r.amount_cents
   from public.payment_refunds r
   join public.payment_attempts a on a.id=r.payment_id
-  where r.status in ('pending','processing') and a.status='succeeded'
-    and a.stripe_payment_intent_id is not null
+  where r.status in ('pending','processing') and r.stripe_refund_id is null
+    and r.created_at>=now()-interval '23 hours'
+    and a.status='succeeded' and a.stripe_payment_intent_id is not null
   order by r.created_at,r.id limit p_limit;
 end;$dispatch_group_refunds$;
 
