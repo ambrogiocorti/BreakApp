@@ -44,7 +44,9 @@ begin
   'device_id',e.device_id,'lease_generation',e.lease_generation,
   'local_recorded_at',e.local_recorded_at,'received_at',e.received_at,
   'payload',e.payload,'status',e.status,'review_reason',e.review_reason,
-  'reviewed_at',e.reviewed_at,'reviewed_by',e.reviewed_by
+  'reviewed_at',e.reviewed_at,'reviewed_by',e.reviewed_by,
+  'reviewer_note',(select r.reason from public.offline_event_reviews r
+    where r.event_id=e.id order by r.created_at desc limit 1)
  ) order by e.received_at desc),'[]'::jsonb) into v_events
  from (select * from public.offline_events_inbox
    where school_id=p_school order by received_at desc limit 100) e;
