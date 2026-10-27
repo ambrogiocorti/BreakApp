@@ -82,6 +82,10 @@ begin
  exception when others then denied:=true;end;
  if not denied then raise exception 'Client certified Stripe money';end if;
 end;$not_webhook$;
+reset role;
+select set_config('app.group_stripe_amount',
+ (select amount_cents::text from public.payment_attempts
+ where id=current_setting('app.group_stripe_attempt')::uuid),false);
 set role service_role;
 select set_config('request.jwt.claims','{"role":"service_role"}',false);
 select public.attach_stripe_checkout_session(
@@ -100,8 +104,7 @@ end;$invalid_amount$;
 select public.finalize_verified_group_checkout('evt_grouptest3',
  'acct_1UUniH2RLt7x5EeZ','cs_test_group1234','pi_grouptest1234',
  current_setting('app.group_stripe_attempt')::uuid,
- (select amount_cents from public.payment_attempts
-  where id=current_setting('app.group_stripe_attempt')::uuid),
+ current_setting('app.group_stripe_amount')::bigint,
  'eur',true,'{}'::jsonb) as settled \gset
 select set_config('app.group_stripe_settled',:'settled',false);
 do $settled$
@@ -114,8 +117,7 @@ end;$settled$;
 select public.finalize_verified_group_checkout('evt_grouptest3',
  'acct_1UUniH2RLt7x5EeZ','cs_test_group1234','pi_grouptest1234',
  current_setting('app.group_stripe_attempt')::uuid,
- (select amount_cents from public.payment_attempts
-  where id=current_setting('app.group_stripe_attempt')::uuid),
+ current_setting('app.group_stripe_amount')::bigint,
  'eur',true,'{}'::jsonb) as replay \gset
 select set_config('app.group_stripe_replay',:'replay',false);
 do $replay$
