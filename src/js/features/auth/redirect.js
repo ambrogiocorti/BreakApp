@@ -10,5 +10,8 @@ export function authRedirectUrl(origin, basePath) {
   if (!/^\/(?:[A-Za-z0-9._~-]+\/)*$/.test(basePath)) {
     throw new Error('Percorso pubblico della PWA non valido.');
   }
+  if (basePath.split('/').some(part => part === '.' || part === '..')) {
+    throw new Error('Percorso pubblico della PWA non valido.');
+  }
   return new URL(basePath, site.origin).href;
 }
