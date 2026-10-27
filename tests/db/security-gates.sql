@@ -49,6 +49,7 @@ begin
     'public.attach_stripe_checkout_session(uuid,text)',
     'public.finalize_verified_checkout(text,text,text,text,uuid,bigint,text,boolean,jsonb)',
     'public.reconcile_signed_checkout_expiry(text,text,text,uuid)',
+    'public.reconcile_signed_checkout_failure(text,text,text,text,uuid,bigint,text)',
     'public.attach_verified_stripe_refund(uuid,text)',
     'public.finalize_verified_stripe_refund(text,text,uuid,text,text,bigint,text,text)',
     'public.claim_push_jobs(integer)',
