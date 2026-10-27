@@ -12,6 +12,7 @@ create table public.offline_event_reviews (
 );
 create index offline_reviews_event on public.offline_event_reviews(event_id,created_at desc);
 create index offline_reviews_school on public.offline_event_reviews(school_id,created_at desc);
+create index offline_reviews_reviewer on public.offline_event_reviews(reviewer_id);
 alter table public.offline_event_reviews enable row level security;
 revoke all on public.offline_event_reviews from public,anon,authenticated;
 
