@@ -10,18 +10,18 @@ insert into public.pickup_windows(school_id,bar_id,service_date,starts_at,ends_a
 values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaaaaaa-0000-4000-8000-000000000001',
  (now() at time zone 'Europe/Rome')::date,'22:00','22:30') returning id as slot \gset
 select set_config('app.offline_pickup_window',:'slot',false);
-insert into public.orders(display_no,school_id,bar_id,customer_id,pickup_window_id,
+insert into public.orders(school_id,bar_id,customer_id,pickup_window_id,
  request_key,status,payment_method,payment_status,total_cents)
-values(98765501,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  'aaaaaaaa-0000-4000-8000-000000000001',
  '11111111-1111-4111-8111-111111111111',
  current_setting('app.offline_pickup_window')::uuid,
  '11111111-0000-4000-8000-000000000451','ready','at_pickup','paid',500)
 returning id as paid_order \gset
 select set_config('app.offline_paid_order',:'paid_order',false);
-insert into public.orders(display_no,school_id,bar_id,customer_id,pickup_window_id,
+insert into public.orders(school_id,bar_id,customer_id,pickup_window_id,
  request_key,status,payment_method,payment_status,total_cents)
-values(98765502,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  'aaaaaaaa-0000-4000-8000-000000000001',
  '11111111-1111-4111-8111-111111111111',
  current_setting('app.offline_pickup_window')::uuid,
@@ -91,9 +91,9 @@ end;$offline_verify$;
 -- Cash genuinely received offline, but Stripe later settled on the same order:
 -- preserve cash and queue an original-payer Stripe refund, never silently drop it.
 reset role;
-insert into public.orders(display_no,school_id,bar_id,customer_id,pickup_window_id,
+insert into public.orders(school_id,bar_id,customer_id,pickup_window_id,
  request_key,status,payment_method,payment_status,total_cents)
-values(98765503,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
  'aaaaaaaa-0000-4000-8000-000000000001',
  '11111111-1111-4111-8111-111111111111',
  current_setting('app.offline_pickup_window')::uuid,
