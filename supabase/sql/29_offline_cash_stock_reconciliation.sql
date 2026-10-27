@@ -74,7 +74,7 @@ create or replace function app_private.guard_offline_stock_conflict()
 returns trigger language plpgsql security definer set search_path=''
 as $stock_guard$
 begin
- if new.allocated>case when tg_op='INSERT' then 0 else old.allocated end
+ if new.allocated>(case when tg_op='INSERT' then 0 else old.allocated end)
   and exists(select 1 from public.offline_stock_conflicts c
    where c.school_id=new.school_id and c.bar_id=new.bar_id
     and c.product_id=new.product_id and c.service_date=new.service_date
