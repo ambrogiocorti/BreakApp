@@ -1,4 +1,4 @@
-// BreakApp group-refund-dispatch: Stripe Connect partial refunds to the ORIGINAL payer.
+// BreakApp refund-dispatch: Stripe Connect refunds from the immutable individual and group ledger.
 // Deploy verify_jwt=false. Shared trusted scheduler secret PUSH_DISPATCH_TOKEN (>=32 bytes).
 // STRIPE_SECRET_KEY must remain only in Supabase Edge Function secrets.
 // Responses are only attached; payment status is finalized by signed Stripe webhook.
@@ -27,7 +27,7 @@ Deno.serve(async request=>{
    payload.set('payment_intent',job.payment_intent);
    payload.set('amount',String(job.amount_cents));
    payload.set('metadata[breakapp_refund_id]',job.refund_id);
-   payload.set('metadata[breakapp_kind]','group');
+   payload.set('metadata[breakapp_kind]','ledger');
    payload.set('reason','requested_by_customer');
    const result=await fetch('https://api.stripe.com/v1/refunds',{
     method:'POST',headers:{
