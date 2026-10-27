@@ -112,6 +112,22 @@ export function initializeGroupDrafts(client){
   const accepted=detail.my_status==='accepted'&&detail.status==='draft';
   byId('group-personal').hidden=!accepted;
   byId('group-coordinator-panel').hidden=!detail.coordinator;
+  const managing=detail.coordinator&&detail.status==='draft';
+  byId('group-manage').hidden=!managing;
+  byId('group-leave').hidden=detail.status!=='draft'||!['accepted','pending'].includes(detail.my_status);
+  if(managing){
+   byId('group-accepting').checked=detail.accepting_members;
+   byId('group-approval').checked=detail.requires_approval;
+   byId('group-limit').value=detail.max_members??'';
+   const candidates=Array.isArray(detail.members)?detail.members.filter(
+    m=>m.status==='accepted'&&m.member_id!==user.id):[];
+   options(byId('group-transfer-member'),candidates.map(m=>[m.member_id,m.member_id.slice(0,8)]));
+   const possible=windows.filter(w=>w.bar_id===detail.bar_id);
+   options(byId('group-reschedule-window'),possible.map(w=>[w.id,
+     w.service_date+' · '+w.starts_at.slice(0,5)+'–'+w.ends_at.slice(0,5)]));
+   byId('group-reschedule-window').value=detail.pickup_window_id;
+   byId('group-transfer').disabled=!candidates.length;
+  }
   const readyButton=byId('group-ready');
   readyButton.textContent=detail.my_ready?'Modifica il mio ordine':'Ho finito';
   cartForm.hidden=!accepted||Boolean(detail.my_ready);
@@ -204,6 +220,59 @@ export function initializeGroupDrafts(client){
   });
   if(error)return report(error.message,true);
   await showGroup(detail.id);
+ });
+ async function mutateGroup(rpc,args,{close=false,success='Gruppo aggiornato.'}={}){
+  if(!detail)return;
+  const id=detail.id;
+  report('Salvataggio sul server…');
+  const {error}=await client.rpc(rpc,args);
+  if(error)return report(error.message,true);
+  if(close){detail=null;detailPanel.hidden=true;await myGroups();report(success);return;}
+  await myGroups();await showGroup(id);
+  report(success);
+ }
+ byId('group-save-settings').addEventListener('click',async()=>{
+  if(!detail||!detail.coordinator)return;
+  const field=byId('group-limit');
+  const limit=field.value===''?null:Number(field.value);
+  if(limit!==null&&(!Number.isInteger(limit)||limit<1||limit>100))
+   return report('Il limite deve essere un intero tra 1 e 100.',true);
+  await mutateGroup('configure_group_draft',{
+   p_group_id:detail.id,p_accepting:byId('group-accepting').checked,
+   p_requires_approval:byId('group-approval').checked,p_max_members:limit,p_rotate_invite:false
+  });
+ });
+ byId('group-rotate-invite').addEventListener('click',async()=>{
+  if(!detail||!detail.coordinator||!confirm('Il precedente link smetterà di funzionare. Continuare?'))return;
+  await mutateGroup('configure_group_draft',{
+   p_group_id:detail.id,p_accepting:byId('group-accepting').checked,
+   p_requires_approval:byId('group-approval').checked,
+   p_max_members:byId('group-limit').value===''?null:Number(byId('group-limit').value),
+   p_rotate_invite:true
+  },{success:'Invito rigenerato: condividi il nuovo link.'});
+ });
+ byId('group-transfer').addEventListener('click',async()=>{
+  const target=byId('group-transfer-member').value;
+  if(!detail||!detail.coordinator||!target||!confirm('Trasferire subito il ruolo di coordinatore?'))return;
+  await mutateGroup('transfer_group_coordinator',{
+   p_group_id:detail.id,p_new_coordinator:target
+  },{success:'Coordinamento trasferito.'});
+ });
+ byId('group-reschedule').addEventListener('click',async()=>{
+  const selected=byId('group-reschedule-window').value;
+  if(!detail||!selected)return report('Seleziona una nuova fascia valida.',true);
+  await mutateGroup('reschedule_group_draft',{p_group_id:detail.id,p_window_id:selected},
+   {success:'Fascia di ritiro della bozza aggiornata.'});
+ });
+ byId('group-leave').addEventListener('click',async()=>{
+  if(!detail||!confirm('Uscire dal gruppo? Il tuo carrello non pagato verrà eliminato.'))return;
+  await mutateGroup('leave_group_draft',{p_group_id:detail.id},
+   {close:true,success:'Hai lasciato il gruppo (oppure sciolto il gruppo se eri solo).'});
+ });
+ byId('group-cancel').addEventListener('click',async()=>{
+  if(!detail||!detail.coordinator||!confirm('Annullare l’intera bozza di gruppo?'))return;
+  await mutateGroup('cancel_group_draft',{p_group_id:detail.id},
+   {close:true,success:'Bozza di gruppo annullata.'});
  });
  byId('group-invite-copy').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(byId('group-invite-link').value);
