@@ -74,7 +74,7 @@ Deno.serve(async request=>{
     if(error)return respond({error:'Scadenza non riconciliata'},500);
     return respond({received:true,result:data},200);
   }
-  if(evt.type==='refund.updated'){
+  if(['refund.created','refund.updated'].includes(evt.type)){
     const refund=evt.data?.object;
     if(!refund||refund.object!=='refund'||
       !['succeeded','failed'].includes(refund.status)||
@@ -88,9 +88,16 @@ Deno.serve(async request=>{
       key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if(!url||!key)return respond({error:'Backend non configurato'},503);
     const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-    const {data,error}=await admin.rpc('finalize_verified_stripe_refund',{
+    const refundId=refund.metadata.breakapp_refund_id;
+    const {data:kind,error:kindError}=await admin.rpc('stripe_refund_kind',{
+      p_refund_id:refundId
+    });
+    if(kindError||!['individual','group'].includes(kind))
+      return respond({error:'Rimborso estraneo al ledger'},500);
+    const {data,error}=await admin.rpc(
+      kind==='group'?'finalize_verified_group_refund':'finalize_verified_stripe_refund',{
       p_event_id:evt.id,p_stripe_account:evt.account,
-      p_refund_id:refund.metadata.breakapp_refund_id,
+      p_refund_id:refundId,
       p_stripe_refund:refund.id,p_payment_intent:refund.payment_intent,
       p_amount:refund.amount,p_currency:refund.currency,p_status:refund.status
     });
