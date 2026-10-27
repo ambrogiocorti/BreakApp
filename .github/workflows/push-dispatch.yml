@@ -32,7 +32,7 @@ jobs:
             --header "x-breakapp-dispatch-token: ${DISPATCH_TOKEN}" \
             "https://ynvswdyirngvdpudcikl.supabase.co/functions/v1/push-dispatch"
       - name: Invoke private group refund dispatcher
-        if: steps.check.outputs.configured == 'true'
+        if: always() && steps.check.outputs.configured == 'true'
         env:
           DISPATCH_TOKEN: ${{ secrets.PUSH_DISPATCH_TOKEN }}
         run: |
