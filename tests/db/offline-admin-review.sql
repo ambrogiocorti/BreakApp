@@ -1,13 +1,13 @@
 -- Offline review audit and privilege enforcement (migration 26).
 reset role;
 insert into auth.users(id,email) values
- ('55555555-5555-4555-8555-555555555555','offline-reviewer@example.invalid');
+ ('adadadad-5555-4555-8555-555555555555','offline-reviewer@example.invalid');
 insert into public.school_memberships(id,school_id,user_id)
-values('aaaaaaaa-0000-4000-8000-000000000096',
+values('eeeeeeee-0000-4000-8000-000000000096',
  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
- '55555555-5555-4555-8555-555555555555');
+ 'adadadad-5555-4555-8555-555555555555');
 insert into public.role_assignments(membership_id,role_code)
-values('aaaaaaaa-0000-4000-8000-000000000096','school_admin');
+values('eeeeeeee-0000-4000-8000-000000000096','school_admin');
 select id as staged_id from public.offline_events_inbox
  where request_key='aaaaaaaa-0000-4000-8000-000000000092' \gset
 select set_config('app.offline_review_id',:'staged_id',false);
@@ -28,7 +28,7 @@ begin
  exception when others then denied:=true;end;
  if not denied then raise exception 'Barista accessed admin review queue';end if;
 end;$barista_denied$;
-select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',false);
+select set_config('request.jwt.claim.sub','adadadad-5555-4555-8555-555555555555',false);
 select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
 do $mfa_denied$
 declare denied boolean:=false;
@@ -73,7 +73,7 @@ do $audit_written$
 begin
  if not exists(select 1 from public.offline_event_reviews
  where event_id=current_setting('app.offline_review_id')::uuid and decision='approved'
- and reviewer_id='55555555-5555-4555-8555-555555555555')
+ and reviewer_id='adadadad-5555-4555-8555-555555555555')
  then raise exception 'No immutable review audit record';end if;
  if (select status from public.offline_events_inbox where id=current_setting('app.offline_review_id')::uuid)<>'approved'
  then raise exception 'Review status missing';end if;
