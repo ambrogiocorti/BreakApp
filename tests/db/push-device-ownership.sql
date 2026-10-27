@@ -27,9 +27,11 @@ select public.register_my_push_subscription(
  'https://fcm.googleapis.com/fcm/send/pilot_push_test_012345678901',
  repeat('C',65),repeat('D',24)) as transferred_id \gset
 reset role;
+select set_config('app.push_transfer_id',:'transferred_id',false);
+select set_config('app.push_old_notice',:'old_notice_id',false);
 
 do $ownership$
-declare v_subscription uuid:=:'transferred_id';
+declare v_subscription uuid:=current_setting('app.push_transfer_id')::uuid;
 begin
  if (select count(*) from public.push_subscriptions
   where endpoint='https://fcm.googleapis.com/fcm/send/pilot_push_test_012345678901')<>1
@@ -38,7 +40,7 @@ begin
   where id=v_subscription and user_id='11111111-1111-4111-8111-111111111111')
  then raise exception 'Push endpoint ownership transfer failed';end if;
  if not exists(select 1 from app_private.notification_jobs
-  where notice_id=:'old_notice_id'::uuid and status='dead')
+  where notice_id=current_setting('app.push_old_notice')::uuid and status='dead')
  then raise exception 'Old account queued notification was not retired';end if;
 end;
 $ownership$;
@@ -71,8 +73,9 @@ set role service_role;
 select set_config('request.jwt.claims','{"role":"service_role"}',false);
 select public.claim_push_jobs(10) as claimed \gset
 reset role;
+select set_config('app.push_claimed_transfer',:'claimed',false);
 do $privacy$
-declare v_claimed jsonb:=:'claimed'::jsonb;
+declare v_claimed jsonb:=current_setting('app.push_claimed_transfer')::jsonb;
 begin
  if jsonb_array_length(v_claimed)<>1 then
   raise exception 'Expected only one new-owner push job';end if;
