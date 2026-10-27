@@ -138,6 +138,12 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-refunds.sql
       - name: Verify refund ledger FK indexes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply same-day offline pickup and cash/Stripe collision migration 31
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/31_offline_order_pickups.sql
+      - name: Verify offline ready manifest, QR delivery, cash and duplicate Stripe refund
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-order-pickups.sql
+      - name: Verify offline pickup ledger FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
       - name: Snapshot and restore disposable database into a separate empty DB

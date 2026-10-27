@@ -14,10 +14,10 @@ export function initializeOfflineTerminal(client){
   entryForm=$('offline-entry-form'),syncButton=$('offline-sync');
  let ctx=null,user=null,db=null,device=null,key=null,lastTouch=0,
   authVersion=0,pinFailures=0,blockedUntil=0,
-  catalog=null,saleItems=[],onlineCashKey=null;
+  catalog=null,saleItems=[],onlineCashKey=null,manifest=null,pickupCandidate=null;
  const info=(text,error=false)=>{status.textContent=text;status.dataset.type=error?'error':'information';};
  const lock=()=>{
-  key=null;lastTouch=0;catalog=null;saleItems=[];onlineCashKey=null;
+  key=null;lastTouch=0;catalog=null;saleItems=[];onlineCashKey=null;manifest=null;pickupCandidate=null;
   $('offline-unlock-pin').value='';
   unlockForm.hidden=!device;
   entryForm.hidden=true;
@@ -32,6 +32,74 @@ export function initializeOfflineTerminal(client){
  const contextKey=()=>ctx&&user?user.id+':'+ctx.schoolId:null;
  const hasLease=()=>Boolean(device&&Date.parse(device.expiresAt)>Date.now()
    &&device.schoolId===ctx?.schoolId);
+ const todayRome=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',
+  year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const manifestForm=$('offline-pickup-form'),manifestSummary=$('offline-manifest-summary');
+ const renderManifest=()=>{
+  const valid=Boolean(manifest&&manifest.school_id===ctx?.schoolId&&
+   manifest.service_date===todayRome());
+  const total=valid?(manifest.orders||[]).length:0;
+  manifestSummary.textContent=valid?total+' ordini pronti del giorno salvati localmente.':
+   'Manifest non presente o di un altro giorno. Sincronizza online.';
+  manifestForm.hidden=!key||!valid||!total;
+ };
+ async function refreshManifest(){
+  if(!navigator.onLine||!touch()||!device||!ctx)throw new Error('PIN e connessione richiesti.');
+  const {data,error}=await client.rpc('offline_ready_order_manifest',{p_school:ctx.schoolId});
+  if(error)throw error;
+  if(!data||!Array.isArray(data.orders)||data.school_id!==ctx.schoolId)
+   throw new Error('Manifest non verificabile.');
+  manifest=data;device.ordersEncrypted=await sealOffline(key,data);
+  await saveDevice(db,device);pickupCandidate=null;renderManifest();
+  return data.orders.length;
+ }
+ $('offline-refresh-manifest').addEventListener('click',async()=>{
+  try{const n=await refreshManifest();info(n+' ordini pronti sincronizzati e cifrati.');}
+  catch(e){info(e.message||'Manifest non disponibile.',true);}
+ });
+ $('offline-pickup-find').addEventListener('click',()=>{
+  if(!touch()||!hasLease()||manifest?.service_date!==todayRome())
+   return info('PIN, lease valido e manifest odierno richiesti.',true);
+  const token=$('offline-pickup-token').value.trim();
+  pickupCandidate=(manifest.orders||[]).find(o=>o.pickup_token===token)||null;
+  $('offline-pickup-preview').textContent=pickupCandidate
+   ?'Ordine '+pickupCandidate.display_no+' · '+formatEuro(pickupCandidate.total_cents)+
+    ' · '+(pickupCandidate.payment_status==='paid'?'già saldato':
+     'saldo in contanti da ricevere prima della consegna')
+   :'QR non presente tra gli ordini pronti cifrati di oggi.';
+ });
+ manifestForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!touch()||!hasLease()||manifest?.service_date!==todayRome()||!pickupCandidate)
+   return info('Verifica prima un ordine pronto con QR valido.',true);
+  const o=pickupCandidate;
+  if(o.pickup_token!==$('offline-pickup-token').value.trim())
+   return info('Il QR è cambiato: riverifica il codice.',true);
+  const amount=o.payment_status==='paid'?0:Number(o.total_cents);
+  if(!Number.isSafeInteger(amount)||amount<0||amount>1000000)
+   return info('Totale non valido.',true);
+  if(!confirm(amount
+   ?'Hai ricevuto fisicamente '+formatEuro(amount)+' in contanti e consegnato l’ordine '+o.display_no+'?'
+   :'Hai verificato il QR e consegnato fisicamente l’ordine già pagato '+o.display_no+'?'))return;
+  const pending=await readPending(db,contextKey());
+  for(const p of pending){
+   const data=await unsealOffline(key,p.encrypted);
+   if(data.kind==='cash_pickup'&&data.order_id===o.id)
+    return info('La consegna è già nella coda locale.',true);
+  }
+  const eventId=crypto.randomUUID(),now=new Date().toISOString();
+  const payload={kind:'cash_pickup',order_id:o.id,pickup_token:o.pickup_token,
+   bar_id:o.bar_id,collected_cents:amount,
+   snapshot_payment_status:o.payment_status,local_recorded_at:now,request_key:eventId};
+  await savePending(db,{id:eventId,context:contextKey(),createdAt:now,
+   encrypted:await sealOffline(key,payload),deviceId:device.deviceId,
+   generation:device.generation});
+  manifest.orders=manifest.orders.filter(row=>row.id!==o.id);
+  device.ordersEncrypted=await sealOffline(key,manifest);await saveDevice(db,device);
+  pickupCandidate=null;manifestForm.reset();$('offline-pickup-preview').textContent='';
+  renderManifest();await renderQueue();
+  info('Consegna fisica registrata e cifrata: sincronizza appena possibile.');
+ });
  const barInput=$('offline-sale-bar'),productInput=$('offline-sale-product'),
   quantityInput=$('offline-sale-quantity'),saleView=$('offline-sale-items');
  const saleSum=()=>saleItems.reduce((sum,item)=>sum+item.quantity*item.unit_cents,0);
@@ -107,6 +175,7 @@ export function initializeOfflineTerminal(client){
   activateForm.hidden=Boolean(device&&hasLease());
   unlockForm.hidden=!device||Boolean(key);
   entryForm.hidden=!key;
+  renderManifest();
   syncButton.disabled=!key||!navigator.onLine;
   $('offline-lock').disabled=!key;
  };
@@ -130,6 +199,7 @@ export function initializeOfflineTerminal(client){
  async function selectContext(next){
    const id=++authVersion;lock();ctx=next;db=null;device=null;user=null;catalog=null;saleItems=[];
    panel.hidden=next?.role!=='bartender'||!next?.schoolId;
+   manifest=null;pickupCandidate=null;renderManifest();
    if(panel.hidden)return;
    info('Verifica autenticazione e dispositivo…');
    try{
@@ -206,7 +276,11 @@ export function initializeOfflineTerminal(client){
       if(catalog?.school_id!==ctx.schoolId)catalog=null;
      }
      if(catalog)renderCatalog();
-     renderLease();
+     if(device.ordersEncrypted){
+      manifest=await unsealOffline(key,device.ordersEncrypted);
+      if(manifest?.school_id!==ctx.schoolId)manifest=null;
+     }
+     renderManifest();renderLease();
      info(hasLease()?'Coda sbloccata. Le operazioni restano da verificare sul server.':
        'Coda sbloccata per invio, ma lease scaduto: nessuna nuova operazione offline autorizzata.');
    }catch{
@@ -279,19 +353,22 @@ export function initializeOfflineTerminal(client){
    for(const record of records){
      try{
        const data=await unsealOffline(key,record.encrypted);
+       const payload=data.kind==='cash_pickup'
+        ?{order_id:data.order_id,pickup_token:data.pickup_token,bar_id:data.bar_id,
+          collected_cents:data.collected_cents,snapshot_payment_status:data.snapshot_payment_status}
+        :{bar_id:data.bar_id,method:'cash',amount_cents:data.amount_cents,
+          note:data.note,items:data.items};
        const {data:receipt,error}=await client.rpc('stage_my_offline_event',{
          p_device:record.deviceId,p_generation:record.generation,
          p_request_key:record.id,p_kind:data.kind,
-         p_local_recorded_at:data.local_recorded_at,
-         p_payload:{bar_id:data.bar_id,method:'cash',amount_cents:data.amount_cents,
-          note:data.note,items:data.items}
+         p_local_recorded_at:data.local_recorded_at,p_payload:payload
        });
        if(error||!['quarantined','applied','approved'].includes(receipt?.status))
          throw error||new Error('Il server non ha confermato l’evento.');
-       if(receipt.status==='quarantined'&&Array.isArray(data.items)){
-        const {error:reconcileError}=await client.rpc('reconcile_my_offline_cash_event',{
-         p_event:receipt.id
-        });
+       if(receipt.status==='quarantined'){
+        const rpc=data.kind==='cash_pickup'
+         ?'reconcile_my_offline_pickup_event':'reconcile_my_offline_cash_event';
+        const {error:reconcileError}=await client.rpc(rpc,{p_event:receipt.id});
         if(reconcileError)throw reconcileError;
        }
        // Durable server receipt is the authority, even for queued Admin review.

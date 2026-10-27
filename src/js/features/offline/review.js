@@ -27,7 +27,7 @@ export function initializeOfflineReview(client){
    row.append(element('strong',types[event.event_kind]||'Evento offline'),
      element('p',(statusNames[event.status]||event.status)+
       ' · acquisito dal server: '+new Date(event.received_at).toLocaleString('it-IT')));
-   const cents=Number(event.payload?.amount_cents);
+   const cents=Number(event.payload?.amount_cents??event.payload?.collected_cents);
    if(Number.isSafeInteger(cents)&&cents>=0)
     row.append(element('p','Importo dichiarato: '+
       new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(cents/100)));
@@ -64,6 +64,23 @@ export function initializeOfflineReview(client){
      actions.append(button);
     }
     row.append(label,reason,actions);
+   }
+   if(event.status==='approved'&&event.event_kind==='cash_pickup'){
+    const button=element('button','Riconcilia ritiro approvato','button button-primary button-small');
+    button.type='button';
+    button.addEventListener('click',async()=>{
+     if(!confirm('Verificati QR, ordine, contanti fisici ed eventuale rimborso? Confermare la riconciliazione?'))return;
+     button.disabled=true;
+     const {data:receipt,error:e}=await client.rpc('apply_approved_offline_pickup_event',{
+      p_event:event.id
+     });
+     if(e){report(e.message,true);button.disabled=false;return;}
+     await refresh();
+     report(receipt.status==='applied'?'Consegna registrata. Rimborso Stripe da completare: '+
+       (receipt.refund_pending?'sì':'no'):'Evento in verifica: '+(receipt.reason||receipt.status),
+       receipt.status!=='applied');
+    });
+    row.append(button);
    }
    if(event.status==='approved'&&event.event_kind==='counter_sale'){
     const button=element('button','Contabilizza vendita approvata','button button-primary button-small');
