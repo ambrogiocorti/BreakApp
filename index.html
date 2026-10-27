@@ -326,8 +326,8 @@
       <section id="school-reports" class="container orders-section workspace-page" hidden aria-labelledby="reports-heading">
         <div class="section-heading"><span class="eyebrow">ADMIN SCUOLA</span><h2 id="reports-heading">Report e comunicazioni</h2>
           <p>Movimenti della scuola nel periodo selezionato: contanti, POS esterno, Stripe e rimborsi. I report sono rendiconti interni e non documenti fiscali.</p></div>
-        <form id="reports-form" class="catalog-toolbar"><label for="reports-from">Dal</label><input id="reports-from" type="date" required />
-          <label for="reports-to">Al</label><input id="reports-to" type="date" required />
+        <form id="reports-form" class="catalog-toolbar"><label for="reports-from">Dal<input id="reports-from" type="date" required /></label>
+          <label for="reports-to">Al<input id="reports-to" type="date" required /></label>
           <button type="submit" class="button button-primary">Calcola report</button></form>
         <p id="reports-feedback" role="status" aria-live="polite"></p><div id="reports-metrics" class="dashboard-metrics"></div>
         <p id="reports-order-count"></p>
@@ -344,8 +344,8 @@
       <section id="cash-workspace" class="container orders-section workspace-page" hidden aria-labelledby="cash-heading">
         <div class="section-heading"><span class="eyebrow">CASSA E TURNI</span><h2 id="cash-heading">La cassa del bar</h2>
           <p>Apri il turno con il fondo ricevuto, registra uscite e versamenti, poi conferma il conteggio fisico. Le chiusure rimangono nello storico.</p></div>
-        <label for="cash-bar">Bar</label><select id="cash-bar"></select>
-        <button type="button" id="cash-refresh" class="button button-outline button-small">Aggiorna registro</button>
+        <div class="catalog-toolbar"><label for="cash-bar">Bar<select id="cash-bar"></select></label>
+        <button type="button" id="cash-refresh" class="button button-outline button-small">Aggiorna registro</button></div>
         <p id="cash-feedback" role="status" aria-live="polite"></p><p id="cash-current"></p><p id="cash-unassigned" role="status"></p>
         <div class="catalog-columns">
           <form id="cash-open-form" class="pilot-card"><h3>Apertura turno</h3>

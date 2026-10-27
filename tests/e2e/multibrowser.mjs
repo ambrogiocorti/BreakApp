@@ -7,7 +7,18 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit})) {
     const page=await browser.newPage({viewport});
     const failures=[];
     page.on('pageerror',e=>failures.push(e.message));
-    const response=await page.goto(site,{waitUntil:'networkidle',timeout:30000});
+    page.on('requestfailed',request=>{
+      if(new URL(request.url()).origin===new URL(site).origin&&['script','stylesheet'].includes(request.resourceType()))
+        failures.push('asset failed: '+request.url());
+    });
+    page.on('response',response=>{
+      if(new URL(response.url()).origin===new URL(site).origin&&response.request().resourceType()==='script'&&
+        !/javascript/.test(response.headers()['content-type']||''))failures.push('wrong script content type: '+response.url());
+    });
+    const response=await page.goto(site,{waitUntil:'domcontentloaded',timeout:30000});
+    try{
+      await page.waitForFunction(()=>document.body.hasAttribute('data-authenticated'),null,{timeout:15000});
+    }catch{failures.push('application JavaScript did not initialize');}
     if(!response?.ok())failures.push('HTTP '+response?.status());
     const pathname=new URL(page.url()).pathname;
     if(pathname!=='/BreakApp/')failures.push('wrong base path '+pathname);

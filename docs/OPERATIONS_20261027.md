@@ -38,6 +38,11 @@ Verificati: endpoint chiave pubblica HTTP 200, dispatcher HTTP 200 con coda vuot
 - `runtime-refund-retries.sql`: segreti non pubblici, backoff e segnalazioni.
 - IndexedDB: ordine causale concorrente, salvataggi obsoleti e cambio generazione.
 - Export verificati indipendentemente con openpyxl e parser PDF.
+- PostgreSQL 17 in GitHub: superati integrazione, concorrenza stock e restore.
+- Controllo live: zero tabelle pubbliche senza RLS e zero funzioni privilegiate eseguibili da anon. Applicata anche la precedente revoca SQL 22 mancante sul database remoto.
+- Chromium con fixture UI: report autenticato, download Excel, rettifica Admin e larghezza mobile. Le fixture verificano l'interfaccia; l'autorizzazione reale è verificata dai test SQL.
+
+Il test browser controlla anche l'avvio effettivo del JavaScript e il tipo MIME dei moduli. Il server di anteprima deve usare lo stesso `--base /BreakApp/` della build: la sola presenza dell'HTML di login non dimostra che l'app sia partita.
 
 La suite SQL è eseguita localmente anche tramite PGlite; concorrenza fra connessioni e restore richiedono il job PostgreSQL 17. Non costituisce pagamento Stripe o collaudo fisico.
 
