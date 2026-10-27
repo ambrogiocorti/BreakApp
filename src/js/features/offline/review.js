@@ -5,7 +5,8 @@ const types={counter_sale:'Vendita al bancone',cash_pickup:'Ritiro con contanti'
 export function initializeOfflineReview(client){
  if(!client)return;
  const panel=$('offline-review'),feedback=$('offline-review-feedback'),
-  list=$('offline-review-list'),reload=$('offline-review-refresh');
+  list=$('offline-review-list'),reload=$('offline-review-refresh'),
+  conflicts=$('offline-stock-conflicts');
  let context=null,requestNo=0;
  const report=(message,isError=false)=>{feedback.textContent=message;feedback.dataset.type=isError?'error':'information';};
  async function refresh(){
@@ -19,8 +20,7 @@ export function initializeOfflineReview(client){
   list.replaceChildren();
   if(error){report(error.message,true);return;}
   if(!Array.isArray(data)||!data.length){
-   list.append(element('p','Nessuna operazione offline in attesa o recentemente revisionata.'));
-   return report('Coda aggiornata.');
+   list.append(element('p','Nessuna operazione offline da revisionare.'));
   }
   for(const event of data){
    const row=element('article','','pilot-card');
@@ -65,15 +65,64 @@ export function initializeOfflineReview(client){
     }
     row.append(label,reason,actions);
    }
+   if(event.status==='approved'&&event.event_kind==='counter_sale'){
+    const button=element('button','Contabilizza vendita approvata','button button-primary button-small');
+    button.type='button';
+    button.addEventListener('click',async()=>{
+     if(!confirm('Registrare i contanti realmente verificati e aggiornare le scorte?'))return;
+     button.disabled=true;
+     const {data:receipt,error:e}=await client.rpc('apply_approved_offline_cash_event',{
+      p_event:event.id
+     });
+     if(e){report(e.message,true);button.disabled=false;return;}
+     await refresh();
+     report(receipt.status==='applied'?'Vendita contabilizzata. Conflitti stock: '+
+       (receipt.stock_conflicts||0):'Evento in verifica: '+(receipt.reason||receipt.status),
+       receipt.status!=='applied');
+    });
+    row.append(button);
+   }
    list.append(row);
   }
-  report('Visualizzati '+data.length+' eventi. Le approvazioni non scrivono il registro cassa.');
+  const {data:pendingConflicts,error:conflictError}=await client.rpc(
+   'list_school_stock_conflicts',{p_school:school});
+  if(serial!==requestNo)return;
+  conflicts.replaceChildren();
+  if(conflictError){report(conflictError.message,true);return;}
+  for(const c of pendingConflicts||[]){
+   const box=element('article','','service-list-item');
+   box.append(element('strong','Conflitto di magazzino · '+String(c.product_id).slice(0,8)),
+    element('p','Data '+c.service_date+' · vendute offline '+c.sold_quantity+
+     ' · riservate '+c.allocated+' · capacità '+c.capacity));
+   const button=element('button','Riconcilia scorta fisica','button button-outline button-small');
+   button.type='button';
+   button.addEventListener('click',async()=>{
+    const units=prompt('Nuova capacità verificata fisicamente (non inferiore alle prenotazioni):');
+    if(units===null)return;
+    const capacity=Number(units);
+    if(!Number.isInteger(capacity)||capacity<Number(c.allocated))
+     return report('Capacità non valida: non può essere inferiore al già prenotato.',true);
+    const reason=prompt('Motivo dell’inventario e dettaglio verifica (almeno 10 caratteri):');
+    if(!reason||reason.trim().length<10)return report('Motivazione obbligatoria.',true);
+    if(!confirm('Salvare la rettifica di magazzino? Resterà nello storico.'))return;
+    button.disabled=true;
+    const {error:resolveError}=await client.rpc('resolve_offline_stock_conflict',{
+     p_conflict:c.id,p_new_capacity:capacity,p_reason:reason.trim()
+    });
+    if(resolveError){report(resolveError.message,true);button.disabled=false;return;}
+    await refresh();report('Scorta riconciliata con audit.');
+   });
+   box.append(button);conflicts.append(box);
+  }
+  if(!pendingConflicts?.length)conflicts.append(element('p','Nessun conflitto di magazzino aperto.'));
+  report('Visualizzati '+data.length+' eventi e '+(pendingConflicts||[]).length+
+   ' conflitti di magazzino.');
  }
  reload.addEventListener('click',()=>void refresh());
  window.addEventListener('breakapp:workspace-context',event=>{
   context=event.detail?.role==='school_admin'&&event.detail?.verified?event.detail:null;
   panel.hidden=!context;requestNo++;
-  if(context)void refresh();else list.replaceChildren();
+  if(context)void refresh();else{list.replaceChildren();conflicts.replaceChildren();}
  });
  window.addEventListener('breakapp:route-changed',event=>{
   if(event.detail?.route==='offline-review'&&context)void refresh();
