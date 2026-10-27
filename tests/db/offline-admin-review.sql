@@ -10,6 +10,7 @@ insert into public.role_assignments(membership_id,role_code)
 values('aaaaaaaa-0000-4000-8000-000000000096','school_admin');
 select id as staged_id from public.offline_events_inbox
  where request_key='aaaaaaaa-0000-4000-8000-000000000092' \gset
+select set_config('app.offline_review_id',:'staged_id',false);
 do $direct_denied$
 begin
  if has_table_privilege('authenticated','public.offline_event_reviews','INSERT') or
@@ -33,7 +34,7 @@ do $mfa_denied$
 declare denied boolean:=false;
 begin
  begin
-  perform public.review_school_offline_event(:'staged_id'::uuid,true,
+  perform public.review_school_offline_event(current_setting('app.offline_review_id')::uuid,true,
    'Verifica integrità e registri di cassa.');
  exception when others then denied:=true;end;
  if not denied then raise exception 'AAL1 Admin approved offline event';end if;
@@ -53,15 +54,16 @@ begin
  events:=public.list_school_offline_events('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
  if jsonb_array_length(events)<1 then raise exception 'Offline queue empty after staging';end if;
 end;$queue_exists$;
-select public.review_school_offline_event(:'staged_id'::uuid,true,
+select public.review_school_offline_event(current_setting('app.offline_review_id')::uuid,true,
  'Decisione tracciata, riconciliazione contabile non ancora applicata.') as review_response \gset
+select set_config('app.offline_review_response',:'review_response',false);
 do $no_double_review$
 declare denied boolean:=false;
 begin
- if (:'review_response'::jsonb->>'applied_to_ledger')::boolean
+ if (current_setting('app.offline_review_response')::jsonb->>'applied_to_ledger')::boolean
  then raise exception 'Review falsely marked ledger applied';end if;
  begin
-  perform public.review_school_offline_event(:'staged_id'::uuid,false,
+  perform public.review_school_offline_event(current_setting('app.offline_review_id')::uuid,false,
    'Tentativo duplicato della stessa revisione.');
  exception when others then denied:=true;end;
  if not denied then raise exception 'Double review accepted';end if;
@@ -70,9 +72,9 @@ reset role;
 do $audit_written$
 begin
  if not exists(select 1 from public.offline_event_reviews
- where event_id=:'staged_id'::uuid and decision='approved'
+ where event_id=current_setting('app.offline_review_id')::uuid and decision='approved'
  and reviewer_id='55555555-5555-4555-8555-555555555555')
  then raise exception 'No immutable review audit record';end if;
- if (select status from public.offline_events_inbox where id=:'staged_id'::uuid)<>'approved'
+ if (select status from public.offline_events_inbox where id=current_setting('app.offline_review_id')::uuid)<>'approved'
  then raise exception 'Review status missing';end if;
 end;$audit_written$;
