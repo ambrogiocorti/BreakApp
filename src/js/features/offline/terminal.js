@@ -131,7 +131,7 @@ export function initializeOfflineTerminal(client){
        'Coda sbloccata per invio, ma lease scaduto: nessuna nuova operazione offline autorizzata.');
    }catch{
      pinFailures++;
-     if(pinFailures>=5){blockedUntil=Date.now()+60000;pinFailures=0;}
+     if(pinFailures>=5){blockedUntil=Date.now()+5*60*1000;pinFailures=0;}
      info('PIN non valido o dati locali non decifrabili.',true);
    }
  });
