@@ -49,6 +49,7 @@ create table public.offline_stock_conflicts(
 create index offline_conflicts_stock_open on public.offline_stock_conflicts(
  school_id,bar_id,product_id,service_date) where status='open';
 create index offline_conflicts_resolver on public.offline_stock_conflicts(resolved_by);
+create index offline_conflicts_school on public.offline_stock_conflicts(school_id);
 create index offline_conflicts_bar on public.offline_stock_conflicts(bar_id);
 create index offline_conflicts_product on public.offline_stock_conflicts(product_id);
 create table public.offline_stock_conflict_audit(
