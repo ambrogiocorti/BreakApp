@@ -20,9 +20,9 @@ select public.join_group_draft(current_setting('app.group_stripe_invite')::uuid,
 select public.replace_group_personal_cart(current_setting('app.group_stripe_id')::uuid,
  '[{"product_id":"aaaaaaaa-0000-4000-8000-000000000003","quantity":2}]'::jsonb);
 select set_config('app.group_stripe_line',
- (select id::text from public.group_cart_items
-  where group_id=current_setting('app.group_stripe_id')::uuid
-   and user_id='22222222-2222-4222-8222-222222222222'),false);
+ (select line->>'line_id' from jsonb_array_elements(
+  public.group_payable_lines(current_setting('app.group_stripe_id')::uuid)) line
+  where (line->>'quantity')::integer=2),false);
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 do $lines$
 declare a jsonb;
@@ -37,6 +37,7 @@ select public.begin_group_stripe_checkout(
 select set_config('app.group_stripe_attempt',
  (:'checkout'::jsonb->>'attempt_id'),false);
 -- The payer may pay another accepted member's WHOLE line.
+reset role;
 do $payer$
 declare p uuid;b uuid;
 begin
@@ -48,6 +49,8 @@ begin
     b<>'22222222-2222-4222-8222-222222222222'::uuid
  then raise exception 'Wrong payer attribution';end if;
 end;$payer$;
+set role authenticated;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 select public.begin_group_stripe_checkout(
  current_setting('app.group_stripe_id')::uuid,
  array[current_setting('app.group_stripe_line')::uuid],
