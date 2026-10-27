@@ -94,7 +94,7 @@ export function initializePickupQr(client) {
     const when=el('p',slot?'Ritiro: '+slot.service_date+' · '+slot.starts_at.slice(0,5):'Ritiro da verificare','catalog-help');
     const payment=el('p',
       'Totale: '+formatEuro(order.total_cents)+' · '+
-      (order.payment_status==='paid'?'Pagato':'Saldo da incassare'),'catalog-help');
+      (order.payment_status==='paid'?'Pagato':order.payment_status==='refund_pending'?'Rimborso in elaborazione':order.payment_status==='refunded'?'Rimborsato':'Saldo da incassare'),'catalog-help');
     const items=el('ul','', 'scan-item-list');
     for(const x of order.order_items||[]) items.append(el('li',x.quantity+' × '+x.product_name));
     result.append(heading,when,payment,items);

@@ -257,7 +257,7 @@ export function initializeOrders(client) {
       const box=elem('article','','order-card');
       box.append(elem('h3',`Ordine #${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date||'—'} ${o.pickup_windows?.starts_at?.slice(0,5)||''}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':'Da pagare'}`));
+        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da pagare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const reorder=elem('button','Riordina','button button-outline button-small');reorder.type='button';
       reorder.addEventListener('click',()=>{
@@ -371,7 +371,7 @@ export function initializeOrders(client) {
       const box=elem('article','','order-card');
       box.append(elem('h3',`#${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date} ${o.pickup_windows?.starts_at?.slice(0,5)}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':'Da incassare'}`));
+        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da incassare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const actions=elem('div','','order-actions');
       if(o.status==='confirmed'){

@@ -332,7 +332,14 @@ begin
  if public.reconcile_my_offline_pickup_event((e->>'id')::uuid)->>'status'<>'duplicate' then raise exception 'Individual offline replay not idempotent';end if;
  perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');
  j:=public.request_completed_order_refund('individual',o,gen_random_uuid(),'Verifica rimborso ordine con saldo misto');
- if (j->>'cash_pending')::int<>200 or jsonb_array_length(j->'online')<>1 or app_private.order_paid_cents('individual',o)<>0 then raise exception 'Mixed completed-order refund did not balance';end if;
+ if (j->>'cash_pending')::int<>200 or jsonb_array_length(j->'online')<>1 or app_private.order_paid_cents('individual',o)<>0 or (select payment_status from public.orders where id=o)<>'refund_pending' then raise exception 'Mixed completed-order refund did not balance';end if;
+ perform pg_temp.actor('84444444-4444-4444-8444-444444444444','service_role');
+ perform public.finalize_verified_stripe_refund('evt_mixedfinal1','acct_workflow810',(j->'online'->0->>'refund_id')::uuid,'re_mixedfinal1','pi_offlinepartial1',200,'eur','succeeded');
+ perform public.finalize_verified_stripe_refund('evt_mixedfinal2','acct_workflow810',(select id from public.payment_refunds where payment_id=topup),'re_mixedfinal2','pi_offlinepartial2',200,'eur','succeeded');
+ if (select payment_status from public.orders where id=o)<>'refund_pending' then raise exception 'Cash not returned but refund shown complete';end if;
+ perform pg_temp.actor('83333333-3333-4333-8333-333333333333');
+ perform public.confirm_cash_refund_return((select id from public.cash_refund_obligations where order_id=o),'Contanti restituiti fisicamente al cliente');
+ if (select payment_status from public.orders where id=o)<>'refunded' then raise exception 'Verified mixed refund not complete after physical cash return';end if;
 end;$$;
 
 -- A no-show never returns food to stock; only a registered owner is penalized.

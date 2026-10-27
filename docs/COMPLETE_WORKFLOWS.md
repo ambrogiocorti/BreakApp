@@ -16,7 +16,7 @@ Il Barista seleziona il bar e attiva **Sono in servizio e disponibile per le app
 
 Le sostituzioni e i ritardi si propongono nella stessa schermata. Nei gruppi i membri sono informati e decide il coordinatore. Per una differenza positiva su riga pagata viene creato un supplemento intero, pagabile da qualsiasi membro online prima della scansione. Al bancone il residuo rimane del coordinatore. Per una riga saldata in contanti, il credito diventa un obbligo di restituzione fisica.
 
-L'Admin può chiedere il rimborso di un ordine concluso: il sistema ripartisce gli importi sui pagatori originali. Un credito cash non risulta restituito finché il personale non registra il movimento fisico con turno aperto e motivazione. I rendiconti distinguono richiesta di rimborso, conferma Stripe e contanti restituiti.
+L'Admin può chiedere il rimborso di un ordine concluso: il sistema ripartisce gli importi sui pagatori originali. Un credito cash non risulta restituito finché il personale non registra il movimento fisico con turno aperto e motivazione. I rendiconti distinguono richiesta di rimborso, conferma Stripe e contanti restituiti. Per un ordine concluso il pagamento resta `refund_pending` finché tutti i rimborsi online sono confermati e tutti i contanti dovuti sono restituiti; solo allora diventa `refunded`.
 
 Le chiusure straordinarie includono ordini individuali e gruppi, anche pagati, limitatamente all'intervallo scelto. La riapertura non ripristina gli ordini annullati. Alla chiusura giornaliera il cron registra i mancati ritiri, avvia i rimborsi e non rimette prodotti deperibili in magazzino. La penalità è disabilitata per default e configurabile dall'Admin in minuti; interessa soltanto il cliente registrato o il coordinatore. Eventi di consegna offline già in verifica sospendono la decisione automatica.
 
@@ -46,7 +46,7 @@ Nel centro assistenza si può associare un gruppo e scegliere conversazione cond
 
 ## Distribuzione e verifiche
 
-Le sei migrazioni `20261027214803`..`20261027222100` si applicano dopo la baseline e gli incrementi precedenti. Non rieseguire file già registrati nel progetto. Il connettore può assegnare un timestamp remoto differente: riconciliare la cronologia prima di usare `supabase db push`.
+Le sette migrazioni `20261027214803`..`20261027225739` si applicano dopo la baseline e gli incrementi precedenti. Non rieseguire file già registrati nel progetto. Il connettore può assegnare un timestamp remoto differente: riconciliare la cronologia prima di usare `supabase db push`.
 
 Distribuire `guest-access`, `push-dispatch` e `stripe-full-refund`. Queste Edge Functions gestiscono internamente l'autenticazione prevista dal rispettivo ingresso; il dispatcher verifica il token Vault, il rimborso verifica la sessione e il guest endpoint scambia un link privato con una sessione verificata. Il cron esistente richiama manutenzione approvazioni, proposte e chiusure prima degli invii push.
 
