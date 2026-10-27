@@ -208,6 +208,19 @@
         </div>
         <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div id="staff-orders-list" class="orders-list"></div>
+        <article id="group-staff-panel" class="pilot-card" hidden>
+          <h3>Ordini di gruppo · ritiro unico</h3>
+          <p>Consegna soltanto al coordinatore, con saldo zero e tutti i prodotti pronti.</p>
+          <form id="group-staff-scan-form">
+            <label for="group-staff-token">Codice QR del coordinatore</label>
+            <input id="group-staff-token" placeholder="Token UUID o breakapp:group:..." required />
+            <button class="button button-primary button-small" type="submit">Avvia ritiro (10 minuti)</button>
+          </form>
+          <button class="button button-outline button-small" type="button" id="group-staff-refresh">Aggiorna gruppi</button>
+          <p id="group-staff-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+          <div id="group-staff-list" class="service-list"></div>
+          <div id="group-staff-active" hidden></div>
+        </article>
       </section>
 
 
@@ -287,7 +300,20 @@
             <button type="button" id="group-cancel" class="button button-outline button-small">Annulla bozza</button>
           </div>
           <button type="button" id="group-leave" class="button button-outline button-small" hidden>Esci dal gruppo</button>
-          <p class="catalog-help">Conferma definitiva, pagamenti Stripe e ritiro unico non sono ancora disponibili in questo incremento. Non è possibile effettuare un incasso dalla bozza.</p>
+          <div id="group-confirm-panel" hidden>
+            <h4>Conferma definitiva dell'ordine di gruppo</h4>
+            <p class="catalog-help">Alla conferma verranno riverificate posizione, disponibilità e scorte.</p>
+            <label><input id="group-accept-unready" type="checkbox" /> Accetto che alcuni partecipanti non abbiano premuto «Ho finito».</label>
+            <button type="button" id="group-confirm" class="button button-primary">Conferma ordine di gruppo</button>
+          </div>
+          <div id="group-confirmed-panel" hidden>
+            <h4>Ordine confermato · unico ritiro</h4>
+            <div id="group-confirmed-summary" class="service-summary"></div>
+            <div id="group-ticket-qr" class="group-invite" aria-label="QR ritiro coordinatore"></div>
+            <p id="group-ticket-token" class="catalog-help"></p>
+            <button type="button" id="group-cancel-confirmed" class="button button-outline button-small" hidden>Annulla l'intero ordine</button>
+          </div>
+          <p class="catalog-help">La conferma e il ritiro unico sono attivi. I pagamenti Stripe multipagatore saranno disponibili al termine dei test di sicurezza finanziaria; al momento il residuo può essere saldato dal coordinatore al bancone.</p>
         </article>
       </section>
 
