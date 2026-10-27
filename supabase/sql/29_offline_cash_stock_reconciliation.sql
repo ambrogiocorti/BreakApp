@@ -161,7 +161,7 @@ begin
   select p.* into v_product from public.products p
    join public.categories c on c.id=p.category_id and c.is_active
   where p.id=v_item.product_id and p.school_id=v_bar.school_id
-   and p.bar_id=p_bar.id and p.is_active for share of p;
+   and p.bar_id=v_bar.id and p.is_active for share of p;
   if not found then raise exception 'Articolo non valido per questo bar';end if;
   select * into v_stock from public.daily_stock
    where school_id=v_bar.school_id and bar_id=v_bar.id
