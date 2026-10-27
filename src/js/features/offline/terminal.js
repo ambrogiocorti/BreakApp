@@ -14,10 +14,10 @@ export function initializeOfflineTerminal(client){
   entryForm=$('offline-entry-form'),syncButton=$('offline-sync');
  let ctx=null,user=null,db=null,device=null,key=null,lastTouch=0,
   authVersion=0,pinFailures=0,blockedUntil=0,
-  catalog=null,saleItems=[];
+  catalog=null,saleItems=[],onlineCashKey=null;
  const info=(text,error=false)=>{status.textContent=text;status.dataset.type=error?'error':'information';};
  const lock=()=>{
-  key=null;lastTouch=0;catalog=null;saleItems=[];
+  key=null;lastTouch=0;catalog=null;saleItems=[];onlineCashKey=null;
   $('offline-unlock-pin').value='';
   unlockForm.hidden=!device;
   entryForm.hidden=true;
@@ -42,7 +42,7 @@ export function initializeOfflineTerminal(client){
    row.append(make('span',item.quantity+' × '+item.name+' · '+formatEuro(item.quantity*item.unit_cents)));
    const remove=make('button','Rimuovi','button button-outline button-small');remove.type='button';
    remove.addEventListener('click',()=>{
-    saleItems=saleItems.filter(x=>x.product_id!==item.product_id);renderSale();
+    saleItems=saleItems.filter(x=>x.product_id!==item.product_id);onlineCashKey=null;renderSale();
    });row.append(remove);saleView.append(row);
   }
   $('offline-entry-amount').value=(saleSum()/100).toFixed(2).replace('.',',');
@@ -62,7 +62,7 @@ export function initializeOfflineTerminal(client){
     option.textContent=p.name+' · '+formatEuro(p.unit_cents);
     productInput.append(option);
    }
-   saleItems=[];renderSale();
+   saleItems=[];onlineCashKey=null;renderSale();
   };
   barInput.onchange=fillProducts;fillProducts();
   entryForm.querySelector('button[type=submit]').disabled=!catalog?.products?.length;
@@ -93,7 +93,7 @@ export function initializeOfflineTerminal(client){
    existing.quantity+=qty;}
   else saleItems.push({product_id:product.id,quantity:qty,
     unit_cents:product.unit_cents,name:product.name});
-  renderSale();info('Riga aggiunta. La vendita viene salvata solo dopo conferma.');
+  onlineCashKey=null;renderSale();info('Riga aggiunta. La vendita viene salvata solo dopo conferma.');
  });
  const renderLease=()=>{
   leaseView.textContent=device
@@ -214,6 +214,29 @@ export function initializeOfflineTerminal(client){
      if(pinFailures>=5){blockedUntil=Date.now()+5*60*1000;pinFailures=0;}
      info('PIN non valido o dati locali non decifrabili.',true);
    }
+ });
+ $('offline-entry-online').addEventListener('click',async()=>{
+  if(!touch()||!navigator.onLine||!hasLease()||!catalog||!saleItems.length)
+   return info('Catalogo, PIN, connessione e prodotti validi richiesti.',true);
+  const amount=saleSum(),barId=barInput.value;
+  if(!Number.isSafeInteger(amount)||amount<=0||amount>1000000)
+   return info('Totale non valido.',true);
+  if(!confirm('Confermi di avere già incassato '+formatEuro(amount)+
+    ' in contanti? Il server registrerà ora la vendita.'))return;
+  onlineCashKey ||=crypto.randomUUID();
+  const button=$('offline-entry-online');button.disabled=true;
+  try{
+   const {data,error}=await client.rpc('record_online_bar_cash_sale',{
+    p_bar:barId,p_items:saleItems.map(({product_id,quantity})=>({product_id,quantity})),
+    p_request_key:onlineCashKey,p_note:$('offline-entry-note').value.trim()
+   });
+   if(error)throw error;
+   if(!data?.sale_id)throw new Error('Ricevuta contabile non disponibile');
+   onlineCashKey=null;saleItems=[];renderSale();
+   info('Vendita contabilizzata: '+formatEuro(amount)+
+    '. Riferimento '+data.sale_id.slice(0,8)+'. Documento fiscale separato.');
+  }catch(e){info(e.message||'Registrazione non riuscita, controlla la cassa.',true);}
+  finally{button.disabled=false;}
  });
  entryForm.addEventListener('submit',async event=>{
    event.preventDefault();
