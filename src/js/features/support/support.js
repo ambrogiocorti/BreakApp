@@ -8,6 +8,8 @@ export function initializeSupportCenter(client) {
   const feedback=document.getElementById('support-feedback');
   const school=document.getElementById('support-school');
   const ordersSelect=document.getElementById('support-order-reference');
+  const groupSelect=document.getElementById('support-group-reference'),groupOptions=document.getElementById('support-group-options'),
+    groupVisibility=document.getElementById('support-group-visibility'),groupLine=document.getElementById('support-group-line'),groupPayment=document.getElementById('support-group-payment');
   const list=document.getElementById('support-ticket-list');
   const detail=document.getElementById('support-detail-panel');
   const title=document.getElementById('support-detail-title');
@@ -20,6 +22,16 @@ export function initializeSupportCenter(client) {
   const reopenList=document.getElementById('support-reopen-requests');
   let user=null,schools=[],orders=[],tickets=[],current=null,adminSchools=new Set();
   let createRequestKey=null,pendingOrder=null,pendingSchool=null,generation=0;
+  let groupReferences=[];
+  function groupFields(){
+    const g=groupReferences.find(g=>g.id===groupSelect.value);groupOptions.hidden=!g;
+    ordersSelect.disabled=school.disabled=Boolean(g);if(g){ordersSelect.value='';school.value=g.school_id;}
+    groupLine.replaceChildren(new Option('Nessuno',''));groupPayment.replaceChildren(new Option('Nessuno',''));
+    for(const i of g?.lines||[])groupLine.add(new Option(i.quantity+' × '+i.name,i.id));
+    for(const p of g?.payments||[])groupPayment.add(new Option((p.amount_cents/100).toFixed(2)+' € · '+p.status,p.id));
+    groupLine.disabled=groupPayment.disabled=groupVisibility.value!=='personal';
+  }
+  groupSelect.addEventListener('change',groupFields);groupVisibility.addEventListener('change',groupFields);
 
   const report=(message,error=false)=>{
     feedback.textContent=message;
@@ -85,7 +97,7 @@ export function initializeSupportCenter(client) {
     const seq=++generation;
     report('Caricamento ticket da Supabase…');
     const {data,error}=await client.from('support_tickets')
-      .select('id,school_id,order_id,owner_id,subject,category,status,created_at,updated_at')
+      .select('id,school_id,order_id,group_id,visibility,owner_id,subject,category,status,created_at,updated_at')
       .order('updated_at',{ascending:false}).limit(100);
     if(seq!==generation)return;
     if(error){report(error.message,true);return;}
@@ -111,7 +123,7 @@ export function initializeSupportCenter(client) {
     const seq=++generation;
     report('Lettura della conversazione protetta…');
     const {data:t,error}=await client.from('support_tickets')
-      .select('id,school_id,order_id,owner_id,subject,status,category,created_at')
+      .select('id,school_id,order_id,group_id,visibility,owner_id,subject,status,category,created_at')
       .eq('id',id).single();
     if(seq!==generation)return;
     if(error){report(error.message,true);return;}
@@ -123,7 +135,7 @@ export function initializeSupportCenter(client) {
     adminActions.hidden=!admin;
     document.getElementById('support-admin-state').value=t.status;
     const isClosed=['resolved','closed'].includes(t.status);
-    replyForm.hidden=isClosed;reopenForm.hidden=!isClosed||t.owner_id!==user.id;
+    replyForm.hidden=isClosed;reopenForm.hidden=!isClosed||(t.owner_id!==user.id&&t.visibility!=='group');
     const [messages,reopen]=await Promise.all([
       client.from('support_messages').select('id,author_id,body,created_at')
         .eq('ticket_id',id).order('created_at').limit(150),
@@ -144,7 +156,7 @@ export function initializeSupportCenter(client) {
     for(const message of messages.data||[]){
       const article=element('article','','support-message');
       article.append(
-        element('strong',message.author_id===t.owner_id?'Cliente':'Personale autorizzato'),
+        element('strong',message.author_id===user.id?'Tu':t.visibility==='group'?'Membro del gruppo o personale':'Interlocutore'),
         element('time',formatDate(message.created_at)),
         element('p',message.body)
       );
@@ -184,19 +196,21 @@ export function initializeSupportCenter(client) {
   async function initialData(){
     if(!user)return;
     const seq=++generation;
-    const [s,o,m,a]=await Promise.all([
+    const [s,o,m,a,g]=await Promise.all([
       client.from('schools').select('id,name').eq('is_active',true).order('name'),
       client.from('orders').select('id,school_id,display_no')
         .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(100),
       client.from('school_memberships').select('school_id,role_assignments(role_code)')
         .eq('user_id',user.id).eq('membership_status','active'),
-      client.auth.mfa.getAuthenticatorAssuranceLevel()
+      client.auth.mfa.getAuthenticatorAssuranceLevel(),client.rpc('my_support_group_references')
     ]);
     if(seq!==generation)return;
-    if(s.error||o.error||m.error||a.error){
-      report((s.error||o.error||m.error||a.error).message,true);return;
+    if(s.error||o.error||m.error||a.error||g.error){
+      report((s.error||o.error||m.error||a.error||g.error).message,true);return;
     }
     schools=s.data||[];orders=o.data||[];
+    groupReferences=g.data||[];groupSelect.replaceChildren(new Option('Nessun gruppo',''));
+    for(const row of groupReferences)groupSelect.add(new Option(row.title,row.id));groupFields();
     const aal2=a.data.currentLevel==='aal2';
     adminSchools=new Set((m.data||[]).filter(x=>aal2 &&
       (x.role_assignments||[]).some(r=>r.role_code==='school_admin'))
@@ -212,7 +226,12 @@ export function initializeSupportCenter(client) {
     btn.disabled=true;
     createRequestKey ||= crypto.randomUUID();
     report('Creazione richiesta e messaggio su Supabase…');
-    const {data:id,error}=await client.rpc('open_support_ticket',{
+    const shared=groupSelect.value;
+    const {data:id,error}=await client.rpc(shared?'open_group_support_ticket':'open_support_ticket',shared?{
+      p_group:shared,p_visibility:groupVisibility.value,p_line:groupVisibility.value==='personal'?groupLine.value||null:null,
+      p_payment:groupVisibility.value==='personal'?groupPayment.value||null:null,
+      p_subject:document.getElementById('support-subject').value.trim(),p_message:document.getElementById('support-message').value.trim(),p_key:createRequestKey
+    }:{
       p_school_id:school.value,
       p_order_id:ordersSelect.value||null,p_order_item_id:null,
       p_category:document.getElementById('support-category').value,
@@ -231,7 +250,7 @@ export function initializeSupportCenter(client) {
         if(message.error)throw message.error;
         await uploadPhoto(file,t,message.data.id);
       }
-      createForm.reset();createRequestKey=null;
+      createForm.reset();groupFields();createRequestKey=null;
       await readTicketList();await openTicket(id);
       report('Ticket creato. La conversazione è accessibile dal Centro assistenza.');
     }catch(err){

@@ -1,23 +1,11 @@
-# BreakApp — Attivazione servizi esterni e gate di collaudo (26 ottobre 2026)
+# Attivazioni esterne prima della vendita
 
-## Stato verificato
-- Stripe: piattaforma sandbox `acct_1UUniH2RLt7x5EeZ` e **un merchant Connect scolastico di test creato**. Verificato direttamente con `GET /v1/accounts/{id}`: `charges_enabled=false`, `payouts_enabled=false`, `card_payments=inactive`, `details_submitted=false`. Il badge di creazione NON equivale a un esercente abilitato a incassare. Seguire `docs/STRIPE_TEST_MERCHANT_ACTIVATION.md`.
-- Supabase `ynvswdyirngvdpudcikl`: scuola ITSOS Marie Curie, nessun merchant nella tabella `school_stripe_merchants`, cinque Edge Functions attive; estensione Vault presente; `pg_cron` e `pg_net` non abilitate.
-- GitHub repository `ambrogiocorti/BreakApp`: GitHub Pages abilitato (`has_pages=true`). Il controllo reale della pagina pubblicata, del manifest e del Service Worker è riuscito nella CI; restano da collaudare login e flussi end-to-end con utenti reali.
-- Multi-browser: workflow `multibrowser.yml` esegue Playwright Chromium/Firefox/WebKit (desktop e smartphone emulato) in CI. Non sostituisce test su dispositivi fisici.
-- Push: workflow `push-dispatch.yml` invoca ogni cinque minuti il dispatcher Supabase **solo se** il segreto `PUSH_DISPATCH_TOKEN` è presente fra i Secrets GitHub; senza segreto salta e avverte.
+Aggiornato il 27 ottobre 2026. I moduli applicativi e le prove automatiche sono descritti in `COMPLETE_WORKFLOWS.md` e `ROADMAP.md`.
 
-## Interventi del titolare indispensabili
-1. **Pages (abilitato):** la pubblicazione è già raggiungibile su `https://ambrogiocorti.github.io/BreakApp/` e il monitoraggio statico ha superato il test. Rimangono da controllare gli URL di redirect OAuth e l'operatività delle sessioni su dispositivi reali.
-2. **Stripe merchant scolastico (creato ma non operativo):** completare l'onboarding Connect dell'esercente giuridicamente responsabile; il merchant scolastico di **test** è già distinto dalla piattaforma, ma `card_payments=inactive` e i pagamenti sono sospesi. Per associarlo a Supabase con interruttori disabilitati usare il runbook `docs/STRIPE_TEST_MERCHANT_ACTIVATION.md`. Abilitare il checkout soltanto dopo verifica Stripe. Non simulare soggetti legali o IBAN.
-3. **Stripe Secrets:** creare nei **Supabase Edge Function Secrets** `STRIPE_SECRET_KEY=sk_test_...` e `STRIPE_WEBHOOK_SECRET=whsec_...`. Registrare in Stripe Connect webhook l'URL `https://ynvswdyirngvdpudcikl.supabase.co/functions/v1/stripe-webhook` per `checkout.session.completed`, `checkout.session.expired`, `refund.updated`. Non usare un live secret per il sandbox.
-4. **Web Push:** generare coppia VAPID, salvare nei Supabase Edge Secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=mailto:breakapp.app@gmail.com`, `PUSH_DISPATCH_TOKEN` robusto (almeno 32 caratteri). Copiare lo **stesso token** in GitHub Actions → Secrets and variables → Actions → `PUSH_DISPATCH_TOKEN`. Non mettere mai i segreti nel codice o in variabili Vite pubbliche.
-5. **Accessi Supabase:** aggiungere URL esatto GitHub Pages in Authentication → URL Configuration → Redirect URLs e controllare Google/Microsoft OAuth.
-6. **E2E reale:** due Clienti con email confermata, Barista e Admin con 2FA; provare pagamenti test, webhook ripetuti, annullamenti, doppio pagamento bloccato, rimborsi al pagatore originale, lease offline revocato e riconciliazione, notifiche su dispositivo reale e PWA chiusa.
+1. **Stripe.** Il merchant scolastico Connect di test esiste ma non è abilitato agli incassi. Completare l'onboarding dell'esercente responsabile e verificare `charges_enabled`/`card_payments`. Nei Supabase Edge Function Secrets configurare `STRIPE_SECRET_KEY` di test e `STRIPE_WEBHOOK_SECRET`; registrare il webhook per `checkout.session.completed`, `checkout.session.expired`, `refund.updated`. Effettuare un vero pagamento e rimborso sandbox, compresi saldo aggiuntivo e gruppo con più pagatori. Il database e il frontend non inventano un esito positivo.
+2. **OAuth.** Configurare Google/Microsoft in Supabase Auth e gli URL esatti di redirect per il dominio effettivo. Email/password e ospiti hanno percorsi distinti. Non inserire segreti OAuth nel bundle Vite.
+3. **Backup.** Il workflow giornaliero e gli script di cifratura/restore sono implementati. Nei GitHub Actions Secrets servono `SUPABASE_BACKUP_DB_URL` e `BACKUP_PASSPHRASE` di almeno 32 caratteri. Eseguire il job e un ripristino in progetto separato; includere separatamente file Storage, configurazioni Auth/Edge, Vault e servizi esterni. Vedere `BACKUP_RESTORE_PHASE_A.md`.
+4. **Dispositivi.** Provare Android e iPhone fisici: PWA installata/chiusa, consenso push, cambi operatore con PIN, scadenza otto ore, revoca da altro dispositivo, sincronizzazione e perdita/reinstallazione. Le prove Playwright desktop/mobile emulato non dimostrano la consegna push reale o il recupero dopo cancellazione dello storage.
+5. **Gestione e produzione.** Il gestore verifica ricevute/dispositivi fiscali, informative/GDPR, allergeni, ruoli e procedure di cassa. Il sito di test è GitHub Pages, Vercel genera anteprime, il pacchetto resta compatibile con Cloudflare Pages. La promozione commerciale è manuale dopo il pilota.
 
-## Policy di rilascio
-- Nessun merchant test di piattaforma sostituisce una scuola abilitata.
-- Il workflow push è un cron **best effort** GitHub Actions (ritardi possibili, frequenza non garantita). Non sostituisce un dispatcher sempre online.
-- Se manca un secret il servizio resta disabilitato: il fallback in-app continua a funzionare.
-- Il test multi-browser automatizzato copre i percorsi pubblici e la responsività; i flussi autenticati Stripe/offline necessitano collaudi con account e device reali.
-- Implementazione infrastrutturale non equivale alla convalida di tutti i 171 requisiti del Prompt Master.
+Il cron Supabase è già attivo ogni minuto e usa VAPID/token in Vault con audit degli esiti HTTP. Non occorre riconfigurarlo tramite il vecchio fallback GitHub. Le notifiche in-app restano disponibili anche se un provider push non consegna. Le ricevute interne non sono documenti fiscali.

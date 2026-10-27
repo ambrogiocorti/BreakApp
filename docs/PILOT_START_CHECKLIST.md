@@ -1,6 +1,6 @@
 # BreakApp — Checklist per avvio pilota reale
 
-**Ambiente di test:** Supabase `ynvswdyirngvdpudcikl`; pubblicazione web tramite GitHub/Vercel. È un *pilota limitato*, non l'intera piattaforma del Prompt Master.
+**Ambiente di test:** Supabase `ynvswdyirngvdpudcikl`; pubblicazione web tramite GitHub/Vercel. I flussi sono sottoposti a collaudo operativo prima dell'apertura commerciale.
 
 ## Prima di aprire il bar agli studenti
 
@@ -17,18 +17,9 @@
 
 ## Stato delle funzioni
 
-| Modulo | Livello attuale |
-|---|---|
-| Auth e 2FA | Implementate, collaudo reale amministratori ancora necessario |
-| Super Admin | Solo ruolo globale, provisioning personale e calendario/scorte nel pannello pilota |
-| Cliente, catalogo, ordine individuale | Flussi reali disponibili previa configurazione reale delle fasce/scorte |
-| Barista, pagamento al ritiro, ritiro QR | Flussi reali, richiedono account Barista e test su dispositivo |
-| Supporto | Ticket individuali e allegati, senza notifiche push |
-| Chiusure | Blocco sicuro se sono coinvolti incassi già registrati |
-| Pagamenti online Stripe | **NON IMPLEMENTATI** |
-| Gruppi e pagatori separati | **NON IMPLEMENTATI** |
-| Modalità offline con lease/revoche/sync | **NON IMPLEMENTATA** |
-| Promozioni, report completi, stampa fiscale | **NON IMPLEMENTATI** |
+I flussi applicativi di account/ospiti, scorte, ordini e gruppi, variazioni economiche, grandi ordini, ticket, promozioni, offline, cassa e report sono implementati. Lo stato verificabile e le dipendenze esterne sono in `ROADMAP.md`; le istruzioni sono in `COMPLETE_WORKFLOWS.md`.
+
+Il pilota deve ancora certificare gli incassi/rimborsi presso Stripe con merchant e segreti operativi, OAuth dei provider scelti, backup reali con restore separato, push e revoche su dispositivi fisici, fiscalità e procedure privacy. Non confondere i pagamenti sintetici del database CI con transazioni presso Stripe.
 
 ## Condizioni che impediscono il go-live completo
 

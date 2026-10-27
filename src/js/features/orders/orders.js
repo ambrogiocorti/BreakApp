@@ -41,6 +41,33 @@ export function initializeOrders(client) {
   let staffContextSchool=null;
   const stripeAttemptKeys=new Map();
   const stripeRefundKeys=new Map();
+  const coupon=document.createElement('input');coupon.maxLength=32;coupon.placeholder='Codice coupon (facoltativo)';coupon.setAttribute('aria-label','Codice coupon facoltativo');
+  checkoutReview.parentElement.insertBefore(coupon,checkoutReview);
+  const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
+  const favoriteStatus=elem('p');favoriteStatus.setAttribute('role','status');productDialog.append(favoriteStatus);
+  const favoritesBox=elem('article','','order-card');section.append(favoritesBox);
+  async function loadFavorites(){
+    if(!user){favoritesBox.replaceChildren();return;}
+    const uid=user.id,r=await client.from('customer_favorites').select('product_id,products(id,name,bar_id,price_cents)').eq('user_id',uid);
+    if(user?.id!==uid)return;favoritesBox.replaceChildren(elem('h3','I tuoi preferiti'));
+    if(r.error){favoritesBox.append(elem('p',r.error.message));return;}
+    if(!r.data?.length)favoritesBox.append(elem('p','Salva i prodotti dal menu per ritrovarli qui.'));
+    for(const row of r.data||[]){const p=row.products;if(!p)continue;
+      const b=elem('button',p.name+' · '+formatEuro(p.price_cents),'button button-outline button-small');b.type='button';
+      b.addEventListener('click',()=>{
+        if(context.barId!==p.bar_id)return report(feedback,'Seleziona nel menu il bar del prodotto '+p.name+'.',true);
+        window.dispatchEvent(new CustomEvent('breakapp:product-open',{detail:{id:p.id}}));
+      });favoritesBox.append(b);
+    }
+  }
+  favorite.addEventListener('click',async()=>{
+    if(!user||!product)return;favorite.disabled=true;const uid=user.id,pid=product.id;
+    try{
+      const current=await client.from('customer_favorites').select('product_id').eq('user_id',uid).eq('product_id',pid).maybeSingle();if(current.error)throw current.error;
+      const r=current.data?await client.from('customer_favorites').delete().eq('user_id',uid).eq('product_id',pid):await client.from('customer_favorites').insert({user_id:uid,product_id:pid});
+      if(r.error)throw r.error;report(favoriteStatus,current.data?'Prodotto rimosso dai preferiti.':'Prodotto aggiunto ai preferiti.');await loadFavorites();
+    }catch(error){report(favoriteStatus,error.message,true);}finally{favorite.disabled=false;}
+  });
 
   function total(){return cartSummary(cart,context.products);}
   function showCartBar(){
@@ -88,6 +115,7 @@ export function initializeOrders(client) {
   });
   window.addEventListener('breakapp:product-open',event=>{
     if(!user)return;
+    favoriteStatus.textContent='';
     product=context.products.find(p=>p.id===event.detail.id);
     if(!product)return;
     document.querySelector('#product-name').textContent=product.name;
@@ -202,15 +230,15 @@ export function initializeOrders(client) {
     try {
       const loc=await positionOnce();
       requestKey??=crypto.randomUUID();
-      const {data,error}=await client.rpc('submit_individual_order',{
-        p_bar_id:context.barId,p_window_id:slotSelect.value,p_items:toRpcItems(cart),
-        p_request_key:requestKey,p_latitude:loc.coords.latitude,
-        p_longitude:loc.coords.longitude,p_accuracy_m:loc.coords.accuracy,
-        p_observed_at:new Date(loc.timestamp).toISOString()
+      const {data,error}=await client.rpc('submit_promoted_order',{
+        p_bar:context.barId,p_window:slotSelect.value,p_items:toRpcItems(cart),
+        p_key:requestKey,p_latitude:loc.coords.latitude,p_code:coupon.value.trim(),
+        p_longitude:loc.coords.longitude,p_accuracy:loc.coords.accuracy,
+        p_observed:new Date(loc.timestamp).toISOString()
       });
       if(error)throw error;
       if(!data)throw new Error('Conferma non ricevuta: controlla lo storico prima di riprovare.');
-      changeCart([]);requestKey=null;stepper.close();
+      changeCart([]);requestKey=null;coupon.value='';stepper.close();
       await loadOrders();location.hash='orders';
       report(feedback,'Ordine creato correttamente sul server.');
     } catch(err){report(checkoutFeedback,err.message||'Ordine non riuscito.',true);}
@@ -218,9 +246,10 @@ export function initializeOrders(client) {
   });
   async function loadOrders(){
     if(!user)return;
+    void loadFavorites();
     report(feedback,'Caricamento ordini…');
     const {data,error}=await client.from('orders')
-      .select('id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
+      .select('id,bar_id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity)')
       .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(50);
     if(error){report(feedback,'Ordini non disponibili: '+error.message,true);return;}
     history.replaceChildren();
@@ -228,8 +257,14 @@ export function initializeOrders(client) {
       const box=elem('article','','order-card');
       box.append(elem('h3',`Ordine #${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date||'—'} ${o.pickup_windows?.starts_at?.slice(0,5)||''}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':'Da pagare'}`));
+        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da pagare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
+      const reorder=elem('button','Riordina','button button-outline button-small');reorder.type='button';
+      reorder.addEventListener('click',()=>{
+        if(context.barId!==o.bar_id)return report(feedback,'Seleziona prima nel menu il bar di questo ordine.',true);
+        const next=(o.order_items||[]).map(i=>({product_id:i.product_id,quantity:i.quantity}));
+        try{cartSummary(next,context.products);changeCart(next);location.hash='menu';renderCart();cartDialog.showModal();}catch(error){report(feedback,error.message,true);}
+      });box.append(reorder);
       if(!['cancelled','delivered','no_show'].includes(o.status) && o.pickup_token){
         const ticket=elem('button','Mostra QR di ritiro','button button-outline button-small');
         ticket.type='button';
@@ -336,7 +371,7 @@ export function initializeOrders(client) {
       const box=elem('article','','order-card');
       box.append(elem('h3',`#${o.display_no} · ${o.status}`),
         elem('p',`Ritiro ${o.pickup_windows?.service_date} ${o.pickup_windows?.starts_at?.slice(0,5)}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':'Da incassare'}`));
+        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da incassare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const actions=elem('div','','order-actions');
       if(o.status==='confirmed'){
@@ -347,7 +382,8 @@ export function initializeOrders(client) {
       if(o.status==='ready'&&o.payment_status==='due'){
         for(const [label,method] of [['Incassa contanti','cash'],['POS esterno','external_pos']]){
           action(actions,label,async()=>{
-            if(!confirm(`Confermi di aver effettivamente ricevuto ${formatEuro(o.total_cents)} tramite ${label}?`))return {error:new Error('Operazione annullata')};
+            const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});if(balance.error)return balance;
+            if(!confirm(`Confermi di aver effettivamente ricevuto il residuo di ${formatEuro(balance.data.due_cents)} tramite ${label}?`))return {error:new Error('Operazione annullata')};
             return client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
           });
         }

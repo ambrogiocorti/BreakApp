@@ -24,6 +24,7 @@ export function initializeReports(client){
   const grid=$('reports-metrics');grid.replaceChildren();
   const labels=[['cash_cents','Contanti registrati'],['external_pos_cents','POS esterno registrato'],
    ['stripe_gross_cents','Stripe incassato'],['stripe_refunded_cents','Rimborsi Stripe confermati'],
+   ['cash_returned_cents','Contanti restituiti'],['cash_refunds_pending_cents','Contanti ancora da restituire'],
    ['stripe_refunds_pending_cents','Rimborsi da completare / verificare'],['net_recorded_cents','Incassi netti registrati']];
   for(const [key,label] of labels){const box=el('article','','metric-card');box.append(el('p',label),el('strong',money(report[key])));grid.append(box);}
   $('reports-order-count').textContent=report.individual_orders+' ordini individuali · '+report.group_orders+
@@ -53,7 +54,7 @@ export function initializeReports(client){
    const summary=[['BreakApp',selected.school_name],['Periodo',selected.from+' / '+selected.to],
     ['Contanti EUR',selected.cash_cents/100],['POS esterno EUR',selected.external_pos_cents/100],
     ['Stripe lordo EUR',selected.stripe_gross_cents/100],['Rimborsi confermati EUR',selected.stripe_refunded_cents/100],
-    ['Rimborsi da completare EUR',selected.stripe_refunds_pending_cents/100],['Netto registrato EUR',selected.net_recorded_cents/100],
+    ['Rimborsi da completare EUR',selected.stripe_refunds_pending_cents/100],['Contanti restituiti EUR',(selected.cash_returned_cents||0)/100],['Contanti da restituire EUR',(selected.cash_refunds_pending_cents||0)/100],['Netto registrato EUR',selected.net_recorded_cents/100],
     ['Righe ordini esportate',result.rows.length],['Limite raggiunto',result.truncated?'Si, restringere il periodo':'No'],
     ['Nota','Rendiconto interno. Non sostituisce i documenti fiscali.']];
    if(kind==='xlsx')downloadReport(workbookBytes([{name:'Riepilogo',rows:summary},{name:'Ordini',rows:table}]),

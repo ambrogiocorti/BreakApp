@@ -32,10 +32,13 @@ Deno.serve(async request=>{
   return out({error:'Dispatcher non configurato'},503);
  try{
   webpush.setVapidDetails(subject,vapidPublic,vapidPrivate);
+  const {error:approvalError}=await db.rpc('maintain_approval_queues');
+  const {error:changeError}=await db.rpc('maintain_order_changes');
+  const {error:dailyError}=await db.rpc('maintain_daily_orders');
   const {error:reminderError}=await db.rpc('enqueue_pickup_reminders',{p_limit:500});
   const {error:warningError}=await db.rpc('warn_group_drafts_before_expiry',{p_limit:50});
   const {error:expiryError}=await db.rpc('expire_group_drafts',{p_limit:50});
-  if(warningError||expiryError||reminderError)return out({error:'Manutenzione notifiche non disponibile'},503);
+  if(warningError||expiryError||reminderError||approvalError||changeError||dailyError)return out({error:'Manutenzione notifiche non disponibile'},503);
   const {data:jobs,error:claimError}=await db.rpc('claim_push_jobs',{p_limit:50});
   if(claimError)return out({error:'Coda indisponibile'},503);
   const results=await Promise.all(((jobs||[]) as PushJob[]).map(async job=>{

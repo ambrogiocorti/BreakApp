@@ -18,9 +18,13 @@ import { initializeOfflineTerminal } from './features/offline/terminal.js';
 import { initializeOfflineReview } from './features/offline/review.js';
 import { initializeCashWorkspace } from './features/operations/cash.js';
 import { initializeReports } from './features/shell/reports.js';
+import { initializeOrderWorkflows } from './features/operations/workflows.js';
+import { initializeCompletionUI } from './features/operations/completion-ui.js';
+import { initializeGuestAccess } from './features/auth/guest.js';
 
 initializeTheme();
 const client = initializeAuth(readSupabaseConfig(import.meta.env));
+initializeGuestAccess(client);
 initializePublicMenu(client);
 initializeOrders(client);
 initializePickupQr(client);
@@ -36,6 +40,8 @@ const offlineTerminal=initializeOfflineTerminal(client);
 initializeCashWorkspace(client,offlineTerminal);
 initializeReports(client);
 initializeOfflineReview(client);
+initializeCompletionUI(client);
+initializeOrderWorkflows(client);
 initializeWorkspace(client);
 
 // Static shell cache; operational snapshots and pending events use the encrypted vault.

@@ -1,29 +1,27 @@
-# Roadmap operativa
+# Stato della piattaforma
 
-Aggiornata il 27 ottobre 2026. La specifica privata rimane la fonte dei requisiti.
+Aggiornato il 27 ottobre 2026. La specifica privata resta la fonte dei requisiti. Le verifiche automatiche usano database e pagamenti sintetici isolati; il servizio collegato è l'ambiente di sviluppo.
 
-| Area | Presente e verificata nel codice | Da completare o collaudare |
+| Area | Implementazione | Verifica |
 | --- | --- | --- |
-| Account | Ruoli tenant, TOTP, Super Admin esclusivo | OAuth configurato e percorso ospite completo con recupero privato |
-| Catalogo/stock | Prodotti, allergeni, immagini, scorte per giorno, conflitti e vincoli atomici | Carico reale durante un intervallo scolastico |
-| Ordini | Prenotazione individuale, GPS, QR, preparazione, incasso/consegna | Modifiche con differenze economiche, sostituzioni e nuovi orari |
-| Gruppi | Inviti, coordinatore, carrelli, conferma e ritiro unico | Percorso ospite ed eccezioni complete |
-| Stripe | Checkout/webhook, allocazioni, rimborso originale e retry controllati | Merchant abilitato, chiave test e webhook secret, pagamento/rimborso sandbox effettivi |
-| Grandi ordini | Soglie configurabili, blocco prudente della conferma non gestita | Coda senza riserva, presenza Barista, limite attivazioni, lease 10 minuti e ripianificazione |
-| Offline | Vendite itemizzate, ritiri individuali odierni, PIN/cifratura, ordine causale, turni e quarantena | Gruppi offline, cambio operatore offline completo e prove fisiche di revoca/perdita/reinstallazione |
-| Cassa | Fondi, movimenti, conteggio, chiusura immutabile e rettifica | Cambio turno reale e recupero di eventi tardivi nel pilota |
-| Report | Aggregati per scuola, gruppi, contanti/POS/Stripe, rimborsi, CSV/XLSX/PDF | Verifica contabile con il gestore e analisi aggiuntive |
-| Comunicazioni | Annunci tenant, centro notifiche, preferenze per categoria, revoca dispositivo, promemoria ritiro/chiusura idempotenti, VAPID e cron con audit HTTP | Consegna su Android/iPhone fisici e verifica volumi nel pilota |
-| Promozioni | Non implementate | Coupon, bundle e prezzi promozionali atomici |
-| Scuole | Strumenti Super Admin per personale e pilota | Onboarding autonomo completo di un nuovo istituto |
-| Backup | Restore di database temporaneo in CI | Backup giornaliero cifrato esterno e ripristino del servizio reale |
-| Rilascio | Build, test e distribuzione automatica | Collaudo di tutti i requisiti, pilota, accessibilità e accordi operativi |
+| Account e scuole | RBAC per scuola, TOTP Admin/Super Admin, ospiti con link privato e recupero email verificata, import CSV/XLSX, creazione/sospensione/riattivazione scuole e assegnazione personale | RLS, ruoli, ospite non coordinatore, onboarding transazionale; OAuth Google/Microsoft richiede configurazione dei provider |
+| Catalogo e scorte | Prodotti, immagini, ingredienti/allergeni, scorte giornaliere, vendite, conta motivata anche sotto il prenotato, priorità di ritiro e sostituzioni | Ultima unità concorrente; isolamento prodotto/giorno; un ammanco non cancella arbitrariamente gli ordini confermati |
+| Ordini | GPS, idempotenza, QR, preparazione/ritiro, preferiti, riordino, modifica atomica, sostituzioni e proposte di orario con consenso | Ordine originale preservato su errore, cutoff, allergeni, nessuno spostamento tacito |
+| Grandi ordini | Coda senza stock, presenza Barista, limite attivazioni, riserva di 10 minuti, priorità fascia, nuova fascia o risposta entro 2 ore | Attivazione, scadenze, rifiuto, rilascio e rimborso; nessuna autoconferma sopra soglia |
+| Gruppi e finanza | Inviti, coordinatore registrato, carrelli personali, pagamenti di righe anche per altri, prezzi pagati protetti, ritiro unico, supplementi per sostituzioni, rimborsi ai pagatori effettivi | Regali, uscita, scadenza, doppio webhook, differenze di prezzo, saldo e lease QR |
+| Promozioni | Coupon percentuali/unitari, bundle con quantità esatte, quote globali/per cliente, prezzi calcolati sul server e applicazione ai gruppi prima dei pagamenti | Prezzi, retry, quote e riconvalida del bundle a conferma/checkout |
+| Offline | PIN/cifratura, sequenza causale, tablet condiviso con operatori distinti, limite complessivo 8 ore, manifest odierno individuali/gruppi, contanti residui, revoca e quarantena | Manifest vincolato al server/dispositivo/generazione; doppio incasso rimborsa soltanto i pagamenti successivi al manifest |
+| Cassa e chiusure | Turni, conta motivata, chiusura immutabile, rettifiche Admin, chiusure straordinarie e rimborsi, no-show a chiusura senza riciclo delle scorte | Riattivare il bar non resuscita ordini; eventuale penalità riguarda cliente registrato/coordinatore, mai ospite o altri membri |
+| Assistenza | Ticket personali e condivisi di gruppo, commenti dei membri, riapertura soggetta ad Admin, immagini private JPG/PNG/WebP | Coordinatore escluso dai ticket/ricevute personali altrui; RLS anche per messaggi e allegati |
+| Comunicazioni e report | Push/in-app, preferenze, cron ogni minuto, promemoria ritiro/chiusura, annunci, rendiconti e CSV/XLSX/PDF | Destinatari, backoff, rimborsi elaborati/pendenti e contanti da restituire distinti; ricevute interne separate dai documenti fiscali |
+| Backup | Job giornaliero, export PostgreSQL 17, AES-256, archivio esterno al database, verifica e restore su target vuoto | CI esegue cifratura, decifratura, restore e controlli RLS/grant; il job reale richiede due segreti del titolare |
 
-## Ordine di completamento
+## Attivazioni e collaudi esterni
 
-1. Eseguire il ciclo finanziario Stripe sandbox con credenziali e merchant operativi.
-2. Completare grandi ordini, modifiche/eccezioni e promozioni con test finanziari.
-3. Completare ospiti, onboarding, offline condiviso e gruppi offline.
-4. Attivare backup separati, collaudare dispositivi e seconda scuola, validare il rilascio commerciale.
+1. **Stripe:** merchant scolastico abilitato e `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`; quindi prova reale sandbox di pagamento e rimborso firmato. Non è stato simulato un incasso esterno riuscito.
+2. **OAuth:** configurazione Google/Microsoft e URL di redirect del dominio effettivo.
+3. **Backup operativo:** `SUPABASE_BACKUP_DB_URL` e `BACKUP_PASSPHRASE` nei segreti GitHub; prova di ripristino del servizio in un progetto separato, comprese configurazioni e file Storage.
+4. **Pilota:** telefoni Android/iPhone fisici, stampante/dispositivo fiscale esterno, revoca di dispositivi realmente disconnessi, recupero dopo perdita/reinstallazione, procedure privacy e responsabilità del gestore.
+5. **Hosting definitivo:** il sito di test è GitHub Pages; anteprima Vercel e compatibilità Cloudflare restano distinte dalla promozione manuale in produzione.
 
-Una dipendenza esterna non rende completati i moduli di codice ancora mancanti.
+Queste attivazioni non richiedono di riscrivere i moduli applicativi elencati sopra. La vendita richiede il completamento del collaudo operativo e degli adempimenti del gestore.

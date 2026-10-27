@@ -44,7 +44,7 @@ export function initializeWarehouseInventory(client){
      const form=el('form','warehouse-row-controls');
      const label=el('label','warehouse-quantity');
      label.textContent='Quantità totale';
-     const amount=el('input');amount.type='number';amount.step='1';amount.min=String(p.stock?.allocated||0);
+     const amount=el('input');amount.type='number';amount.step='1';amount.min='0';
      amount.value=p.stock?.capacity===null||!p.stock?'':String(p.stock.capacity);
      amount.placeholder='Illimitata';amount.setAttribute('aria-label','Capacità di '+p.name);
      const unlimited=el('label','warehouse-unlimited');
@@ -65,15 +65,19 @@ export function initializeWarehouseInventory(client){
        event.preventDefault();
        const value=check.checked?null:Number(amount.value);
        if(!check.checked&&(!amount.value.trim()||!Number.isSafeInteger(value)||
-          value<0||value<(p.stock?.allocated||0))){
-         report('Quantità non valida per '+p.name+
-           '. Non puoi scendere sotto la quantità già prenotata.',true);
+          value<0)){
+         report('Quantità non valida per '+p.name+'. Inserisci un intero non negativo.',true);
          return;
        }
        button.disabled=true;report('Salvataggio scorte di '+p.name+'…');
        const payload={school_id:bar.school_id,bar_id:bar.id,product_id:p.id,
          service_date:day,capacity:value};
-       const result=p.stock
+       let result;
+       if(p.stock&&value!==null){
+         const reason=prompt('Motivo della conta/rettifica (almeno 10 caratteri). Se mancano prodotti prenotati, partirà il flusso sostituzioni secondo priorità di ritiro:');
+         if(!reason||reason.trim().length<10){button.disabled=false;report('Rettifica non registrata: motivazione obbligatoria.',true);return;}
+         result=await client.rpc('reconcile_physical_stock',{p_stock:p.stock.id,p_capacity:value,p_reason:reason.trim()});
+       }else result=p.stock
          ?await client.from('daily_stock').update({capacity:value})
            .eq('id',p.stock.id).eq('school_id',bar.school_id)
            .eq('bar_id',bar.id).select('id').single()

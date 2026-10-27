@@ -234,13 +234,13 @@ export function initializeBarService(client) {
     impact.replaceChildren(
       make('strong',active+' ordini attivi coinvolti'),
       make('p',paid>0
-        ? 'Ci sono importi già incassati. La chiusura sarà bloccata finché il rimborso automatico non sarà disponibile.'
+        ? 'I pagamenti online saranno rimborsati ai pagatori originali. Le restituzioni di contanti saranno registrate come importi da restituire.'
         : 'Nessun importo incassato da rimborsare per gli ordini coinvolti.'),
       make('p',f.p_kind==='planned'&&active>0
         ? 'Una chiusura programmata non può cancellare ordini già attivi.'
-        : 'Confermare la chiusura annullerà gli ordini non consegnati e non pagati nell’intervallo. Sarà registrato un avviso in app.')
+        : 'Confermare annullerà tutti gli ordini non consegnati nell’intervallo, avviando rimborsi e avvisi in app.')
     );
-    if(paid>0||(f.p_kind==='planned'&&active>0)){
+    if(f.p_kind==='planned'&&active>0){
       report('L’operazione è bloccata per proteggere ordini e pagamenti.',true);
       return;
     }

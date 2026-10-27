@@ -421,6 +421,16 @@
               </select>
               <label for="support-order-reference">Ordine associato (facoltativo)</label>
               <select id="support-order-reference"><option value="">Nessun ordine specifico</option></select>
+              <label for="support-group-reference">Gruppo associato (facoltativo)</label>
+              <select id="support-group-reference"><option value="">Nessun gruppo</option></select>
+              <div id="support-group-options" hidden>
+                <label for="support-group-visibility">Visibilità della conversazione</label>
+                <select id="support-group-visibility"><option value="group">Tutti i membri: funzionamento del gruppo</option><option value="personal">Privata: tuoi prodotti o pagamenti</option></select>
+                <label for="support-group-line">Tuo prodotto (solo ticket privati)</label>
+                <select id="support-group-line"><option value="">Nessuno</option></select>
+                <label for="support-group-payment">Tuo pagamento (solo ticket privati)</label>
+                <select id="support-group-payment"><option value="">Nessuno</option></select>
+              </div>
               <label for="support-subject">Oggetto</label>
               <input id="support-subject" minlength="4" maxlength="160" required placeholder="Es. Prodotto mancante" />
               <label for="support-message">Descrivi il problema</label>

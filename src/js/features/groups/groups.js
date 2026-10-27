@@ -109,7 +109,7 @@ export function initializeGroupDrafts(client){
    u.searchParams.set('invite',detail.invite_token);u.hash='groups';
    byId('group-invite-link').value=u.toString();
   }
-  const canPay=detail.my_status==='accepted'&&['draft','confirmed'].includes(detail.status);
+  const canPay=detail.my_status==='accepted'&&['draft','confirmed','approval_pending'].includes(detail.status);
   byId('group-payments-panel').hidden=!canPay;
   if(canPay)await loadPayableLines(detail.id,seq);
   const accepted=detail.my_status==='accepted'&&detail.status==='draft';
@@ -117,6 +117,14 @@ export function initializeGroupDrafts(client){
   byId('group-coordinator-panel').hidden=!detail.coordinator;
   const managing=detail.coordinator&&detail.status==='draft';
   byId('group-manage').hidden=!managing;
+  let couponBox=byId('group-coupon-box');
+  if(!couponBox){couponBox=el('div','','order-actions');couponBox.id='group-coupon-box';const code=el('input');code.id='group-coupon-code';code.maxLength=32;code.placeholder='Codice coupon del gruppo';code.setAttribute('aria-label','Codice coupon del gruppo');
+   const apply=el('button','Applica coupon al gruppo','button button-outline button-small');apply.type='button';
+   apply.addEventListener('click',async()=>{const r=await client.rpc('apply_group_promotion',{p_group:detail.id,p_code:code.value,p_key:crypto.randomUUID()});if(r.error)return report(r.error.message,true);await showGroup(detail.id);});
+   const remove=el('button','Rimuovi coupon','button button-outline button-small');remove.type='button';
+   remove.addEventListener('click',async()=>{const r=await client.rpc('apply_group_promotion',{p_group:detail.id,p_code:'',p_key:crypto.randomUUID()});if(r.error)return report(r.error.message,true);code.value='';await showGroup(detail.id);});
+   couponBox.append(code,apply,remove);byId('group-manage').append(couponBox);}
+  couponBox.hidden=!managing;
   byId('group-leave').hidden=detail.status!=='draft'||!['accepted','pending'].includes(detail.my_status);
   if(managing){
    byId('group-accepting').checked=detail.accepting_members;
@@ -134,7 +142,7 @@ export function initializeGroupDrafts(client){
   byId('group-confirm-panel').hidden=!managing;
   if(!managing)byId('group-accept-unready').checked=false;
   byId('group-confirmed-panel').hidden=true;
-  if(detail.status==='confirmed')await loadConfirmedGroup(detail.id,seq);
+  if(['confirmed','approval_pending'].includes(detail.status))await loadConfirmedGroup(detail.id,seq);
   const readyButton=byId('group-ready');
   readyButton.textContent=detail.my_ready?'Modifica il mio ordine':'Ho finito';
   cartForm.hidden=!accepted||Boolean(detail.my_ready);
@@ -246,7 +254,7 @@ export function initializeGroupDrafts(client){
   if(!data?.length)list.append(el('p','Nessuna riga da pagare.'));
  }
  byId('group-pay-selected').addEventListener('click',async()=>{
-  if(!detail||!['draft','confirmed'].includes(detail.status))return;
+  if(!detail||!['draft','confirmed','approval_pending'].includes(detail.status))return;
   const lines=[...byId('group-payable-list').querySelectorAll('input[type=checkbox]:checked')]
    .map(n=>n.value).sort();
   if(!lines.length)return report('Seleziona almeno una riga disponibile.',true);

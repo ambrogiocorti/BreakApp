@@ -79,6 +79,8 @@ export function initializePickupQr(client) {
       if(error)throw error;
       if(!data)throw new Error('Ordine non trovato oppure non autorizzato.');
       if(!await allowedStaff(data.school_id))throw new Error('Non sei autorizzato a gestire questo ordine.');
+      const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:data.id});
+      if(balance.error)throw balance.error;data.due_cents=balance.data.due_cents;
       if(version!==queryVersion || !scanDialog.open)return;
       drawOrder(data);
       report('Ordine #'+data.display_no+' verificato dal server.');
@@ -92,7 +94,7 @@ export function initializePickupQr(client) {
     const when=el('p',slot?'Ritiro: '+slot.service_date+' · '+slot.starts_at.slice(0,5):'Ritiro da verificare','catalog-help');
     const payment=el('p',
       'Totale: '+formatEuro(order.total_cents)+' · '+
-      (order.payment_status==='paid'?'Pagato':'Saldo da incassare'),'catalog-help');
+      (order.payment_status==='paid'?'Pagato':order.payment_status==='refund_pending'?'Rimborso in elaborazione':order.payment_status==='refunded'?'Rimborsato':'Saldo da incassare'),'catalog-help');
     const items=el('ul','', 'scan-item-list');
     for(const x of order.order_items||[]) items.append(el('li',x.quantity+' × '+x.product_name));
     result.append(heading,when,payment,items);
@@ -123,12 +125,12 @@ export function initializePickupQr(client) {
     }
     if(order.payment_status==='due') {
       command('Incassa contanti',
-        'Confermi di avere realmente ricevuto '+formatEuro(order.total_cents)+' in contanti?',
+        'Confermi di avere realmente ricevuto il residuo di '+formatEuro(order.due_cents)+' in contanti?',
         ()=>client.rpc('record_individual_counter_payment',{
           p_order_id:order.id,p_method:'cash',p_request_key:crypto.randomUUID()
         }));
       command('POS esterno',
-        'Confermi che il POS esterno ha già registrato correttamente il pagamento di '+formatEuro(order.total_cents)+'?',
+        'Confermi che il POS esterno ha già registrato il residuo di '+formatEuro(order.due_cents)+'?',
         ()=>client.rpc('record_individual_counter_payment',{
           p_order_id:order.id,p_method:'external_pos',p_request_key:crypto.randomUUID()
         }));

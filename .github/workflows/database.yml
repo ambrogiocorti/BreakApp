@@ -162,6 +162,8 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/pickup-reminders.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
+      - name: Complete approval, amendment, payer refund, guest, coupon and onboarding workflows
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/complete-workflows.sql
       - name: Snapshot and restore disposable database into a separate empty DB
         run: |
           PG_CONTAINER="${{ job.services.postgres.id }}"
@@ -173,3 +175,14 @@ jobs:
           PG_CONTAINER="${{ job.services.postgres.id }}"
           docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_restore -v ON_ERROR_STOP=1 < tests/db/restore-verification.sql
           docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_restore -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Encrypt and restore a backup using the production scripts
+        run: |
+          PG_CONTAINER="${{ job.services.postgres.id }}"
+          docker exec -u root "$PG_CONTAINER" sh -c 'apt-get update -qq && apt-get install -y -qq gnupg > /dev/null'
+          docker cp scripts/backup-database.sh "$PG_CONTAINER:/tmp/backup-database.sh"
+          docker cp scripts/verify-backup.sh "$PG_CONTAINER:/tmp/verify-backup.sh"
+          docker exec "$PG_CONTAINER" createdb -U postgres breakapp_encrypted_restore
+          docker exec -e SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1/postgres -e BACKUP_PASSPHRASE=ci-disposable-test-key-with-over-32-characters "$PG_CONTAINER" bash /tmp/backup-database.sh /tmp/encrypted-backup
+          docker exec -e RESTORE_TEST_DB_URL=postgresql://postgres:postgres@127.0.0.1/breakapp_encrypted_restore -e BACKUP_PASSPHRASE=ci-disposable-test-key-with-over-32-characters "$PG_CONTAINER" bash -c 'for file in /tmp/encrypted-backup/*.dump.gpg; do bash /tmp/verify-backup.sh "$file"; done'
+          docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_encrypted_restore -v ON_ERROR_STOP=1 < tests/db/restore-verification.sql
+          docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_encrypted_restore -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql

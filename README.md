@@ -18,15 +18,17 @@ Il frontend richiede soltanto `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_K
 
 - Ruoli per scuola, Super Admin esclusivo e TOTP Admin.
 - Catalogo, ingredienti/allergeni, immagini, scorte giornaliere, orari, fasce e chiusure.
-- Ordini individuali, preparazione, QR, contanti/POS esterno.
-- Gruppi, inviti, conferma atomica, ritiro unico e ledger multipagatore.
+- Ordini individuali, preparazione, QR, contanti/POS esterno, modifiche atomiche, sostituzioni e nuovi orari con consenso.
+- Gruppi, inviti, conferma atomica, ritiro unico, ledger multipagatore e supplementi di sostituzione.
+- Grandi ordini: coda senza stock, presenza, priorità, riserva di dieci minuti e ripianificazione.
+- Ospiti con link privato, onboarding scuole, import classi, coupon/bundle e ticket condivisi o personali.
 - Checkout/webhook verificati e rimborsi al pagatore originale. **Merchant di test ancora disabilitato e credenziali Stripe mancanti: incassi online non attivi.**
-- Terminale Barista cifrato, vendite/ritiri individuali offline, riconciliazione e revisione Admin.
+- Terminale Barista cifrato e condiviso, vendite e ritiri individuali/gruppi offline, riconciliazione del saldo e revisione Admin.
 - Turni di cassa online/offline, movimenti, conteggi, chiusure immutabili e rettifiche Admin.
 - Report per scuola con CSV, XLSX e PDF; annunci e notifiche personali.
 - Runtime VAPID e cron con audit HTTP; preferenze push, revoca del dispositivo e promemoria ritiro/chiusura. Consegna su telefoni fisici da collaudare.
 
-**Stato: sviluppo avanzato, non certificato per la vendita come piattaforma completa.** [ROADMAP.md](ROADMAP.md) documenta i limiti effettivi.
+Flussi applicativi implementati e coperti da test. [ROADMAP.md](ROADMAP.md) distingue le funzioni disponibili dalle attivazioni e dai collaudi esterni necessari alla vendita. Uso e invarianti: [COMPLETE_WORKFLOWS.md](docs/COMPLETE_WORKFLOWS.md).
 
 ## Database e verifiche
 
