@@ -19,9 +19,9 @@ select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222'
 select public.join_group_draft(current_setting('app.refund_invite')::uuid,45,9,10,now());
 select public.replace_group_personal_cart(current_setting('app.refund_group')::uuid,
  '[{"product_id":"aaaaaaaa-0000-4000-8000-000000000003","quantity":2}]'::jsonb);
-select set_config('app.refund_member_line',(select i.id::text from public.group_cart_items i
- where i.group_id=current_setting('app.refund_group')::uuid and i.user_id='22222222-2222-4222-8222-222222222222'::uuid
- and i.removed_at is null),false);
+select set_config('app.refund_member_line',(select line->>'line_id'
+ from jsonb_array_elements(public.group_payable_lines(current_setting('app.refund_group')::uuid)) line
+ where (line->>'quantity')::integer=2),false);
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',false);
 select public.begin_group_stripe_checkout(
  current_setting('app.refund_group')::uuid,
@@ -87,8 +87,9 @@ select public.create_group_draft(
 select set_config('app.late_group',:'id',false);
 select public.replace_group_personal_cart(current_setting('app.late_group')::uuid,
  '[{"product_id":"aaaaaaaa-0000-4000-8000-000000000003","quantity":1}]'::jsonb);
-select set_config('app.late_line',(select i.id::text from public.group_cart_items i
- where i.group_id=current_setting('app.late_group')::uuid and i.removed_at is null),false);
+select set_config('app.late_line',(select line->>'line_id'
+ from jsonb_array_elements(public.group_payable_lines(current_setting('app.late_group')::uuid)) line
+ limit 1),false);
 select public.begin_group_stripe_checkout(current_setting('app.late_group')::uuid,
  array[current_setting('app.late_line')::uuid],
  '11111111-0000-4000-8000-000000000304') as payment \gset
@@ -143,3 +144,21 @@ begin
   where group_id=current_setting('app.expiring_group')::uuid)
  then raise exception 'Expired unclaimed draft lines not released';end if;
 end;$expiry$;
+
+-- Warning is delivered exactly once per real inactivity deadline.
+reset role;
+update public.group_drafts set updated_at=now()-interval '23 hours 10 minutes'
+where id=current_setting('app.expiring_group')::uuid;
+update public.group_drafts set status='draft'
+where id=current_setting('app.expiring_group')::uuid;
+set role service_role;
+select set_config('request.jwt.claims','{"role":"service_role"}',false);
+select public.warn_group_drafts_before_expiry(100);
+select public.warn_group_drafts_before_expiry(100);
+reset role;
+do $warning$
+begin
+ if (select count(*) from public.customer_notifications
+ where group_id=current_setting('app.expiring_group')::uuid and event_type='group_draft_expiry')<>1
+ then raise exception 'Expiry warning not exactly-once';end if;
+end;$warning$;
