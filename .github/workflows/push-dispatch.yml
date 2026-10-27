@@ -31,3 +31,13 @@ jobs:
             --request POST \
             --header "x-breakapp-dispatch-token: ${DISPATCH_TOKEN}" \
             "https://ynvswdyirngvdpudcikl.supabase.co/functions/v1/push-dispatch"
+      - name: Invoke private group refund dispatcher
+        if: always() && steps.check.outputs.configured == 'true'
+        env:
+          DISPATCH_TOKEN: ${{ secrets.PUSH_DISPATCH_TOKEN }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            --retry 2 --retry-delay 5 \
+            --request POST \
+            --header "x-breakapp-dispatch-token: ${DISPATCH_TOKEN}" \
+            "https://ynvswdyirngvdpudcikl.supabase.co/functions/v1/group-refund-dispatch"

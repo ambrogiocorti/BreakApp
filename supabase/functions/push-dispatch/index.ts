@@ -28,6 +28,9 @@ Deno.serve(async request=>{
  try{
   webpush.setVapidDetails(subject,vapidPublic,vapidPrivate);
   const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {error:warningError}=await db.rpc('warn_group_drafts_before_expiry',{p_limit:50});
+  const {error:expiryError}=await db.rpc('expire_group_drafts',{p_limit:50});
+  if(warningError||expiryError)return out({error:'Manutenzione gruppi non disponibile'},503);
   const {data:jobs,error:claimError}=await db.rpc('claim_push_jobs',{p_limit:15});
   if(claimError)return out({error:'Coda indisponibile'},503);
   let succeeded=0,failed=0;
