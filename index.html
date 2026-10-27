@@ -270,6 +270,23 @@
             <h4>Coordinatore · richieste e avanzamento</h4>
             <div id="group-members" class="service-list"></div>
           </div>
+          <div id="group-manage" hidden>
+            <h4>Gestione della bozza</h4>
+            <label><input type="checkbox" id="group-accepting" /> Accetta nuovi partecipanti</label>
+            <label><input type="checkbox" id="group-approval" /> Richiedi approvazione per entrare</label>
+            <label for="group-limit">Limite partecipanti (vuoto: senza limite)</label>
+            <input id="group-limit" type="number" min="1" max="100" />
+            <button type="button" id="group-save-settings" class="button button-outline button-small">Salva impostazioni</button>
+            <button type="button" id="group-rotate-invite" class="button button-outline button-small">Rigenera link invito</button>
+            <label for="group-transfer-member">Nuovo coordinatore (partecipante approvato)</label>
+            <select id="group-transfer-member"></select>
+            <button type="button" id="group-transfer" class="button button-outline button-small">Trasferisci coordinamento</button>
+            <label for="group-reschedule-window">Cambia fascia di ritiro della bozza</label>
+            <select id="group-reschedule-window"></select>
+            <button type="button" id="group-reschedule" class="button button-outline button-small">Cambia fascia</button>
+            <button type="button" id="group-cancel" class="button button-outline button-small">Annulla bozza</button>
+          </div>
+          <button type="button" id="group-leave" class="button button-outline button-small" hidden>Esci dal gruppo</button>
           <p class="catalog-help">Conferma definitiva, pagamenti Stripe e ritiro unico non sono ancora disponibili in questo incremento. Non è possibile effettuare un incasso dalla bozza.</p>
         </article>
       </section>
