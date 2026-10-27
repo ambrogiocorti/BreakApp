@@ -44,13 +44,29 @@ export function initializeOrders(client) {
   const coupon=document.createElement('input');coupon.maxLength=32;coupon.placeholder='Codice coupon (facoltativo)';coupon.setAttribute('aria-label','Codice coupon facoltativo');
   checkoutReview.parentElement.insertBefore(coupon,checkoutReview);
   const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
+  const favoriteStatus=elem('p');favoriteStatus.setAttribute('role','status');productDialog.append(favoriteStatus);
+  const favoritesBox=elem('article','','order-card');section.append(favoritesBox);
+  async function loadFavorites(){
+    if(!user){favoritesBox.replaceChildren();return;}
+    const uid=user.id,r=await client.from('customer_favorites').select('product_id,products(id,name,bar_id,price_cents)').eq('user_id',uid);
+    if(user?.id!==uid)return;favoritesBox.replaceChildren(elem('h3','I tuoi preferiti'));
+    if(r.error){favoritesBox.append(elem('p',r.error.message));return;}
+    if(!r.data?.length)favoritesBox.append(elem('p','Salva i prodotti dal menu per ritrovarli qui.'));
+    for(const row of r.data||[]){const p=row.products;if(!p)continue;
+      const b=elem('button',p.name+' · '+formatEuro(p.price_cents),'button button-outline button-small');b.type='button';
+      b.addEventListener('click',()=>{
+        if(context.barId!==p.bar_id)return report(feedback,'Seleziona nel menu il bar del prodotto '+p.name+'.',true);
+        window.dispatchEvent(new CustomEvent('breakapp:product-open',{detail:{id:p.id}}));
+      });favoritesBox.append(b);
+    }
+  }
   favorite.addEventListener('click',async()=>{
     if(!user||!product)return;favorite.disabled=true;const uid=user.id,pid=product.id;
     try{
       const current=await client.from('customer_favorites').select('product_id').eq('user_id',uid).eq('product_id',pid).maybeSingle();if(current.error)throw current.error;
       const r=current.data?await client.from('customer_favorites').delete().eq('user_id',uid).eq('product_id',pid):await client.from('customer_favorites').insert({user_id:uid,product_id:pid});
-      if(r.error)throw r.error;report(cartMessage,current.data?'Prodotto rimosso dai preferiti.':'Prodotto aggiunto ai preferiti.');
-    }catch(error){report(cartMessage,error.message,true);}finally{favorite.disabled=false;}
+      if(r.error)throw r.error;report(favoriteStatus,current.data?'Prodotto rimosso dai preferiti.':'Prodotto aggiunto ai preferiti.');await loadFavorites();
+    }catch(error){report(favoriteStatus,error.message,true);}finally{favorite.disabled=false;}
   });
 
   function total(){return cartSummary(cart,context.products);}
@@ -99,6 +115,7 @@ export function initializeOrders(client) {
   });
   window.addEventListener('breakapp:product-open',event=>{
     if(!user)return;
+    favoriteStatus.textContent='';
     product=context.products.find(p=>p.id===event.detail.id);
     if(!product)return;
     document.querySelector('#product-name').textContent=product.name;
@@ -229,6 +246,7 @@ export function initializeOrders(client) {
   });
   async function loadOrders(){
     if(!user)return;
+    void loadFavorites();
     report(feedback,'Caricamento ordini…');
     const {data,error}=await client.from('orders')
       .select('id,bar_id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity)')

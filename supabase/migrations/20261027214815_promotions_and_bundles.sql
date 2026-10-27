@@ -81,7 +81,7 @@ declare j jsonb;begin
 end;$$;
 create function public.submit_promoted_order(p_bar uuid,p_window uuid,p_items jsonb,p_key uuid,p_latitude double precision,p_longitude double precision,p_accuracy double precision,p_observed timestamptz,p_code text default '')
 returns uuid language plpgsql security definer set search_path='' as $$
-declare p public.school_promotions%rowtype;v_order uuid;x record;v_total bigint;j jsonb;
+declare p public.school_promotions%rowtype;v_order uuid;x record;v_total bigint;j jsonb;sc public.schools%rowtype;o public.orders%rowtype;w public.pickup_windows%rowtype;
 begin
  if btrim(p_code)='' then return public.submit_individual_order(p_bar,p_window,p_items,p_key,p_latitude,p_longitude,p_accuracy,p_observed);end if;
  select id into v_order from public.orders where customer_id=auth.uid() and request_key=p_key;if found then return v_order;end if;
@@ -93,6 +93,21 @@ begin
  update public.order_items set unit_cents=app_private.promotion_price(p.id,product_id,unit_cents) where order_id=v_order and removed_at is null;
  select sum(subtotal_cents) into v_total from public.order_items where order_id=v_order and removed_at is null;
  update public.orders set total_cents=v_total where id=v_order;perform app_private.refresh_individual_balance(v_order);
+ select * into o from public.orders where id=v_order;
+ select * into sc from public.schools where id=o.school_id;
+ if o.status in ('approval_queued','approval_active') and
+  (sc.approval_amount_threshold_cents is null or v_total<=sc.approval_amount_threshold_cents) and
+  (sc.approval_product_threshold is null or (select sum(quantity) from public.order_items where order_id=v_order and removed_at is null)<=sc.approval_product_threshold) then
+  select * into w from public.pickup_windows where id=o.pickup_window_id;
+  if not o.stock_reserved then
+   for x in select product_id,quantity from public.order_items where order_id=v_order and removed_at is null order by product_id loop
+    update public.daily_stock set allocated=allocated+x.quantity,updated_at=now() where bar_id=o.bar_id and product_id=x.product_id and service_date=w.service_date;
+    if not found then raise exception 'Scorte non configurate';end if;
+   end loop;
+  end if;
+  update public.order_approvals set state='cancelled',lease_until=null,reason='Totale scontato entro le soglie: approvazione non necessaria' where order_id=v_order;
+  update public.orders set status=case when (select preparation_mode from public.bars where id=o.bar_id)='ready_made' then 'ready' else 'confirmed' end,stock_reserved=true where id=v_order;
+ end if;
  insert into public.promotion_redemptions(promotion_id,user_id,order_id,request_key) values(p.id,auth.uid(),v_order,p_key);
  return v_order;
 end;$$;

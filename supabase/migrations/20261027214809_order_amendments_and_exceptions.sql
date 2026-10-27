@@ -136,8 +136,8 @@ create function app_private.finalize_workflow_checkout(p_event text,p_account te
 returns text language plpgsql security definer set search_path='' as $$
 declare a public.payment_attempts%rowtype;j jsonb;k text;v_id uuid;v_due bigint;v_refund bigint;v_terminal boolean;
 begin
- if auth.jwt()->>'role' is distinct from 'service_role' or p_event!~'^evt_[A-Za-z0-9]+$' or p_intent!~'^pi_[A-Za-z0-9]+$'
-  or p_session!~'^cs_(test|live)_[A-Za-z0-9]+$' or p_currency<>'eur' or not p_paid or p_amount<=0 then raise exception 'Webhook non valido';end if;
+ if auth.jwt()->>'role' is distinct from 'service_role' or coalesce(p_event,'')!~'^evt_[A-Za-z0-9]+$' or coalesce(p_intent,'')!~'^pi_[A-Za-z0-9]+$'
+  or coalesce(p_session,'')!~'^cs_(test|live)_[A-Za-z0-9]+$' or p_currency is distinct from 'eur' or p_paid is distinct from true or coalesce(p_amount,0)<=0 or p_attempt is null then raise exception 'Webhook non valido';end if;
  select * into a from public.payment_attempts where id=p_attempt;
  if not found or a.stripe_account_id<>p_account or a.amount_cents<>p_amount or a.stripe_checkout_session_id<>p_session then raise exception 'Webhook incoerente';end if;
  if a.status='succeeded' then return 'duplicate_payment';end if;
@@ -219,7 +219,8 @@ begin
   or exists(select 1 from app_private.platform_admins where user_id=auth.uid()) then raise exception 'Gruppo non pagabile';end if;
  select * into o from public.group_orders where group_id=g.id for update;
  if found and (o.status in ('cancelled','delivered','no_show') or o.pickup_lease_until>now()
-  or exists(select 1 from public.group_counter_payments where group_order_id=o.id)) then raise exception 'Pagamenti chiusi durante il ritiro';end if;
+  or exists(select 1 from public.group_counter_payments where group_order_id=o.id)
+  or exists(select 1 from public.order_additional_receipts where group_order_id=o.id)) then raise exception 'Pagamenti chiusi durante il ritiro';end if;
  select * into a from public.payment_attempts where payer_id=auth.uid() and request_key=p_request_key;
  if found then
   select array_agg(coalesce(group_cart_item_id,supplement_id) order by coalesce(group_cart_item_id,supplement_id)) into v_ids from public.payment_item_allocations where payment_id=a.id;
@@ -258,8 +259,8 @@ create or replace function public.finalize_verified_stripe_refund(p_event_id tex
 returns text language plpgsql security definer set search_path='' as $$
 declare r public.payment_refunds%rowtype;a public.payment_attempts%rowtype;
 begin
- if auth.jwt()->>'role' is distinct from 'service_role' or p_event_id!~'^evt_[A-Za-z0-9]+$' or p_stripe_refund!~'^re_[A-Za-z0-9]+$'
-  or p_status not in ('succeeded','failed') or p_currency<>'eur' then raise exception 'Evento refund non valido';end if;
+ if auth.jwt()->>'role' is distinct from 'service_role' or coalesce(p_event_id,'')!~'^evt_[A-Za-z0-9]+$' or coalesce(p_stripe_refund,'')!~'^re_[A-Za-z0-9]+$'
+  or p_status is null or p_status not in ('succeeded','failed') or p_currency is distinct from 'eur' or p_refund_id is null or p_amount is null or p_amount<=0 or p_stripe_account is null or p_payment_intent is null then raise exception 'Evento refund non valido';end if;
  select * into r from public.payment_refunds where id=p_refund_id for update;
  select * into a from public.payment_attempts where id=r.payment_id for update;
  if r.id is null or r.amount_cents<>p_amount or a.status<>'succeeded' or a.stripe_account_id<>p_stripe_account or a.stripe_payment_intent_id<>p_payment_intent
@@ -409,6 +410,10 @@ begin
  perform app_private.assert_no_pending_checkout('individual',p_order);
  v_items:=app_private.quote_order_items((j->>'bar_id')::uuid,p_items);
  select preparation_mode='active' and j->>'status' in ('preparing','ready') into v_needs_staff from public.bars where id=(j->>'bar_id')::uuid;
+ -- An amendment cannot bypass the large-order thresholds by starting small.
+ v_needs_staff:=v_needs_staff or (((select sum((x->>'quantity')::bigint*(x->>'unit_cents')::bigint) from jsonb_array_elements(v_items) x)>(j->>'total_cents')::bigint or (select sum((x->>'quantity')::int) from jsonb_array_elements(v_items) x)>(select sum(quantity) from app_private.order_lines('individual',p_order))) and exists(select 1 from public.schools s where s.id=(j->>'school_id')::uuid and
+  ((s.approval_product_threshold is not null and (select sum((x->>'quantity')::integer) from jsonb_array_elements(v_items) x)>s.approval_product_threshold)
+  or (s.approval_amount_threshold_cents is not null and (select sum((x->>'quantity')::bigint*(x->>'unit_cents')::bigint) from jsonb_array_elements(v_items) x)>s.approval_amount_threshold_cents))));
  insert into public.order_change_requests(school_id,order_id,actor_id,owner_id,kind,state,payload,request_key,expires_at)
  values((j->>'school_id')::uuid,p_order,auth.uid(),auth.uid(),'amendment','staff_pending',jsonb_build_object('items',v_items),p_key,v_at) returning id into c;
  if not v_needs_staff then perform app_private.apply_individual_amendment(c);end if;
@@ -463,7 +468,10 @@ begin
  select * into c from public.order_change_requests where id=p_change for update;
  if c.state='applied' then return;end if;
  k:=case when c.order_id is null then 'group' else 'individual' end;v_id:=coalesce(c.order_id,c.group_order_id);
- j:=app_private.order_scope(k,v_id,'internal');perform app_private.assert_no_pending_checkout(k,v_id);
+ j:=app_private.order_scope(k,v_id,'internal');
+ if j->>'status' not in ('confirmed','preparing','ready') then
+  update public.order_change_requests set state='expired',resolved_at=now() where id=c.id;return;end if;
+ perform app_private.assert_no_pending_checkout(k,v_id);
  select * into x from app_private.order_lines(k,v_id) where line_id=(c.payload->>'line_id')::uuid;
  if not found then raise exception 'Riga non più disponibile';end if;
  v_old:=x.quantity::bigint*x.unit_cents;v_new:=case when p_remove then 0 else (c.payload->>'quantity')::bigint*(c.payload->>'unit_cents')::bigint end;
@@ -491,6 +499,12 @@ begin
   if p_remove then update public.group_order_lines set quantity=0 where id=x.line_id;
   else update public.group_order_lines set product_id=(c.payload->>'product_id')::uuid,name=c.payload->>'name',unit_cents=(c.payload->>'unit_cents')::int where id=x.line_id;end if;
   if not exists(select 1 from public.group_line_payment_claims where group_cart_item_id=x.cart_id) then
+   v_paid:=app_private.order_paid_cents(k,v_id);
+   if v_new<v_old and v_paid>(j->>'total_cents')::bigint+v_new-v_old then
+    insert into public.cash_refund_obligations(school_id,owner_id,group_order_id,request_key,amount_cents,reason)
+    values((j->>'school_id')::uuid,(j->>'owner_id')::uuid,v_id,c.id,
+     least(v_old-v_new,v_paid-((j->>'total_cents')::bigint+v_new-v_old)),'Riduzione di una riga saldata al bancone');
+   end if;
    if p_remove then update public.group_cart_items set removed_at=now() where id=x.cart_id;
    else update public.group_cart_items set product_id=(c.payload->>'product_id')::uuid,product_name=c.payload->>'name',unit_price_cents=(c.payload->>'unit_cents')::int where id=x.cart_id;end if;
   elsif v_new>v_old then
@@ -575,7 +589,9 @@ returns integer language plpgsql security definer set search_path='' as $$
 declare c public.order_change_requests%rowtype;n integer:=0;
 begin
  if auth.jwt()->>'role' is distinct from 'service_role' then raise exception 'Solo backend';end if;
- for c in select * from public.order_change_requests where state in ('customer_pending','staff_pending') and expires_at<=now()
+ for c in select * from public.order_change_requests cr where state in ('customer_pending','staff_pending') and expires_at<=now()
+ and not exists(select 1 from public.payment_attempts a where a.status in ('initiated','requires_action','processing','review') and
+  (a.order_id=cr.order_id or a.group_id=(select group_id from public.group_orders where id=cr.group_order_id)))
  order by expires_at for update skip locked limit 100 loop
   if c.kind='substitution' then perform app_private.apply_order_substitution(c.id,true);
   else update public.order_change_requests set state='expired',resolved_at=now() where id=c.id;

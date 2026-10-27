@@ -124,11 +124,11 @@ export function initializeOfflineReview(client){
    const button=element('button','Riconcilia scorta fisica','button button-outline button-small');
    button.type='button';
    button.addEventListener('click',async()=>{
-    const units=prompt('Nuova capacità verificata fisicamente (non inferiore alle prenotazioni):');
+    const units=prompt('Capacità totale verificata, incluse le vendite già avvenute. Se inferiore al prenotato, il sistema avvia le sostituzioni in ordine di priorità:');
     if(units===null)return;
     const capacity=Number(units);
-    if(!Number.isInteger(capacity)||capacity<Number(c.allocated))
-     return report('Capacità non valida: non può essere inferiore al già prenotato.',true);
+    if(!Number.isInteger(capacity)||capacity<0)
+     return report('Inserisci una quantità intera non negativa.',true);
     const reason=prompt('Motivo dell’inventario e dettaglio verifica (almeno 10 caratteri):');
     if(!reason||reason.trim().length<10)return report('Motivazione obbligatoria.',true);
     if(!confirm('Salvare la rettifica di magazzino? Resterà nello storico.'))return;

@@ -233,7 +233,7 @@ export function initializeOfflineTerminal(client){
      user=identity;db=await openOfflineDB();
      if(id!==authVersion)return;
      device=await readDevice(db,contextKey())||null;
-     renderLease();await renderQueue();
+     renderLease();await renderQueue();await refreshOperators();
      info(device?'Dispositivo trovato: inserisci il PIN per visualizzare le operazioni cifrate.':
        'Autorizza online un dispositivo per usare la coda locale offline.');
    }catch(err){
@@ -402,7 +402,7 @@ export function initializeOfflineTerminal(client){
          ?'reconcile_my_offline_pickup_event':'reconcile_my_offline_cash_event';
         const {data:reconciled,error:reconcileError}=await client.rpc(rpc,{p_event:receipt.id});
         if(reconcileError)throw reconcileError;
-        if(reconciled?.status==='quarantined'){
+        if(!['applied','duplicate'].includes(reconciled?.status)){
          throw new Error('Evento in revisione: conserva localmente gli eventi successivi.');
         }
        }
@@ -443,11 +443,13 @@ export function initializeOfflineTerminal(client){
   lock();user={id:selected.context.split(':')[0]};device=selected;renderLease();await renderQueue();
   info('Operatore '+user.id.slice(0,8)+' selezionato: sblocca con il suo PIN. Il limite delle otto ore non riparte.');
  });
- $('offline-refresh').addEventListener('click',async()=>{
+ async function refreshOperators(){
   if(!db)return;operators.replaceChildren();
   for(const d of await readConfiguredOperators(db))if(d.schoolId===ctx?.schoolId&&d.deviceId===(device?.deviceId||localStorage.getItem('breakapp:physical-device')))
    operators.add(new Option('Operatore '+d.context.split(':')[0].slice(0,8),d.context));
- });
+  if(device)operators.value=device.context;
+ }
+ $('offline-refresh').addEventListener('click',()=>void refreshOperators());
  return {
   isUnlocked:()=>Boolean(key&&device&&ctx),
   getSnapshot:()=>cashSnapshot,

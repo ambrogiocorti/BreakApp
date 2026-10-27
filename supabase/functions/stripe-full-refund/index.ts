@@ -49,13 +49,14 @@ Deno.serve(async(req)=>{
    payment_intent:refund.payment_intent,
    amount:String(refund.amount_cents),
    reason:'requested_by_customer',
-   'metadata[breakapp_refund_id]':refund.refund_id
+   'metadata[breakapp_refund_id]':refund.refund_id,
+   'metadata[breakapp_kind]':'ledger'
   });
   const response=await fetch('https://api.stripe.com/v1/refunds',{
     method:'POST',
     headers:{Authorization:'Bearer '+stripeKey,
       'Stripe-Account':refund.account,
-      'Idempotency-Key':'breakapp-full-refund-'+refund.refund_id,
+      'Idempotency-Key':'breakapp-group-refund-'+refund.refund_id,
       'content-type':'application/x-www-form-urlencoded'},body:params
   });
   const stripe=await response.json() as Record<string,unknown>;

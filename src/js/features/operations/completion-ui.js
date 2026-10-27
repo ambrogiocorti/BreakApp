@@ -16,7 +16,9 @@ export function initializeCompletionUI(client){
    if(context.role==='platform_admin'){
     const f=formCard(extra,'Nuova scuola'),slug=input(f,'Identificativo della scuola (es. liceo-verdi)'),name=input(f,'Nome della scuola'),bar=input(f,'Nome del bar'),lat=input(f,'Latitudine','number'),lon=input(f,'Longitudine','number');
     lat.step='any';lon.step='any';const mode=select(f,'Preparazione',[['active','Preparazione su ordine'],['ready_made','Prodotti già pronti']]),email=input(f,'Email verificata del primo Admin','email');
-    submit(f,'Crea scuola e bar',()=>rpc('platform_onboard_school',{p_slug:slug.value,p_name:name.value,p_bar_name:bar.value,p_latitude:Number(lat.value),p_longitude:Number(lon.value),p_mode:mode.value,p_admin_email:email.value}),act);return;
+    submit(f,'Crea scuola e bar',()=>rpc('platform_onboard_school',{p_slug:slug.value,p_name:name.value,p_bar_name:bar.value,p_latitude:Number(lat.value),p_longitude:Number(lon.value),p_mode:mode.value,p_admin_email:email.value}),act);
+    const all=await client.from('schools').select('id,name,is_active').order('name');
+    for(const s of all.data||[])extra.append(node('p',s.name+' · '+(s.is_active?'attiva':'sospesa')),button(s.is_active?'Sospendi '+s.name:'Riattiva '+s.name,b=>act(b,async()=>{const reason=prompt('Motivazione (almeno 8 caratteri)');if(reason)await rpc('platform_set_school_active',{p_school:s.id,p_active:!s.is_active,p_reason:reason});})));return;
    }
    const [individual,groups,changes,refunds,documents]=await Promise.all([
     client.from('orders').select('id,display_no,bar_id,status').eq(staff?'school_id':'customer_id',staff?context.schoolId:user.id).order('created_at',{ascending:false}).limit(100),
@@ -44,6 +46,13 @@ export function initializeCompletionUI(client){
     }cards.append(box);
    }
    if(!changes.length)cards.append(node('p','Nessuna proposta aperta.'));
+   if(staff){
+    const conflicts=await rpc('list_school_stock_conflicts',{p_school:context.schoolId});
+    for(const c of conflicts||[])extra.append(node('p','Conflitto scorte del '+c.service_date+' · vendite offline: '+c.sold_quantity),button('Registra conta fisica',b=>act(b,async()=>{
+     const raw=prompt('Capacità totale verificata, incluse le vendite già avvenute');if(raw===null)return;
+     const reason=prompt('Motivazione e dettaglio conta (almeno 10 caratteri)');if(reason)await rpc('resolve_offline_stock_conflict',{p_conflict:c.id,p_new_capacity:Number(raw),p_reason:reason});
+    })));
+   }
    if(orders.length){
     const f=formCard(extra,staff?'Proponi sostituzione o nuovo orario':'Modifica o annulla un ordine'),choice=select(f,'Ordine',orders.map(o=>[o.kind+':'+o.id,o.label+' · '+o.status]));
     const body=node('div');f.append(body);
@@ -74,6 +83,10 @@ export function initializeCompletionUI(client){
    if(!staff){extra.append(node('h3','I tuoi pagamenti'),node('p','Conferme interne di pagamento e rimborsi. Non sostituiscono il documento fiscale.'));
     for(const p of documents||[])extra.append(node('p',new Date(p.created_at).toLocaleString('it-IT')+' · '+formatEuro(p.amount_cents)+' · '+p.status+' · rimborsi: '+p.refunds.map(r=>formatEuro(r.amount_cents)+' '+r.status).join(', ')));}
    if(admin){
+    for(const o of [...(individual.data||[]).map(o=>({...o,kind:'individual',label:'#'+o.display_no})),...(groups||[]).map(o=>({...o,kind:'group',label:o.title||'Gruppo'}))].filter(o=>['delivered','no_show'].includes(o.status)))
+     extra.append(button('Richiedi rimborso '+o.label,b=>act(b,async()=>{const reason=prompt('Motivo (almeno 8 caratteri). Online: rimborso ai pagatori originali. Contanti: obbligo di restituzione fisica.');if(reason)await rpc('request_completed_order_refund',{p_kind:o.kind,p_order:o.id,p_key:crypto.randomUUID(),p_reason:reason});})));
+    const policy=formCard(extra,'Politica mancati ritiri'),minutes=input(policy,'Sospensione prenotazioni in minuti (0: nessuna penalità)','number','0');minutes.min='0';minutes.max='10080';
+    submit(policy,'Salva politica no-show',()=>rpc('set_no_show_policy',{p_school:context.schoolId,p_minutes:Number(minutes.value)}),act);
     const bars=await client.from('bars').select('id,name').eq('school_id',context.schoolId).eq('is_active',true);
     const f=formCard(extra,'Coupon e bundle'),bar=select(f,'Bar',(bars.data||[]).map(b=>[b.id,b.name])),code=input(f,'Codice coupon'),title=input(f,'Titolo'),kind=select(f,'Tipo',[['percent','Sconto percentuale'],['unit_discount','Sconto in centesimi per prodotto'],['bundle','Bundle di prodotti']]),value=input(f,'Valore (% o centesimi)','number','10'),start=input(f,'Inizio','datetime-local'),end=input(f,'Fine','datetime-local'),max=input(f,'Utilizzi totali (vuoto: nessun limite)','number'),per=input(f,'Utilizzi per cliente','number','1');max.required=false;
     const recipe=[],recipeList=node('p');f.append(recipeList);

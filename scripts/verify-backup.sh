@@ -11,7 +11,7 @@ pg_restore --list "$temporary/database.dump" > "$temporary/contents.txt"
 test -s "$temporary/contents.txt"
 if [ -n "${RESTORE_TEST_DB_URL:-}" ]; then
   # This target must be a newly created, disposable database, never production.
-  pg_restore --dbname="$RESTORE_TEST_DB_URL" --no-owner --no-privileges \
+  pg_restore --dbname="$RESTORE_TEST_DB_URL" --no-owner \
     --exit-on-error --single-transaction "$temporary/database.dump"
 fi
 echo 'Encrypted archive authenticated and readable.'

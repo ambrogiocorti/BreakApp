@@ -12,8 +12,8 @@ mkdir -p "$destination"
 temporary="$(mktemp -d)"
 trap 'rm -rf "$temporary"' EXIT
 name="breakapp-$(date -u +%Y%m%dT%H%M%SZ).dump.gpg"
-pg_dump --dbname="$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges \
-  --schema=public --schema=app_private --schema=auth --file="$temporary/database.dump"
+pg_dump --dbname="$SUPABASE_DB_URL" --format=custom --no-owner \
+  --schema=public --schema=app_private --schema=auth --schema=storage --file="$temporary/database.dump"
 pg_restore --list "$temporary/database.dump" > "$temporary/contents.txt"
 test -s "$temporary/contents.txt"
 printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback \

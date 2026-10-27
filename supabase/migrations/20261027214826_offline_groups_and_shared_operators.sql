@@ -3,7 +3,7 @@ alter table public.offline_events_inbox drop constraint offline_events_inbox_eve
 alter table public.offline_events_inbox add constraint offline_events_inbox_event_kind_check check(event_kind in ('counter_sale','cash_pickup','shift_change','group_pickup'));
 create table app_private.offline_manifests(
  id uuid primary key default gen_random_uuid(),barista_id uuid not null references auth.users(id),school_id uuid not null references public.schools(id),
- device_id uuid not null,generation bigint not null,payload jsonb not null,issued_at timestamptz not null default now()
+ device_id uuid not null,generation bigint not null,payload jsonb not null,paid_payment_ids uuid[] not null default '{}',issued_at timestamptz not null default now()
 );
 create index manifest_barista on app_private.offline_manifests(barista_id,issued_at);
 create index manifest_school on app_private.offline_manifests(school_id);
@@ -36,7 +36,10 @@ declare j jsonb;groups jsonb;l public.staff_offline_leases%rowtype;v_id uuid;beg
  where o.school_id=p_school and o.status='ready' and w.service_date=(now() at time zone s.timezone)::date;
  j:=jsonb_set(j,'{orders}',coalesce((select jsonb_agg(x||jsonb_build_object('kind','individual','due_cents',greatest(0,(x->>'total_cents')::bigint-app_private.order_paid_cents('individual',(x->>'id')::uuid)),
  'can_pickup_at',(select case when b.preparation_mode='ready_made' then (w.service_date+w.starts_at) at time zone s.timezone else now() end from public.orders o join public.bars b on b.id=o.bar_id join public.pickup_windows w on w.id=o.pickup_window_id join public.schools s on s.id=o.school_id where o.id=(x->>'id')::uuid))) from jsonb_array_elements(j->'orders') x),'[]'::jsonb)||groups);
- insert into app_private.offline_manifests(barista_id,school_id,device_id,generation,payload) values(auth.uid(),p_school,l.device_id,l.generation,j) returning id into v_id;
+ insert into app_private.offline_manifests(barista_id,school_id,device_id,generation,payload,paid_payment_ids) values(auth.uid(),p_school,l.device_id,l.generation,j,
+ array(select a.id from public.payment_attempts a where a.school_id=p_school and a.status='succeeded' and
+  (a.order_id in(select (x->>'id')::uuid from jsonb_array_elements(j->'orders') x where x->>'kind'='individual')
+   or a.group_id in(select o.group_id from public.group_orders o where o.id in(select (x->>'id')::uuid from jsonb_array_elements(j->'orders') x where x->>'kind'='group'))))) returning id into v_id;
  return j||jsonb_build_object('snapshot_id',v_id);
 end;$$;
 revoke all on function public.offline_ready_order_manifest(uuid) from public,anon,authenticated;
@@ -73,12 +76,12 @@ begin
  v_due:=greatest(0,o.total_cents-app_private.order_paid_cents('group',o.id));v_excess:=greatest(0,v_amount-v_due);
  if v_amount=0 and v_due>0 then return jsonb_build_object('status','quarantined','reason','Saldo non completo');end if;
  if v_amount>0 then
-  if v_excess>0 and not p_force and (select coalesce(sum(pa.amount_cents),0) from public.payment_attempts pa where pa.group_id=o.group_id and pa.status='succeeded' and pa.updated_at>=m.issued_at)<v_excess
+  if v_excess>0 and not p_force and (select coalesce(sum(pa.amount_cents),0) from public.payment_attempts pa where pa.group_id=o.group_id and pa.status='succeeded' and pa.id<>all(m.paid_payment_ids))<v_excess
    then return jsonb_build_object('status','quarantined','reason','Eccedenza non attribuibile con certezza ai pagatori successivi al manifest');end if;
   insert into public.order_additional_receipts(group_order_id,school_id,bar_id,actor_id,request_key,method,amount_cents)
   values(o.id,o.school_id,o.bar_id,e.barista_id,e.id,'cash',v_amount);
   for a in select * from public.payment_attempts where group_id=o.group_id and status='succeeded'
-   and (p_force or updated_at>=m.issued_at) order by updated_at desc,id for update loop
+   and (p_force or id<>all(m.paid_payment_ids)) order by updated_at desc,id for update loop
    exit when v_excess=0;
    select greatest(0,a.amount_cents-coalesce(sum(amount_cents),0)) into v_available from public.payment_refunds where payment_id=a.id;
    v_piece:=least(v_excess,v_available);
@@ -137,12 +140,12 @@ begin
  v_due:=greatest(0,o.total_cents-app_private.order_paid_cents('individual',o.id));v_excess:=greatest(0,v_amount-v_due);
  if v_amount=0 and v_due>0 then return jsonb_build_object('status','quarantined','reason','Saldo non completo');end if;
  if v_amount>0 then
-  if v_excess>0 and not p_force and (select coalesce(sum(pa.amount_cents),0) from public.payment_attempts pa where pa.order_id=o.id and pa.status='succeeded' and pa.updated_at>=m.issued_at)<v_excess
+  if v_excess>0 and not p_force and (select coalesce(sum(pa.amount_cents),0) from public.payment_attempts pa where pa.order_id=o.id and pa.status='succeeded' and pa.id<>all(m.paid_payment_ids))<v_excess
    then return jsonb_build_object('status','quarantined','reason','Eccedenza non attribuibile con certezza ai pagatori successivi al manifest');end if;
   insert into public.order_additional_receipts(order_id,school_id,bar_id,actor_id,request_key,method,amount_cents)
   values(o.id,o.school_id,o.bar_id,e.barista_id,e.id,'cash',v_amount);
   for a in select * from public.payment_attempts where order_id=o.id and status='succeeded'
-   and (p_force or updated_at>=m.issued_at) order by updated_at desc,id for update loop
+   and (p_force or id<>all(m.paid_payment_ids)) order by updated_at desc,id for update loop
    exit when v_excess=0;
    select greatest(0,a.amount_cents-coalesce(sum(amount_cents),0)) into v_available from public.payment_refunds where payment_id=a.id;
    v_piece:=least(v_excess,v_available);
