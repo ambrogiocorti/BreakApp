@@ -19,6 +19,7 @@ create table public.bar_counter_sales(
 );
 create index bar_sales_school_date on public.bar_counter_sales(school_id,bar_id,service_date,created_at);
 create index bar_sales_actor on public.bar_counter_sales(actor_id,created_at);
+create index bar_sales_bar on public.bar_counter_sales(bar_id,service_date);
 create table public.bar_counter_sale_items(
  id bigint generated always as identity primary key,
  sale_id uuid not null references public.bar_counter_sales(id) on delete restrict,
@@ -48,6 +49,8 @@ create table public.offline_stock_conflicts(
 create index offline_conflicts_stock_open on public.offline_stock_conflicts(
  school_id,bar_id,product_id,service_date) where status='open';
 create index offline_conflicts_resolver on public.offline_stock_conflicts(resolved_by);
+create index offline_conflicts_bar on public.offline_stock_conflicts(bar_id);
+create index offline_conflicts_product on public.offline_stock_conflicts(product_id);
 create table public.offline_stock_conflict_audit(
  id bigint generated always as identity primary key,
  conflict_id uuid not null references public.offline_stock_conflicts(id) on delete restrict,
@@ -59,6 +62,7 @@ create table public.offline_stock_conflict_audit(
  created_at timestamptz not null default now()
 );
 create index offline_conflict_audit_actor on public.offline_stock_conflict_audit(actor_id);
+create index offline_conflict_audit_conflict on public.offline_stock_conflict_audit(conflict_id);
 
 do $rls$
 declare t text;
