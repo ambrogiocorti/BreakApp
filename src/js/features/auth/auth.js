@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { loadSchoolAccess, roleLabel } from './access.js';
 import { authRedirectUrl } from './redirect.js';
+import { revokeDevicePush } from '../notifications/notifications.js';
 import { getAdminSchools } from '../catalog/utils.js';
 import { initializeAdminCatalog } from '../catalog/catalog.js';
 import { initializeAdminMfa } from './mfa.js';
@@ -238,8 +239,15 @@ export function initializeAuth(config) {
   google.addEventListener('click', () => oauth('google'));
   microsoft.addEventListener('click', () => oauth('azure'));
   logout.addEventListener('click', async () => {
+    let pushWarning=false;
+    try { await revokeDevicePush(client); }
+    catch { pushWarning=true; }
     const data = await runOperation(() => client.auth.signOut(), 'Disconnessione completata.');
-    if (data !== null) showUser(null);
+    if (data !== null) {
+      showUser(null);
+      if(pushWarning)setFeedback(feedback,
+        'Disconnessione completata, ma la revoca delle push non è stata confermata. Verifica le notifiche del browser su questo dispositivo condiviso.',true);
+    }
   });
 
   client.auth.onAuthStateChange((_event, session) => {

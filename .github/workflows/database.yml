@@ -84,6 +84,10 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/18_web_push_dispatch.sql
       - name: Test Web Push enqueue and dispatcher privileges
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/push-dispatch.sql
+      - name: Apply one-owner-per-endpoint push migration 24
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/24_push_device_ownership.sql
+      - name: Test transfer to another user does not leak queued alerts
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/push-device-ownership.sql
       - name: Apply verified Stripe refund migration 19
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/19_full_stripe_refunds.sql
       - name: Test refund AAL2 authorization and original payment integrity

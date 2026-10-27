@@ -1,4 +1,22 @@
 const byId=id=>document.getElementById(id);
+// Revoke browser endpoint when signing out of a shared school device.
+// Always unsubscribe locally, even when the remote deletion fails.
+export async function revokeDevicePush(client){
+ if(!('serviceWorker' in navigator))return;
+ const registration=await navigator.serviceWorker.getRegistration();
+ const subscription=await registration?.pushManager?.getSubscription();
+ if(!subscription)return;
+ let serverError=null;
+ try {
+  const {error}=await client.from('push_subscriptions')
+   .delete().eq('endpoint',subscription.endpoint);
+  serverError=error;
+ }catch(error){serverError=error;}
+ const removed=await subscription.unsubscribe();
+ if(!removed||serverError)
+  throw new Error('La disattivazione delle notifiche non è stata verificata. Controlla i permessi del browser.');
+}
+
 const make=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 export function initializeInAppNotifications(client){
  if(!client)return;
@@ -122,14 +140,13 @@ export function initializeInAppNotifications(client){
    const publicData=subscription.toJSON();
    if(!publicData.endpoint||!publicData.keys?.p256dh||!publicData.keys?.auth)
      throw new Error('Dati sottoscrizione Web Push incompleti.');
-   const payload={user_id:user.id,endpoint:publicData.endpoint,
-    p256dh:publicData.keys.p256dh,auth_key:publicData.keys.auth};
-   const result=await client.from('push_subscriptions').insert(payload);
-   if(result.error&&result.error.code!=='23505'){
-     // Do not unsubscribe a pre-existing registration because a database
-     // permission error occurred; user can retry without data loss.
-     throw result.error;
-   }
+   // An endpoint must never remain registered under two different accounts
+   // on a shared device: the RPC transfers ownership and expires stale jobs.
+   const {error}=await client.rpc('register_my_push_subscription',{
+     p_endpoint:publicData.endpoint,p_p256dh:publicData.keys.p256dh,
+     p_auth_key:publicData.keys.auth
+   });
+   if(error)throw error;
    return 'Push registrate per questo dispositivo. La consegna richiede il dispatcher server attivo.';
  }
 
