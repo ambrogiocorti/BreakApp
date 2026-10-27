@@ -13,7 +13,7 @@ Aggiornata il 27 ottobre 2026. La specifica privata rimane la fonte dei requisit
 | Offline | Vendite itemizzate, ritiri individuali odierni, PIN/cifratura, ordine causale, turni e quarantena | Gruppi offline, cambio operatore offline completo e prove fisiche di revoca/perdita/reinstallazione |
 | Cassa | Fondi, movimenti, conteggio, chiusura immutabile e rettifica | Cambio turno reale e recupero di eventi tardivi nel pilota |
 | Report | Aggregati per scuola, gruppi, contanti/POS/Stripe, rimborsi, CSV/XLSX/PDF | Verifica contabile con il gestore e analisi aggiuntive |
-| Comunicazioni | Annunci tenant, centro notifiche, VAPID e cron attivi | Preferenze complete e consegna su Android/iPhone fisici |
+| Comunicazioni | Annunci tenant, centro notifiche, preferenze per categoria, revoca dispositivo, promemoria ritiro/chiusura idempotenti, VAPID e cron con audit HTTP | Consegna su Android/iPhone fisici e verifica volumi nel pilota |
 | Promozioni | Non implementate | Coupon, bundle e prezzi promozionali atomici |
 | Scuole | Strumenti Super Admin per personale e pilota | Onboarding autonomo completo di un nuovo istituto |
 | Backup | Restore di database temporaneo in CI | Backup giornaliero cifrato esterno e ripristino del servizio reale |

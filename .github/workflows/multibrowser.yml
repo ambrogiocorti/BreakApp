@@ -37,6 +37,8 @@ jobs:
         env:
           SMOKE_URL: http://127.0.0.1:4173/BreakApp/
         run: node tests/e2e/multibrowser.mjs
+      - name: Test actual notification controls with an isolated API fixture on three browsers
+        run: node tests/e2e/notifications.mjs
       - name: Stop preview
         if: always()
         run: kill "$(cat /tmp/breakapp-preview.pid)" || true

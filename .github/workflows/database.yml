@@ -156,6 +156,10 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/reports-announcements.sql
       - name: Test private runtime credentials and bounded refund retries
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/runtime-refund-retries.sql
+      - name: Test notification preferences, persistent notices and exhausted push leases
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/notification-preferences.sql
+      - name: Test timed reminders, balances, paid members, closing recipients and batch idempotence
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/pickup-reminders.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
       - name: Snapshot and restore disposable database into a separate empty DB

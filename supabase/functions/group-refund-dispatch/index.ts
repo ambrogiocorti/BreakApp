@@ -14,7 +14,7 @@ Deno.serve(async request=>{
  if(!url||!role)return response({error:'Servizio non configurato'},503);
  const db=createClient(url,role,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:config}=await db.rpc('push_runtime_configuration');
- const token=Deno.env.get('PUSH_DISPATCH_TOKEN')||config?.breakapp_dispatch_token||'';
+ const token=config?.breakapp_dispatch_token||Deno.env.get('PUSH_DISPATCH_TOKEN')||'';
  if(token.length<32||!equal(token,request.headers.get('x-breakapp-dispatch-token')||''))
   return response({error:'Non autorizzato'},401);
  const secret=Deno.env.get('STRIPE_SECRET_KEY')||'';

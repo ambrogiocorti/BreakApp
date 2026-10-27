@@ -1,7 +1,6 @@
 name: Push dispatcher schedule
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # Optional manual fallback only. The authoritative schedule is Supabase pg_cron.
   workflow_dispatch:
 permissions:
   contents: read

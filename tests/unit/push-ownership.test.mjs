@@ -15,7 +15,7 @@ test('logout revokes browser endpoint before ending the authenticated session',(
  const notifications=read('src/js/features/notifications/notifications.js');
  assert.ok(auth.indexOf('await revokeDevicePush(client)') <
    auth.indexOf("client.auth.signOut()"));
- assert.match(notifications,/client\.from\('push_subscriptions'\)/);
+ assert.match(notifications,/client\.rpc\('disable_my_push_subscription'/);
  assert.match(notifications,/await subscription\.unsubscribe\(\)/);
  assert.match(auth,/pushWarning/);
 });
