@@ -14,6 +14,7 @@ import { initializePlatformPilot } from './features/shell/platform-pilot.js';
 import { initializeGroupDrafts } from './features/groups/groups.js';
 import { initializeInAppNotifications } from './features/notifications/notifications.js';
 import { initializeOfflineTerminal } from './features/offline/terminal.js';
+import { initializeOfflineReview } from './features/offline/review.js';
 
 initializeTheme();
 const client = initializeAuth(readSupabaseConfig(import.meta.env));
@@ -28,6 +29,7 @@ initializePlatformPilot(client);
 initializeGroupDrafts(client);
 initializeInAppNotifications(client);
 initializeOfflineTerminal(client);
+initializeOfflineReview(client);
 initializeWorkspace(client);
 
 // Cache statica soltanto: nessuna vendita, consegna o incasso offline in Fase 1.
