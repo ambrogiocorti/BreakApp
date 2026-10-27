@@ -36,6 +36,19 @@ rispettivi secret manager.
 **Mai** committare le credenziali, incollarle in chat o rendere pubblica
 la service-role key. La chiave VAPID pubblica può invece essere esposta.
 
+## Rimborsi automatici di gruppo in sandbox
+
+Il dispatcher privato `group-refund-dispatch` usa `STRIPE_SECRET_KEY` in Supabase
+(soltanto `sk_test_...`) e `PUSH_DISPATCH_TOKEN` condiviso dal job GitHub.
+Rimborsa ciascuna singola riga archiviata sul PaymentIntent del pagatore
+originale, con chiave di idempotenza immutabile. La prova finale arriva
+dal webhook Stripe firmato; lo stato `refund_pending` non è denaro restituito.
+Se il dispatcher non è configurato, le richieste restano nel ledger in
+`pending`, non vengono fittiziamente considerate rimborsate.
+Configurare lo stesso webhook firmato per `refund.created` e
+`refund.updated`. Verificare in sandbox un caso di rimborso
+parziale e un pagamento ricevuto dopo una cancellazione.
+
 ## 2. Matrice di verifica fisica
 
 Usare account di prova, ordini fittizi e, per Stripe, soltanto la sandbox.
@@ -68,7 +81,8 @@ data, browser/OS, log CI e identificativo build.
 - [ ] GROUP-01–GROUP-02 con prove su dispositivi fisici
 - [ ] OFF-01–OFF-06 con prove su dispositivi fisici
 - [ ] PAY-01 e verifica merchant Stripe abilitato
-- [ ] Flussi ancora mancanti (pagamenti di gruppo e contabilità offline) implementati
+- [ ] Rimborsi Stripe di gruppo eseguiti e verificati in sandbox con webhook firmato
+- [ ] Tutti i flussi offline (ritiri, cassa/turni e doppio incasso) completati e verificati
 - [ ] Test di sicurezza, accessibilità, privacy, backup/ripristino approvati
 
 **Importante:** i test Playwright emulati, i test SQL e la CI sono utili,
