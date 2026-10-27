@@ -117,7 +117,8 @@ export function initializeWorkspace(client){
  const clearStore=()=>{try{localStorage.removeItem(storageKey);}catch{}};
  function notifyContext(){
    if(active)window.dispatchEvent(new CustomEvent('breakapp:workspace-context',{
-     detail:{schoolId:active.schoolId,role:active.role,barId:null}
+     detail:{schoolId:active.schoolId,role:active.role,barId:null,
+        verified:Boolean(active.verified)}
    }));
  }
  function updateSectionVisibility() {
