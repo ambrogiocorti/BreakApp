@@ -319,8 +319,54 @@
             <p id="group-ticket-token" class="catalog-help"></p>
             <button type="button" id="group-cancel-confirmed" class="button button-outline button-small" hidden>Annulla l'intero ordine</button>
           </div>
-          <p class="catalog-help">La conferma e il ritiro unico sono attivi. I pagamenti Stripe multipagatore saranno disponibili al termine dei test di sicurezza finanziaria; al momento il residuo può essere saldato dal coordinatore al bancone.</p>
+          <p class="catalog-help">Il coordinatore conferma e ritira l’intero gruppo. Il pagamento online richiede un merchant scolastico abilitato; il residuo può essere saldato dal coordinatore al bancone.</p>
         </article>
+      </section>
+
+      <section id="school-reports" class="container orders-section workspace-page" hidden aria-labelledby="reports-heading">
+        <div class="section-heading"><span class="eyebrow">ADMIN SCUOLA</span><h2 id="reports-heading">Report e comunicazioni</h2>
+          <p>Movimenti della scuola nel periodo selezionato: contanti, POS esterno, Stripe e rimborsi. I report sono rendiconti interni e non documenti fiscali.</p></div>
+        <form id="reports-form" class="catalog-toolbar"><label for="reports-from">Dal</label><input id="reports-from" type="date" required />
+          <label for="reports-to">Al</label><input id="reports-to" type="date" required />
+          <button type="submit" class="button button-primary">Calcola report</button></form>
+        <p id="reports-feedback" role="status" aria-live="polite"></p><div id="reports-metrics" class="dashboard-metrics"></div>
+        <p id="reports-order-count"></p>
+        <div class="order-actions"><button type="button" data-export="csv" class="button button-outline" disabled>Esporta CSV</button>
+          <button type="button" data-export="xlsx" class="button button-outline" disabled>Esporta Excel</button>
+          <button type="button" data-export="pdf" class="button button-outline" disabled>Esporta PDF</button></div>
+        <h3>Prodotti più richiesti</h3><div id="reports-products" class="service-list"></div>
+        <form id="announcement-form" class="pilot-card"><h3>Comunica alla scuola</h3>
+          <label for="announcement-title">Titolo</label><input id="announcement-title" required minlength="3" maxlength="120" />
+          <label for="announcement-body">Messaggio</label><textarea id="announcement-body" required minlength="3" maxlength="800" rows="4"></textarea>
+          <button type="submit" class="button button-primary">Pubblica annuncio</button></form>
+      </section>
+
+      <section id="cash-workspace" class="container orders-section workspace-page" hidden aria-labelledby="cash-heading">
+        <div class="section-heading"><span class="eyebrow">CASSA E TURNI</span><h2 id="cash-heading">La cassa del bar</h2>
+          <p>Apri il turno con il fondo ricevuto, registra uscite e versamenti, poi conferma il conteggio fisico. Le chiusure rimangono nello storico.</p></div>
+        <label for="cash-bar">Bar</label><select id="cash-bar"></select>
+        <button type="button" id="cash-refresh" class="button button-outline button-small">Aggiorna registro</button>
+        <p id="cash-feedback" role="status" aria-live="polite"></p><p id="cash-current"></p><p id="cash-unassigned" role="status"></p>
+        <div class="catalog-columns">
+          <form id="cash-open-form" class="pilot-card"><h3>Apertura turno</h3>
+            <label for="cash-opening">Fondo contanti realmente ricevuto (€)</label><input id="cash-opening" inputmode="decimal" required value="0,00" />
+            <button type="submit" class="button button-primary">Apri il turno</button></form>
+          <form id="cash-movement-form" class="pilot-card" hidden><h3>Movimento contanti</h3>
+            <label for="cash-action">Tipo</label><select id="cash-action"><option value="withdrawal">Prelievo / uscita</option><option value="deposit">Versamento / entrata</option></select>
+            <label for="cash-amount">Importo (€)</label><input id="cash-amount" inputmode="decimal" required />
+            <label for="cash-reason">Motivazione</label><textarea id="cash-reason" minlength="10" maxlength="500" required></textarea>
+            <button type="submit" class="button button-primary">Registra movimento</button></form>
+          <form id="cash-close-form" class="pilot-card" hidden><h3>Chiusura turno</h3>
+            <label for="cash-counted">Contanti contati fisicamente (€)</label><input id="cash-counted" inputmode="decimal" required />
+            <label for="cash-close-reason">Motivazione (obbligatoria se il conteggio è diverso dall’atteso)</label><textarea id="cash-close-reason" maxlength="500"></textarea>
+            <button type="submit" class="button button-primary">Conferma chiusura</button></form>
+          <form id="cash-adjust-form" class="pilot-card" hidden><h3>Rettifica Admin</h3>
+            <label for="cash-adjust-session">Chiusura da rettificare</label><select id="cash-adjust-session" required></select>
+            <label for="cash-adjust-amount">Importo della rettifica, con segno (€)</label><input id="cash-adjust-amount" inputmode="decimal" required />
+            <label for="cash-adjust-reason">Motivazione della rettifica</label><textarea id="cash-adjust-reason" required minlength="10" maxlength="500"></textarea>
+            <button type="submit" class="button button-primary">Aggiungi rettifica allo storico</button></form>
+        </div><h3>Turni e chiusure</h3><div id="cash-history" class="service-list"></div>
+        <h3>Ultimi movimenti</h3><div id="cash-entries" class="service-list"></div>
       </section>
 
       <section id="offline-review" class="container orders-section workspace-page" hidden aria-labelledby="offline-review-heading">
@@ -615,7 +661,7 @@
         <section data-step="3" aria-label="Pagamento" hidden>
           <h3>3. Metodo di pagamento</h3>
           <p><strong>Al ritiro</strong> — contanti o POS esterno, come consentito dal bar.</p>
-          <p class="catalog-help">Il pagamento online Stripe non è ancora integrato: non vengono effettuati addebiti online.</p>
+          <p class="catalog-help">Dopo la prenotazione puoi scegliere Stripe dal tuo ordine, se il merchant della scuola è abilitato. Lo stato del pagamento viene confermato dal server.</p>
         </section>
         <section data-step="4" aria-label="Riepilogo" hidden>
           <h3>4. Verifica finale</h3>

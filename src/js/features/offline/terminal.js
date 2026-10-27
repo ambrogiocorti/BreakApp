@@ -1,6 +1,6 @@
 import {formatEuro} from '../catalog/utils.js';
 import {validateOfflinePin,pinSalt,deriveOfflineKey,sealOffline,unsealOffline,
- openOfflineDB,readDevice,saveDevice,savePending,deletePending,readPending} from './vault.js';
+ openOfflineDB,readDevice,saveDevice,appendPending,deletePending,readPending} from './vault.js';
 
 const $=id=>document.getElementById(id);
 const make=(tag,text='',cls='')=>{const x=document.createElement(tag);x.textContent=text;x.className=cls;return x;};
@@ -14,10 +14,21 @@ export function initializeOfflineTerminal(client){
   entryForm=$('offline-entry-form'),syncButton=$('offline-sync');
  let ctx=null,user=null,db=null,device=null,key=null,lastTouch=0,
   authVersion=0,pinFailures=0,blockedUntil=0,
-  catalog=null,saleItems=[],onlineCashKey=null,manifest=null,pickupCandidate=null;
+  catalog=null,saleItems=[],onlineCashKey=null,manifest=null,pickupCandidate=null,cashSnapshot=null;
+ const currentCashSession=barId=>(cashSnapshot?.sessions||[]).find(s=>
+  s.bar_id===barId&&s.actor_id===user?.id&&!s.closed_at)?.id||null;
+ async function queueLocal(payload){
+  if(!touch()||!hasLease())throw new Error('PIN e autorizzazione offline validi richiesti.');
+  const id=payload.request_key||crypto.randomUUID(),now=new Date().toISOString();
+  const data={...payload,local_recorded_at:payload.local_recorded_at||now,request_key:id};
+  await appendPending(db,device,{id,context:contextKey(),createdAt:now,
+   encrypted:await sealOffline(key,data),deviceId:device.deviceId,generation:device.generation});
+  await renderQueue();return id;
+ }
  const info=(text,error=false)=>{status.textContent=text;status.dataset.type=error?'error':'information';};
  const lock=()=>{
-  key=null;lastTouch=0;catalog=null;saleItems=[];onlineCashKey=null;manifest=null;pickupCandidate=null;
+  key=null;lastTouch=0;catalog=null;saleItems=[];onlineCashKey=null;manifest=null;pickupCandidate=null;cashSnapshot=null;
+  window.dispatchEvent(new Event('breakapp:offline-vault-state'));
   $('offline-unlock-pin').value='';
   unlockForm.hidden=!device;
   entryForm.hidden=true;
@@ -88,12 +99,14 @@ export function initializeOfflineTerminal(client){
     return info('La consegna è già nella coda locale.',true);
   }
   const eventId=crypto.randomUUID(),now=new Date().toISOString();
+  const sessionId=currentCashSession(o.bar_id);
+  if(amount&&!sessionId)return info('Apri prima il turno nella sezione Cassa.',true);
   const payload={kind:'cash_pickup',order_id:o.id,pickup_token:o.pickup_token,
    bar_id:o.bar_id,collected_cents:amount,
+   cash_session_id:sessionId,
    snapshot_payment_status:o.payment_status,local_recorded_at:now,request_key:eventId};
-  await savePending(db,{id:eventId,context:contextKey(),createdAt:now,
-   encrypted:await sealOffline(key,payload),deviceId:device.deviceId,
-   generation:device.generation});
+  await queueLocal(payload);
+  window.dispatchEvent(new CustomEvent('breakapp:cash-recorded',{detail:{sessionId,amount}}));
   manifest.orders=manifest.orders.filter(row=>row.id!==o.id);
   device.ordersEncrypted=await sealOffline(key,manifest);await saveDevice(db,device);
   pickupCandidate=null;manifestForm.reset();$('offline-pickup-preview').textContent='';
@@ -178,6 +191,7 @@ export function initializeOfflineTerminal(client){
   renderManifest();
   syncButton.disabled=!key||!navigator.onLine;
   $('offline-lock').disabled=!key;
+  window.dispatchEvent(new Event('breakapp:offline-vault-state'));
  };
  async function renderQueue(){
   queueView.replaceChildren();
@@ -264,12 +278,13 @@ export function initializeOfflineTerminal(client){
  });
  unlockForm.addEventListener('submit',async event=>{
    event.preventDefault();
-   if(Date.now()<blockedUntil)return info('Troppi tentativi PIN. Riprova dopo il blocco temporaneo.',true);
+     if(Date.now()<Math.max(blockedUntil,device?.pinBlockedUntil||0))return info('Troppi tentativi PIN. Riprova dopo cinque minuti.',true);
    try{
      const next=await deriveOfflineKey($('offline-unlock-pin').value,device.salt);
      const proof=await unsealOffline(next,device.verifier);
      if(proof!==verifierText)throw new Error('PIN errato.');
      key=next;lastTouch=Date.now();pinFailures=0;
+     device.pinFailures=0;device.pinBlockedUntil=0;await saveDevice(db,device);
      unlockForm.reset();
      if(device.catalogEncrypted){
       catalog=await unsealOffline(key,device.catalogEncrypted);
@@ -280,12 +295,16 @@ export function initializeOfflineTerminal(client){
       manifest=await unsealOffline(key,device.ordersEncrypted);
       if(manifest?.school_id!==ctx.schoolId)manifest=null;
      }
+     if(device.cashEncrypted)cashSnapshot=await unsealOffline(key,device.cashEncrypted);
      renderManifest();renderLease();
      info(hasLease()?'Coda sbloccata. Le operazioni restano da verificare sul server.':
        'Coda sbloccata per invio, ma lease scaduto: nessuna nuova operazione offline autorizzata.');
    }catch{
-     pinFailures++;
+     lock();
+     pinFailures=(device?.pinFailures||0)+1;
      if(pinFailures>=5){blockedUntil=Date.now()+5*60*1000;pinFailures=0;}
+     if(device){device.pinFailures=pinFailures;device.pinBlockedUntil=blockedUntil;
+      try{await saveDevice(db,device);}catch{/* Preserve the in-memory lock if storage fails. */}}
      info('PIN non valido o dati locali non decifrabili.',true);
    }
  });
@@ -309,6 +328,7 @@ export function initializeOfflineTerminal(client){
    onlineCashKey=null;saleItems=[];renderSale();
    info('Vendita contabilizzata: '+formatEuro(amount)+
     '. Riferimento '+data.sale_id.slice(0,8)+'. Documento fiscale separato.');
+   window.dispatchEvent(new Event('breakapp:cash-refresh'));
   }catch(e){info(e.message||'Registrazione non riuscita, controlla la cassa.',true);}
   finally{button.disabled=false;}
  });
@@ -329,14 +349,15 @@ export function initializeOfflineTerminal(client){
      if(!confirm('Confermi di avere realmente incassato '+formatEuro(amount)+
         ' in contanti? La vendita potrà richiedere riconciliazione.'))return;
      const eventId=crypto.randomUUID();
+     const sessionId=currentCashSession(barInput.value);
+     if(!sessionId)throw new Error('Apri prima il turno nella sezione Cassa.');
      const eventData={kind:'counter_sale',bar_id:barInput.value,method:'cash',
+       cash_session_id:sessionId,
        amount_cents:amount,note,items:saleItems.map(({product_id,quantity,unit_cents})=>({
         product_id,quantity,unit_cents
        })),local_recorded_at:new Date().toISOString(),request_key:eventId};
-     const encrypted=await sealOffline(key,eventData);
-     await savePending(db,{id:eventId,context:contextKey(),
-       createdAt:eventData.local_recorded_at,encrypted,
-       deviceId:device.deviceId,generation:device.generation});
+     await queueLocal(eventData);
+     window.dispatchEvent(new CustomEvent('breakapp:cash-recorded',{detail:{sessionId,amount}}));
      saleItems=[];renderSale();entryForm.reset();
      barInput.value=catalog.bars[0]?.id||'';renderCatalog();
      await renderQueue();
@@ -353,11 +374,15 @@ export function initializeOfflineTerminal(client){
    for(const record of records){
      try{
        const data=await unsealOffline(key,record.encrypted);
-       const payload=data.kind==='cash_pickup'
+       const payload=data.kind==='shift_change'
+        ?{bar_id:data.bar_id,session_id:data.session_id,action:data.action,
+          amount_cents:data.amount_cents,reason:data.reason}
+        :data.kind==='cash_pickup'
         ?{order_id:data.order_id,pickup_token:data.pickup_token,bar_id:data.bar_id,
-          collected_cents:data.collected_cents,snapshot_payment_status:data.snapshot_payment_status}
+          collected_cents:data.collected_cents,snapshot_payment_status:data.snapshot_payment_status,
+          ...(data.cash_session_id?{cash_session_id:data.cash_session_id}:{})}
         :{bar_id:data.bar_id,method:'cash',amount_cents:data.amount_cents,
-          note:data.note,items:data.items};
+          note:data.note,items:data.items,...(data.cash_session_id?{cash_session_id:data.cash_session_id}:{})};
        const {data:receipt,error}=await client.rpc('stage_my_offline_event',{
          p_device:record.deviceId,p_generation:record.generation,
          p_request_key:record.id,p_kind:data.kind,
@@ -365,17 +390,22 @@ export function initializeOfflineTerminal(client){
        });
        if(error||!['quarantined','applied','approved'].includes(receipt?.status))
          throw error||new Error('Il server non ha confermato l’evento.');
+       if(receipt.status==='approved')throw new Error('Attendi la contabilizzazione della revisione Admin.');
        if(receipt.status==='quarantined'){
-        const rpc=data.kind==='cash_pickup'
+        const rpc=data.kind==='shift_change'?'reconcile_my_cash_shift_event':data.kind==='cash_pickup'
          ?'reconcile_my_offline_pickup_event':'reconcile_my_offline_cash_event';
-        const {error:reconcileError}=await client.rpc(rpc,{p_event:receipt.id});
+        const {data:reconciled,error:reconcileError}=await client.rpc(rpc,{p_event:receipt.id});
         if(reconcileError)throw reconcileError;
+        if(reconciled?.status==='quarantined'){
+         throw new Error('Evento in revisione: conserva localmente gli eventi successivi.');
+        }
        }
-       // Durable server receipt is the authority, even for queued Admin review.
+       // Only an applied event may be removed from the protected local queue.
        await deletePending(db,record.id);ok++;
-     }catch{errors++;}
+     }catch{errors++;break;}
    }
    await renderQueue();renderLease();
+   window.dispatchEvent(new Event('breakapp:cash-refresh'));
    info(ok+' eventi trasferiti al server con ricevuta; '+errors+
      ' ancora locali. Controlla il pannello Admin per eventuali conflitti.',errors>0);
  });
@@ -391,10 +421,20 @@ export function initializeOfflineTerminal(client){
  }));
  window.addEventListener('offline',()=>{syncButton.disabled=true;info('Connessione assente: solo bozze locali cifrate.');});
  window.addEventListener('online',()=>{renderLease();info('Connessione ripristinata: invia la coda per verifica.');});
- const interval=setInterval(()=>{
+ setInterval(()=>{
    if(key && Date.now()-lastTouch>=MAX_IDLE_MS){
      lock();renderLease();info('Blocco automatico dopo cinque minuti di inattività.');
    }
  },15000);
  window.addEventListener('pagehide',()=>{lock();});
+ return {
+  isUnlocked:()=>Boolean(key&&device&&ctx),
+  getSnapshot:()=>cashSnapshot,
+  async cacheSnapshot(snapshot){
+   if(!key||!device||snapshot.school_id!==ctx?.schoolId)return;
+   cashSnapshot=snapshot;device.cashEncrypted=await sealOffline(key,snapshot);await saveDevice(db,device);
+  },
+  queueShift:payload=>queueLocal({...payload,kind:'shift_change'}),
+  hasPending:async()=>Boolean(db&&contextKey()&&(await readPending(db,contextKey())).length)
+ };
 }

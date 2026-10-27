@@ -58,7 +58,43 @@ export async function transact(db,storeName,mode,operation){
  });
 }
 export const readDevice=(db,context)=>transact(db,'devices','readonly',s=>s.get(context));
-export const saveDevice=(db,entry)=>transact(db,'devices','readwrite',s=>s.put(entry));
+export async function saveDevice(db,entry){
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('devices','readwrite'),store=tx.objectStore('devices'),request=store.get(entry.context);
+  request.onsuccess=()=>{
+   const current=request.result;
+   if(current?.deviceId===entry.deviceId&&current?.generation===entry.generation)
+    entry.nextSequence=Math.max(entry.nextSequence||0,current.nextSequence||0);
+   store.put(entry);
+  };
+  tx.oncomplete=()=>resolve(entry.context);
+  tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('Dispositivo non salvato.'));
+ });
+}
 export const savePending=(db,entry)=>transact(db,'pending','readwrite',s=>s.put(entry));
 export const deletePending=(db,id)=>transact(db,'pending','readwrite',s=>s.delete(id));
-export const readPending=(db,context)=>transact(db,'pending','readonly',s=>s.index('context').getAll(context));
+export async function readPending(db,context){
+ const entries=await transact(db,'pending','readonly',s=>s.index('context').getAll(context));
+ return entries.sort((a,b)=>(a.sequence??0)-(b.sequence??0)||a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id));
+}
+// Device sequence and ciphertext commit together: random UUID ordering must never
+// replay a closing count before the physical sales that precede it.
+export async function appendPending(db,device,entry){
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction(['devices','pending'],'readwrite');
+  const devices=tx.objectStore('devices');
+  const request=devices.get(device.context);
+  request.onsuccess=()=>{
+   const current=request.result;
+   if(!current||current.deviceId!==device.deviceId||current.generation!==device.generation){
+    tx.abort();return;
+   }
+   const sequence=(current.nextSequence||0)+1;
+   devices.put({...current,nextSequence:sequence});
+   tx.objectStore('pending').add({...entry,sequence});device.nextSequence=sequence;
+  };
+  tx.oncomplete=()=>resolve(entry.id);
+  tx.onerror=()=>reject(tx.error||new Error('Coda locale non salvata.'));
+  tx.onabort=()=>reject(tx.error||new Error('Dispositivo cambiato: riprova.'));
+ });
+}

@@ -15,19 +15,21 @@ function constantTime(a:string,b:string){
 }
 Deno.serve(async request=>{
  if(request.method!=='POST')return out({error:'Metodo non consentito'},405);
- const key=Deno.env.get('PUSH_DISPATCH_TOKEN')||'';
- const supplied=request.headers.get('x-breakapp-dispatch-token')||'';
- if(key.length<32||!constantTime(key,supplied))return out({error:'Non autorizzato'},401);
  const url=Deno.env.get('SUPABASE_URL');
  const service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
- const vapidPublic=Deno.env.get('VAPID_PUBLIC_KEY');
- const vapidPrivate=Deno.env.get('VAPID_PRIVATE_KEY');
- const subject=Deno.env.get('VAPID_SUBJECT');
+ if(!url||!service)return out({error:'Dispatcher non configurato'},503);
+ const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
+ const {data:config,error:configError}=await db.rpc('push_runtime_configuration');
+ const key=Deno.env.get('PUSH_DISPATCH_TOKEN')||config?.breakapp_dispatch_token||'';
+ const supplied=request.headers.get('x-breakapp-dispatch-token')||'';
+ if(key.length<32||!constantTime(key,supplied))return out({error:'Non autorizzato'},401);
+ const vapidPublic=Deno.env.get('VAPID_PUBLIC_KEY')||config?.breakapp_vapid_public;
+ const vapidPrivate=Deno.env.get('VAPID_PRIVATE_KEY')||config?.breakapp_vapid_private;
+ const subject=Deno.env.get('VAPID_SUBJECT')||config?.breakapp_vapid_subject;
  if(!url||!service||!vapidPublic||!vapidPrivate||!subject)
   return out({error:'Dispatcher non configurato'},503);
  try{
   webpush.setVapidDetails(subject,vapidPublic,vapidPrivate);
-  const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
   const {error:warningError}=await db.rpc('warn_group_drafts_before_expiry',{p_limit:50});
   const {error:expiryError}=await db.rpc('expire_group_drafts',{p_limit:50});
   if(warningError||expiryError)return out({error:'Manutenzione gruppi non disponibile'},503);
@@ -37,7 +39,7 @@ Deno.serve(async request=>{
   for(const job of jobs||[]){
     let ok=false,status=0,err='';
     try{
-      const data=JSON.stringify({title:'BreakApp',body:String(job.message||'Nuovo avviso').slice(0,200),
+      const data=JSON.stringify({title:'BreakApp',body:'Hai un nuovo avviso in BreakApp.',
        url:'/BreakApp/#accesso'});
       const result=await webpush.sendNotification({
         endpoint:job.endpoint,

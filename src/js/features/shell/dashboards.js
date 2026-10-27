@@ -15,8 +15,9 @@ export function initializeWorkspaceDashboards(client) {
  exportButton.type='button';exportButton.addEventListener('click',async()=>{
   if(!context?.verified||context.role!=='school_admin'||!context.schoolId)return;
   exportButton.disabled=true;adminFeedback.textContent='Esportazione in corso…';
-  try{const result=await exportSchoolOrdersCsv(client,context.schoolId);
-   if(!context?.verified||context.role!=='school_admin')return;
+  const schoolId=context.schoolId;
+  try{const result=await exportSchoolOrdersCsv(client,schoolId);
+   if(!context?.verified||context.role!=='school_admin'||context.schoolId!==schoolId)return;
    downloadCsv(result.csv,'breakapp-ordini-'+new Date().toISOString().slice(0,10)+'.csv');
    adminFeedback.textContent=result.count+' ordini esportati'+(result.truncated?' (limite di 20.000 righe raggiunto)':'')+'.';
   }catch(error){adminFeedback.textContent='Esportazione non riuscita: '+error.message;}

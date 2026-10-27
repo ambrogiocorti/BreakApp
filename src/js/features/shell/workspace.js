@@ -13,6 +13,7 @@ const SCREENS = Object.freeze({
  bartender:[
   ['staff-orders-section','Ordini da preparare','ClipboardList'],
   ['bar-operations','Servizio e orari','CalendarDays'],
+  ['cash-workspace','Cassa e turni','ClipboardList'],
   ['offline-terminal','Operazioni offline','Boxes'],
   ['support-center','Assistenza','MessageSquareText'],
   ['accesso','Profilo','UserRound']
@@ -23,9 +24,11 @@ const SCREENS = Object.freeze({
  ],
  school_admin:[
   ['admin-overview','Panoramica','LayoutDashboard'],
+  ['school-reports','Report e annunci','LayoutDashboard'],
   ['staff-orders-section','Gestione ordini','ClipboardList'],
   ['admin-catalog','Catalogo','ShoppingBag'],
   ['warehouse-inventory','Magazzino','Boxes'],
+  ['cash-workspace','Cassa e chiusure','ClipboardList'],
   ['offline-review','Revisione offline','ClipboardList'],
   ['admin-order-setup','Impostazioni bar','SlidersHorizontal'],
   ['bar-operations','Calendario','CalendarDays'],
