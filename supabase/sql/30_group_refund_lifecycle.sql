@@ -74,6 +74,57 @@ for each row execute function app_private.queue_unwanted_paid_group_line();
 
 
 
+create or replace function public.join_group_draft(
+ p_invite_token uuid,p_latitude double precision,p_longitude double precision,
+ p_accuracy_m double precision,p_observed_at timestamptz
+) returns uuid language plpgsql security definer set search_path=''
+as $join_group$
+declare v_user uuid:=auth.uid();v_group public.group_drafts%rowtype;
+ v_school public.schools%rowtype;v_status text;v_distance double precision;
+begin
+ if v_user is null or p_invite_token is null then
+  raise exception 'Accedi come partecipante per aprire l''invito';end if;
+ select * into v_group from public.group_drafts where invite_token=p_invite_token for update;
+ if not found then raise exception 'Invito non valido';end if;
+ if v_group.status<>'draft' or v_group.updated_at<now()-interval '24 hours'
+   or not v_group.accepting_members then
+  raise exception 'Il gruppo non accetta nuovi ingressi';end if;
+ select status into v_status from public.group_members
+  where group_id=v_group.id and user_id=v_user;
+ if found and v_status<>'left' then
+  if v_status='rejected' then raise exception 'Ingresso rifiutato';end if;
+  return v_group.id;
+ end if;
+ if v_group.max_members is not null and
+  (select count(*) from public.group_members where group_id=v_group.id
+   and status in ('accepted','pending'))>=v_group.max_members
+ then raise exception 'Gruppo al completo';end if;
+ select * into v_school from public.schools where id=v_group.school_id and is_active;
+ if not found or v_school.latitude is null or v_school.longitude is null
+ then raise exception 'Posizione scuola non configurata';end if;
+ if p_latitude is null or p_longitude is null or
+   p_latitude not between -90 and 90 or p_longitude not between -180 and 180
+   or p_accuracy_m is null or p_accuracy_m<0 or p_accuracy_m>100
+   or p_observed_at is null or p_observed_at<now()-interval '2 minutes'
+   or p_observed_at>now()+interval '15 seconds'
+ then raise exception 'Posizione non verificabile';end if;
+ v_distance:=6371000 * 2 * pg_catalog.asin(least(1.0::double precision,
+   pg_catalog.sqrt(
+   pg_catalog.power(pg_catalog.sin(pg_catalog.radians(p_latitude-v_school.latitude)/2),2)
+   +pg_catalog.cos(pg_catalog.radians(v_school.latitude))*pg_catalog.cos(pg_catalog.radians(p_latitude))
+   *pg_catalog.power(pg_catalog.sin(pg_catalog.radians(p_longitude-v_school.longitude)/2),2))));
+ if v_distance+p_accuracy_m>v_school.pickup_radius_m then
+   raise exception 'Per partecipare devi essere entro il raggio scolastico';end if;
+ insert into public.group_members(group_id,user_id,status)
+ values(v_group.id,v_user,case when v_group.requires_approval then 'pending' else 'accepted' end)
+ on conflict(group_id,user_id) do update
+ set status=excluded.status,ready=false,approved_at=null,joined_at=now()
+ where public.group_members.status='left';
+ update public.group_drafts set updated_at=now() where id=v_group.id;
+ return v_group.id;
+end;
+$join_group$;
+
 create or replace function public.replace_group_personal_cart(
  p_group_id uuid,p_items jsonb
 ) returns void language plpgsql security definer set search_path=''
@@ -800,7 +851,8 @@ revoke all on function app_private.queue_group_line_refund(uuid,text),
  app_private.archive_group_line(uuid,text),
  app_private.queue_unwanted_paid_group_line()
  from public,anon,authenticated;
-revoke all on function public.replace_group_personal_cart(uuid,jsonb),
+revoke all on function public.join_group_draft(uuid,double precision,double precision,double precision,timestamptz),
+ public.replace_group_personal_cart(uuid,jsonb),
  public.leave_group_draft(uuid),public.cancel_group_draft(uuid),
  public.group_payable_lines(uuid),public.begin_group_stripe_checkout(uuid,uuid[],uuid),
  public.group_draft_details(uuid),
@@ -809,7 +861,8 @@ revoke all on function public.replace_group_personal_cart(uuid,jsonb),
  public.deliver_group_order(uuid),public.cancel_confirmed_group_order(uuid),
  public.finalize_verified_group_checkout(text,text,text,text,uuid,bigint,text,boolean,jsonb)
  from public,anon,authenticated;
-grant execute on function public.replace_group_personal_cart(uuid,jsonb),
+grant execute on function public.join_group_draft(uuid,double precision,double precision,double precision,timestamptz),
+ public.replace_group_personal_cart(uuid,jsonb),
  public.leave_group_draft(uuid),public.cancel_group_draft(uuid),
  public.group_payable_lines(uuid),public.begin_group_stripe_checkout(uuid,uuid[],uuid),
  public.group_draft_details(uuid),
