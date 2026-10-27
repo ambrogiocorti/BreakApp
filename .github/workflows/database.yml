@@ -126,6 +126,12 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-stripe-payments.sql
       - name: Verify group Stripe claim FK indexes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply itemized online and offline cash ledger migration 29
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/29_offline_cash_stock_reconciliation.sql
+      - name: Verify encrypted sale replay, stock guard, cash ledger and inventory audit
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-cash-ledger.sql
+      - name: Verify offline financial FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
       - name: Snapshot and restore disposable database into a separate empty DB

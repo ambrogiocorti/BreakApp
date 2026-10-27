@@ -327,11 +327,13 @@
         <div class="section-heading">
           <span class="eyebrow">ADMIN SCUOLA · CONTROLLO OPERAZIONI</span>
           <h2 id="offline-review-heading">Revisione eventi offline</h2>
-          <p>Esamina gli eventi ricevuti dai dispositivi dei Baristi. Le decisioni vengono registrate con autore e motivazione, ma <strong>non contabilizzano automaticamente incassi, pagamenti o scarichi di scorte</strong>.</p>
+          <p>Esamina gli eventi ricevuti dai dispositivi dei Baristi. Le decisioni vengono registrate con autore e motivazione, ma <strong>non sono ancora una registrazione definitiva</strong>. Dopo l’approvazione, l’Admin deve contabilizzare la vendita; le eccedenze restano visibili come conflitti di magazzino.</p>
         </div>
         <p id="offline-review-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <button type="button" id="offline-review-refresh" class="button button-outline button-small">Aggiorna eventi</button>
         <div id="offline-review-list" class="service-list" aria-live="polite"></div>
+        <h3>Conflitti inventariali da riconciliare</h3>
+        <div id="offline-stock-conflicts" class="service-list" aria-live="polite"></div>
       </section>
 
       <section id="support-center" class="container orders-section support-center" aria-labelledby="support-heading" hidden>
@@ -432,20 +434,30 @@
             <button id="offline-lock" type="button" class="button button-outline button-small">Blocca adesso</button>
           </article>
           <article class="pilot-card">
-            <h3>Nuova operazione da verificare</h3>
-            <p class="catalog-help">Inserisci solo un riepilogo tecnico, senza nomi o dati degli studenti. La cifra non viene incassata o registrata nella cassa del server.</p>
-            <form id="offline-entry-form">
-              <label for="offline-entry-amount">Importo dichiarato (€)</label>
-              <input id="offline-entry-amount" inputmode="decimal" placeholder="2,50" required/>
-              <label for="offline-entry-note">Riferimento interno (facoltativo, senza dati personali)</label>
+            <h3>Vendita al banco (contanti)</h3>
+            <p class="catalog-help">Sincronizza il catalogo mentre sei online. Il dispositivo cifra prodotti, quantità e incasso, senza dati personali. L'operazione offline viene contabilizzata o verificata alla riconnessione.</p>
+            <button id="offline-refresh-catalog" type="button" class="button button-outline button-small">Aggiorna catalogo e prezzi online</button>
+            <form id="offline-entry-form" hidden>
+              <label for="offline-sale-bar">Bar in cui avviene la vendita</label>
+              <select id="offline-sale-bar" required></select>
+              <label for="offline-sale-product">Prodotto</label>
+              <select id="offline-sale-product" required></select>
+              <label for="offline-sale-quantity">Quantità</label>
+              <input id="offline-sale-quantity" type="number" min="1" max="1000" step="1" value="1" required/>
+              <button id="offline-add-item" type="button" class="button button-outline button-small">Aggiungi prodotto</button>
+              <div id="offline-sale-items" class="service-list" aria-live="polite"></div>
+              <label for="offline-entry-amount">Totale contanti effettivamente incassati (€)</label>
+              <input id="offline-entry-amount" inputmode="decimal" value="0,00" readonly required/>
+              <label for="offline-entry-note">Riferimento interno (senza dati personali)</label>
               <input id="offline-entry-note" maxlength="120" placeholder="Es. vendita banco"/>
-              <button type="submit" class="button button-primary">Salva bozza cifrata sul dispositivo</button>
+              <button type="submit" class="button button-primary">Conferma incasso e salva offline cifrato</button>
+              <button id="offline-entry-online" type="button" class="button button-outline">Incassa e contabilizza ora (online)</button>
             </form>
           </article>
         </div>
         <article class="pilot-card offline-queue-card">
           <h3>Coda locale e riconnessione</h3>
-          <p class="catalog-help">Una volta inviati, gli eventi vengono messi in quarantena sul server. La registrazione definitiva richiede una riconciliazione separata: **non sono ricevute**.</p>
+          <p class="catalog-help">Le vendite con lease valido e scorte coerenti vengono riconciliate. Le operazioni dubbie o con conflitto restano in verifica Admin. La conferma digitale non sostituisce il documento fiscale.</p>
           <div class="offline-queue-actions">
             <button id="offline-refresh" type="button" class="button button-outline button-small">Aggiorna coda</button>
             <button id="offline-sync" type="button" class="button button-primary button-small">Invia al server per verifica</button>
