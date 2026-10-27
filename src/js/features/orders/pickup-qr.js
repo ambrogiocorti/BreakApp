@@ -165,6 +165,14 @@ export function initializePickupQr(client) {
           const codes=await detector.detect(video);
           if(!active||!scanDialog.open)return;
           for(const code of codes){
+            const groupMatch=/^breakapp:group:([0-9a-f-]{36})$/i.exec(String(code.rawValue));
+            if(groupMatch){
+              stopCamera();scanDialog.close();
+              window.dispatchEvent(new CustomEvent('breakapp:group-pickup-scanned',{
+                detail:{token:groupMatch[1]}
+              }));
+              return;
+            }
             const token=parsePickupQrValue(code.rawValue);
             if(token){
               stopCamera();
