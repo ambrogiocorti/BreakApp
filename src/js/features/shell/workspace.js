@@ -26,6 +26,7 @@ const SCREENS = Object.freeze({
   ['staff-orders-section','Gestione ordini','ClipboardList'],
   ['admin-catalog','Catalogo','ShoppingBag'],
   ['warehouse-inventory','Magazzino','Boxes'],
+  ['offline-review','Revisione offline','ClipboardList'],
   ['admin-order-setup','Impostazioni bar','SlidersHorizontal'],
   ['bar-operations','Calendario','CalendarDays'],
   ['support-center','Centro ticket','MessageSquareText'],
