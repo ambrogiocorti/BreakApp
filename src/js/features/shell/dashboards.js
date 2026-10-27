@@ -89,8 +89,6 @@ export function initializeWorkspaceDashboards(client) {
  }
  window.addEventListener('breakapp:workspace-context',event=>{
    context=event.detail;
-   if(context.role==='school_admin')context.verified=true;
-   if(context.role==='platform_admin')context.verified=true;
    routeUpdate();
  });
  window.addEventListener('breakapp:route-changed',event=>{
