@@ -36,6 +36,7 @@ export function initializeOfflineReview(client){
    if(event.local_recorded_at)row.append(element('small','Orario dichiarato dal dispositivo: '+
      new Date(event.local_recorded_at).toLocaleString('it-IT')+' (non verificato)'));
    if(event.review_reason)row.append(element('p','Motivo quarantena: '+String(event.review_reason).slice(0,500)));
+   if(event.reviewer_note)row.append(element('p','Motivazione Admin: '+String(event.reviewer_note).slice(0,500)));
    if(typeof event.payload?.note==='string'&&event.payload.note)
     row.append(element('p','Nota operatore: '+event.payload.note.slice(0,300)));
    if(event.status==='quarantined'){
