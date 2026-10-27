@@ -8,8 +8,9 @@ export async function revokeDevicePush(client){
  if(!subscription)return;
  let serverError=null;
  try {
-  const {error}=await client.from('push_subscriptions')
-   .delete().eq('endpoint',subscription.endpoint);
+  const {error}=await client.rpc('disable_my_push_subscription',{
+   p_endpoint:subscription.endpoint
+  });
   serverError=error;
  }catch(error){serverError=error;}
  const removed=await subscription.unsubscribe();
@@ -23,20 +24,22 @@ export function initializeInAppNotifications(client){
  const toggle=byId('notifications-toggle'),dialog=byId('notifications-dialog'),
  count=byId('notifications-unread'),list=byId('notifications-list'),
  feedback=byId('notifications-feedback'),permission=byId('notifications-permission');
- let user=null,channel=null,poll=null,epoch=0;
+ let user=null,channel=null,poll=null,epoch=0,preferences=null,preferencesEpoch=0;
+ const preferenceFields=['browser_alerts','push_orders','push_groups','push_support','push_announcements'];
+ const preferenceInput=key=>byId('notice-'+key.replaceAll('_','-'));
  const report=(value,error=false)=>{feedback.textContent=value;feedback.dataset.type=error?'error':'information';};
  async function foregroundNotice(notification){
    // This is foreground/browser-open only; no claims of closed-browser Web Push.
-   if(!('Notification' in window)||Notification.permission!=='granted')return;
+   if(!preferences?.browser_alerts||!('Notification' in window)||Notification.permission!=='granted')return;
    try{
      const registration=await navigator.serviceWorker?.ready;
      if(registration?.showNotification){
        await registration.showNotification('BreakApp · nuovo avviso',{
-         body:notification.message,tag:'breakapp-'+notification.id,
+         body:'Hai un nuovo avviso in BreakApp.',tag:'breakapp-'+notification.id,
          data:{url:location.href},icon:`${import.meta.env.BASE_URL}icon-placeholder.svg`
        });
      }else {
-       new Notification('BreakApp · nuovo avviso',{body:notification.message,
+       new Notification('BreakApp · nuovo avviso',{body:'Hai un nuovo avviso in BreakApp.',
          tag:'breakapp-'+notification.id});
      }
    }catch{/* The in-app alert remains the authoritative fallback. */}
@@ -86,8 +89,18 @@ export function initializeInAppNotifications(client){
    renderRows(data||[]);
    report('Avvisi aggiornati.');
  }
+ async function loadPreferences(){
+   if(!user)return;
+   const current=++preferencesEpoch,uid=user.id;
+   const {data,error}=await client.rpc('get_my_notification_preferences');
+   if(current!==preferencesEpoch||user?.id!==uid)return;
+   if(error){preferences=null;report('Preferenze non disponibili: '+error.message,true);return;}
+   preferences=data;
+   for(const key of preferenceFields)preferenceInput(key).checked=data?.[key]===true;
+ }
  function stop(){
    epoch++;
+   preferencesEpoch++;preferences=null;
    if(channel){void client.removeChannel(channel);channel=null;}
    if(poll){clearInterval(poll);poll=null;}
    list.replaceChildren();count.hidden=true;toggle.hidden=true;
@@ -99,6 +112,7 @@ export function initializeInAppNotifications(client){
    user=next;
    if(!user)return;
    toggle.hidden=false;
+   void loadPreferences();
    void load();
    // RLS restricts row delivery to the owner. Polling is fallback for
    // restrictive networks/browser suspensions or unconfigured Realtime.
@@ -121,6 +135,7 @@ export function initializeInAppNotifications(client){
  }
  async function subscribeBackground(){
    if(!user)throw new Error('Accedi prima di attivare le push.');
+   const uid=user.id;
    if(!window.isSecureContext||!('Notification' in window)||
       !('PushManager' in window)||!('serviceWorker' in navigator))
      throw new Error('Questo dispositivo/browser non supporta le Web Push.');
@@ -138,6 +153,7 @@ export function initializeInAppNotifications(client){
      });
    }
    const publicData=subscription.toJSON();
+   if(user?.id!==uid){await subscription.unsubscribe();throw new Error('Account cambiato: ripeti l’attivazione.');}
    if(!publicData.endpoint||!publicData.keys?.p256dh||!publicData.keys?.auth)
      throw new Error('Dati sottoscrizione Web Push incompleti.');
    // An endpoint must never remain registered under two different accounts
@@ -150,13 +166,35 @@ export function initializeInAppNotifications(client){
    return 'Push registrate per questo dispositivo. La consegna richiede il dispatcher server attivo.';
  }
 
+ byId('notification-preferences-form').addEventListener('submit',async event=>{
+   event.preventDefault();if(!user)return;
+   const uid=user.id,current=++preferencesEpoch;
+   const button=event.currentTarget.querySelector('button[type="submit"]');button.disabled=true;
+   const args=Object.fromEntries(preferenceFields.map(key=>['p_'+key,preferenceInput(key).checked]));
+   try{
+     const {data,error}=await client.rpc('set_my_notification_preferences',args);
+     if(user?.id!==uid||current!==preferencesEpoch)return;
+     if(error)throw error;
+     preferences=data;report('Preferenze salvate. Gli invii già affidati al browser possono ancora arrivare.');
+   }catch(error){if(user?.id===uid)report(error.message||'Salvataggio non riuscito.',true);}
+   finally{button.disabled=false;}
+ });
+ byId('notifications-push-disable').addEventListener('click',async()=>{
+   if(!user)return;
+   const uid=user.id,button=byId('notifications-push-disable');button.disabled=true;
+   try{await revokeDevicePush(client);if(user?.id===uid)report('Push disattivate su questo dispositivo.');}
+   catch(error){if(user?.id===uid)report(error.message,true);}
+   finally{button.disabled=false;}
+ });
+
  toggle.addEventListener('click',()=>{
    if(!user)return;
    if(!dialog.open)dialog.showModal();
+   void loadPreferences();
    void load();
  });
  byId('notifications-close').addEventListener('click',()=>dialog.close());
- byId('notifications-refresh').addEventListener('click',()=>void load());
+ byId('notifications-refresh').addEventListener('click',()=>{void load();void loadPreferences();});
  byId('notifications-push').addEventListener('click',async()=>{
    const button=byId('notifications-push');button.disabled=true;
    try{report(await subscribeBackground());}
@@ -168,7 +206,7 @@ export function initializeInAppNotifications(client){
    if(!window.isSecureContext){report('Le notifiche richiedono HTTPS.',true);return;}
    const status=await Notification.requestPermission();
    report(status==='granted'
-    ?'Avvisi del browser attivi mentre BreakApp è aperta. Le push ad app chiusa richiedono ancora il dispatcher VAPID.'
+    ?'Permesso concesso. Gli avvisi del browser seguono le preferenze; per le push ad app chiusa usa il pulsante dedicato.'
     :'Permesso notifiche non concesso: gli avvisi in-app rimangono disponibili.',status!=='granted');
  });
  document.addEventListener('visibilitychange',()=>{

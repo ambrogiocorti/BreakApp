@@ -24,7 +24,7 @@ Il frontend richiede soltanto `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_K
 - Terminale Barista cifrato, vendite/ritiri individuali offline, riconciliazione e revisione Admin.
 - Turni di cassa online/offline, movimenti, conteggi, chiusure immutabili e rettifiche Admin.
 - Report per scuola con CSV, XLSX e PDF; annunci e notifiche personali.
-- Runtime VAPID e cron di invio configurati; consegna su telefoni fisici da collaudare.
+- Runtime VAPID e cron con audit HTTP; preferenze push, revoca del dispositivo e promemoria ritiro/chiusura. Consegna su telefoni fisici da collaudare.
 
 **Stato: sviluppo avanzato, non certificato per la vendita come piattaforma completa.** [ROADMAP.md](ROADMAP.md) documenta i limiti effettivi.
 

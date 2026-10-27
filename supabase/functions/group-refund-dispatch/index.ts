@@ -9,13 +9,15 @@ function equal(a:string,b:string){if(a.length!==b.length)return false;
  let n=0;for(let i=0;i<a.length;i++)n|=a.charCodeAt(i)^b.charCodeAt(i);return n===0;}
 Deno.serve(async request=>{
  if(request.method!=='POST')return response({error:'Metodo non consentito'},405);
+ const supplied=request.headers.get('x-breakapp-dispatch-token')||'';
+ if(supplied.length<32||supplied.length>512)return response({error:'Non autorizzato'},401);
  const url=Deno.env.get('SUPABASE_URL');
  const role=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
  if(!url||!role)return response({error:'Servizio non configurato'},503);
  const db=createClient(url,role,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:config}=await db.rpc('push_runtime_configuration');
- const token=Deno.env.get('PUSH_DISPATCH_TOKEN')||config?.breakapp_dispatch_token||'';
- if(token.length<32||!equal(token,request.headers.get('x-breakapp-dispatch-token')||''))
+ const token=config?.breakapp_dispatch_token||Deno.env.get('PUSH_DISPATCH_TOKEN')||'';
+ if(token.length<32||!equal(token,supplied))
   return response({error:'Non autorizzato'},401);
  const secret=Deno.env.get('STRIPE_SECRET_KEY')||'';
  if(!/^[sr]k_test_[a-zA-Z0-9]+$/.test(secret))

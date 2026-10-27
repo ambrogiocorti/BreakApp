@@ -61,8 +61,20 @@
       <div class="order-actions">
         <button id="notifications-permission" type="button" class="button button-outline button-small">Attiva notifiche del browser</button>
         <button id="notifications-push" type="button" class="button button-primary button-small">Attiva push anche ad app chiusa</button>
+        <button id="notifications-push-disable" type="button" class="button button-outline button-small">Disattiva push su questo dispositivo</button>
         <button id="notifications-refresh" type="button" class="button button-outline button-small">Aggiorna</button>
       </div>
+      <form id="notification-preferences-form">
+        <fieldset><legend>Preferenze notifiche</legend>
+          <p class="catalog-help">Gli avvisi rimangono sempre nel centro notifiche. Queste scelte valgono per i tuoi dispositivi; i permessi del browser restano separati.</p>
+          <label><input id="notice-browser-alerts" type="checkbox" checked /> Avvisi di sistema mentre l’app è aperta</label>
+          <label><input id="notice-push-orders" type="checkbox" checked /> Push su ordini, pagamenti e rimborsi</label>
+          <label><input id="notice-push-groups" type="checkbox" checked /> Push sui gruppi</label>
+          <label><input id="notice-push-support" type="checkbox" checked /> Push di assistenza</label>
+          <label><input id="notice-push-announcements" type="checkbox" checked /> Push degli annunci della scuola</label>
+          <button class="button button-outline button-small" type="submit">Salva preferenze</button>
+        </fieldset>
+      </form>
       <p id="notifications-feedback" role="status" aria-live="polite"></p>
       <div id="notifications-list" class="service-list"></div>
     </dialog>
