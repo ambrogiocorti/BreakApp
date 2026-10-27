@@ -29,3 +29,5 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - Ticket condivisi commentabili dai membri accettati; prodotti, pagamenti e ricevute personali restano riservati al rispettivo titolare.
 - No-show automatici a chiusura senza rimettere prodotti in magazzino; penalità proposta disabilitata per default, mai applicata a ospiti o altri membri del gruppo.
 - Backup PostgreSQL 17 cifrati prima dell'uscita dal runner. Restore rifiutato su target non vuoto; configurazione dei segreti e prova del servizio reale restano attivazioni del titolare.
+
+- Il recupero email degli ospiti collega un'identità email verificata all'ID ospite originale; non trasferisce ordini, pagamenti o ruoli. Consenso esplicito nel profilo verificato, link privato ruotato al recupero e collegamento rimovibile. La sicurezza del cambio email degli account registrati resta invariata.

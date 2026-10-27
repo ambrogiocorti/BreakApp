@@ -43,6 +43,8 @@ jobs:
         run: node tests/e2e/workflows.mjs
       - name: Test shared and personal group support controls on three browsers
         run: node tests/e2e/support.mjs
+      - name: Test guest creation, verified email binding and recovery controls on three browsers
+        run: node tests/e2e/guest.mjs
       - name: Stop preview
         if: always()
         run: kill "$(cat /tmp/breakapp-preview.pid)" || true
