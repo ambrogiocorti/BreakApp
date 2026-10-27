@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { loadSchoolAccess, roleLabel } from './access.js';
+import { authRedirectUrl } from './redirect.js';
 import { getAdminSchools } from '../catalog/utils.js';
 import { initializeAdminCatalog } from '../catalog/catalog.js';
 import { initializeAdminMfa } from './mfa.js';
@@ -222,7 +223,7 @@ export function initializeAuth(config) {
     const data = await runOperation(
       () => client.auth.signUp({
         ...credentials,
-        options: { emailRedirectTo: window.location.origin + '/' }
+        options: { emailRedirectTo: authRedirectUrl(window.location.origin, import.meta.env.BASE_URL) }
       }),
       'Richiesta ricevuta. Se necessario, verifica l’indirizzo email per attivare l’account.'
     );
@@ -230,7 +231,7 @@ export function initializeAuth(config) {
   });
   async function oauth(provider) {
     await runOperation(
-      () => client.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin + '/' } }),
+      () => client.auth.signInWithOAuth({ provider, options: { redirectTo: authRedirectUrl(window.location.origin, import.meta.env.BASE_URL) } }),
       'Reindirizzamento al provider in corso…'
     );
   }
