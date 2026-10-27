@@ -1,8 +1,14 @@
 -- Itemized cash sales, offline lease, replay, stock conflicts and audit.
 reset role;
-update public.daily_stock set capacity=allocated+30
-where product_id='aaaaaaaa-0000-4000-8000-000000000003'
- and bar_id='aaaaaaaa-0000-4000-8000-000000000001';
+select set_config('app.offline_sale_day',
+ (now() at time zone 'Europe/Rome')::date::text,false);
+insert into public.daily_stock(school_id,bar_id,product_id,service_date,capacity,allocated)
+values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ 'aaaaaaaa-0000-4000-8000-000000000001',
+ 'aaaaaaaa-0000-4000-8000-000000000003',
+ current_setting('app.offline_sale_day')::date,30,0)
+on conflict(bar_id,product_id,service_date) do update
+ set capacity=greatest(public.daily_stock.allocated+30,excluded.capacity);
 set role authenticated;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
@@ -40,7 +46,8 @@ select set_config('app.offline_sale_generation',
 select set_config('app.offline_stock_old',
  (select allocated::text from public.daily_stock
   where product_id='aaaaaaaa-0000-4000-8000-000000000003'
-    and bar_id='aaaaaaaa-0000-4000-8000-000000000001'),false);
+    and bar_id='aaaaaaaa-0000-4000-8000-000000000001'
+  and service_date=current_setting('app.offline_sale_day')::date),false);
 set role authenticated;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
@@ -66,14 +73,16 @@ begin
  then raise exception 'Valid lease offline cash was not posted';end if;
  if (select allocated from public.daily_stock
   where bar_id='aaaaaaaa-0000-4000-8000-000000000001'
-  and product_id='aaaaaaaa-0000-4000-8000-000000000003')
+  and product_id='aaaaaaaa-0000-4000-8000-000000000003'
+    and service_date=current_setting('app.offline_sale_day')::date)
   <>current_setting('app.offline_stock_old')::integer+1
  then raise exception 'Offline sale stock not allocated';end if;
 end;$posted$;
 -- Force an inventory shortage: cash is still real, stock becomes conflicted.
 update public.daily_stock set capacity=allocated
 where bar_id='aaaaaaaa-0000-4000-8000-000000000001'
- and product_id='aaaaaaaa-0000-4000-8000-000000000003';
+ and product_id='aaaaaaaa-0000-4000-8000-000000000003'
+ and service_date=current_setting('app.offline_sale_day')::date;
 set role authenticated;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 select set_config('request.jwt.claims','{"aal":"aal1","is_anonymous":false}',false);
@@ -134,7 +143,8 @@ reset role;
 select set_config('app.offline_restock',
  (select (allocated+10)::text from public.daily_stock
   where bar_id='aaaaaaaa-0000-4000-8000-000000000001'
-  and product_id='aaaaaaaa-0000-4000-8000-000000000003'),false);
+  and product_id='aaaaaaaa-0000-4000-8000-000000000003'
+    and service_date=current_setting('app.offline_sale_day')::date),false);
 set role authenticated;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',false);
 select public.resolve_offline_stock_conflict(
