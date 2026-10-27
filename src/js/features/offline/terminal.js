@@ -133,10 +133,18 @@ export function initializeOfflineTerminal(client){
    if(panel.hidden)return;
    info('Verifica autenticazione e dispositivo…');
    try{
-     const {data,error}=await client.auth.getUser();
+     let identity;
+     if(navigator.onLine){
+      const {data,error}=await client.auth.getUser();
+      if(error||!data?.user)throw new Error('Autenticazione online necessaria.');
+      identity=data.user;
+     }else{
+      const {data}=await client.auth.getSession();
+      identity=data?.session?.user;
+      if(!identity)throw new Error('Nessuna sessione locale: riconnettiti per autenticarti.');
+     }
      if(id!==authVersion)return;
-     if(error||!data?.user)throw new Error('Autenticazione online necessaria per inizializzare il dispositivo.');
-     user=data.user;db=await openOfflineDB();
+     user=identity;db=await openOfflineDB();
      if(id!==authVersion)return;
      device=await readDevice(db,contextKey())||null;
      renderLease();await renderQueue();
