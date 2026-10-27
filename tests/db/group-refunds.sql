@@ -47,7 +47,7 @@ reset role;
 do $original_payer$
 declare n int; payer uuid; state text; amt bigint;removed timestamptz;
 begin
- select count(*),max(original_payer_id),max(amount_cents) into n,payer,amt
+ select count(*),min(original_payer_id::text)::uuid,max(amount_cents) into n,payer,amt
  from public.group_line_refunds where group_cart_item_id=current_setting('app.refund_member_line')::uuid;
  select cl.state,i.removed_at into state,removed
  from public.group_line_payment_claims cl
