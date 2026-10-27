@@ -25,6 +25,10 @@ export function initializeOrderWorkflows(client){
   controls.hidden=!staff;presence.closest('label').hidden=context.role!=='bartender';capacity.hidden=context.role!=='school_admin';
   try{
    const rows=await rpc('list_order_approvals',{p_school:staff?context.schoolId:null});if(v!==epoch)return;
+   if(context.role==='school_admin'){
+    const settings=await client.from('schools').select('max_active_approvals').eq('id',context.schoolId);
+    if(v!==epoch)return;if(settings.data?.[0])limit.value=String(settings.data[0].max_active_approvals);
+   }
    list.replaceChildren(make('h3','Grandi ordini'));
    if(!rows.length)list.append(make('p','Nessuna richiesta di approvazione.'));
    for(const a of rows){

@@ -83,9 +83,10 @@ export function initializeCompletionUI(client){
    if(!staff){extra.append(node('h3','I tuoi pagamenti'),node('p','Conferme interne di pagamento e rimborsi. Non sostituiscono il documento fiscale.'));
     for(const p of documents||[])extra.append(node('p',new Date(p.created_at).toLocaleString('it-IT')+' · '+formatEuro(p.amount_cents)+' · '+p.status+' · rimborsi: '+p.refunds.map(r=>formatEuro(r.amount_cents)+' '+r.status).join(', ')));}
    if(admin){
+    const settings=await client.from('schools').select('no_show_penalty_minutes,require_guest_class').eq('id',context.schoolId);
     for(const o of [...(individual.data||[]).map(o=>({...o,kind:'individual',label:'#'+o.display_no})),...(groups||[]).map(o=>({...o,kind:'group',label:o.title||'Gruppo'}))].filter(o=>['delivered','no_show'].includes(o.status)))
      extra.append(button('Richiedi rimborso '+o.label,b=>act(b,async()=>{const reason=prompt('Motivo (almeno 8 caratteri). Online: rimborso ai pagatori originali. Contanti: obbligo di restituzione fisica.');if(reason)await rpc('request_completed_order_refund',{p_kind:o.kind,p_order:o.id,p_key:crypto.randomUUID(),p_reason:reason});})));
-    const policy=formCard(extra,'Politica mancati ritiri'),minutes=input(policy,'Sospensione prenotazioni in minuti (0: nessuna penalità)','number','0');minutes.min='0';minutes.max='10080';
+    const policy=formCard(extra,'Politica mancati ritiri'),minutes=input(policy,'Sospensione prenotazioni in minuti (0: nessuna penalità)','number',String(settings.data?.[0]?.no_show_penalty_minutes||0));minutes.min='0';minutes.max='10080';
     submit(policy,'Salva politica no-show',()=>rpc('set_no_show_policy',{p_school:context.schoolId,p_minutes:Number(minutes.value)}),act);
     const bars=await client.from('bars').select('id,name').eq('school_id',context.schoolId).eq('is_active',true);
     const f=formCard(extra,'Coupon e bundle'),bar=select(f,'Bar',(bars.data||[]).map(b=>[b.id,b.name])),code=input(f,'Codice coupon'),title=input(f,'Titolo'),kind=select(f,'Tipo',[['percent','Sconto percentuale'],['unit_discount','Sconto in centesimi per prodotto'],['bundle','Bundle di prodotti']]),value=input(f,'Valore (% o centesimi)','number','10'),start=input(f,'Inizio','datetime-local'),end=input(f,'Fine','datetime-local'),max=input(f,'Utilizzi totali (vuoto: nessun limite)','number'),per=input(f,'Utilizzi per cliente','number','1');max.required=false;
@@ -97,6 +98,8 @@ export function initializeCompletionUI(client){
     const promos=await rpc('list_school_promotions',{p_bar:bar.value});for(const p of promos)extra.append(node('p',p.code+' · '+p.title),button('Disattiva '+p.code,b=>act(b,()=>rpc('save_school_promotion',{p_id:p.id,p_bar:bar.value,p_code:p.code,p_title:p.title,p_kind:p.kind,p_value:p.value,p_start:new Date().toISOString(),p_end:p.ends_at,p_max:null,p_per_user:1,p_recipe:[]}))));
     const classes=formCard(extra,'Importa classi da CSV o Excel'),file=input(classes,'File CSV o XLSX','file');file.accept='.csv,.xlsx';
     submit(classes,'Importa classi',async()=>rpc('import_school_classes',{p_school:context.schoolId,p_names:await readClassNames(file.files[0])}),act);
+    const required=formCard(extra,'Classe per gli ospiti'),requireClass=select(required,'Richiedi una classe importata',[['false','Facoltativa'],['true','Obbligatoria']]);requireClass.value=String(Boolean(settings.data?.[0]?.require_guest_class));
+    submit(required,'Salva requisito classe',()=>rpc('set_guest_class_policy',{p_school:context.schoolId,p_required:requireClass.value==='true'}),act);
     const people=formCard(extra,'Assegna personale'),email=input(people,'Email verificata','email'),role=select(people,'Ruolo',[['bartender','Barista'],['warehouse_manager','Magazziniere']]);
     submit(people,'Assegna ruolo',()=>rpc('school_assign_staff',{p_school:context.schoolId,p_email:email.value,p_role:role.value}),act);
    }

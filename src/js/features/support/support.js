@@ -25,7 +25,7 @@ export function initializeSupportCenter(client) {
   let groupReferences=[];
   function groupFields(){
     const g=groupReferences.find(g=>g.id===groupSelect.value);groupOptions.hidden=!g;
-    ordersSelect.disabled=Boolean(g);if(g){ordersSelect.value='';school.value=g.school_id;}
+    ordersSelect.disabled=school.disabled=Boolean(g);if(g){ordersSelect.value='';school.value=g.school_id;}
     groupLine.replaceChildren(new Option('Nessuno',''));groupPayment.replaceChildren(new Option('Nessuno',''));
     for(const i of g?.lines||[])groupLine.add(new Option(i.quantity+' × '+i.name,i.id));
     for(const p of g?.payments||[])groupPayment.add(new Option((p.amount_cents/100).toFixed(2)+' € · '+p.status,p.id));

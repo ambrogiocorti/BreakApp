@@ -226,6 +226,33 @@ begin
  if public.reconcile_my_offline_group_pickup((event->>'id')::uuid)->>'status'<>'duplicate' then raise exception 'Offline group replay duplicated delivery';end if;
 end;$$;
 
+-- Guest creation remains rate limited and school-required classes are authoritative.
+do $$declare denied boolean;begin
+ perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');perform public.set_guest_class_policy('81000000-0000-4000-8000-000000000001',true);
+ perform pg_temp.actor('82222222-2222-4222-8222-222222222222','service_role');denied:=false;
+ begin perform public.create_guest_access(gen_random_uuid(),'81000000-0000-4000-8000-000000000001','Test Guest','Unknown',repeat('a',64));exception when others then denied:=sqlerrm like '%classe%';end;
+ if not denied then raise exception 'Guest bypassed required imported class';end if;
+ for i in 1..10 loop perform public.claim_guest_creation(repeat('a',64));end loop;
+ denied:=false;begin perform public.claim_guest_creation(repeat('a',64));exception when others then denied:=true;end;
+ if not denied then raise exception 'Guest request rate limit bypassed';end if;
+ perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');perform public.set_guest_class_policy('81000000-0000-4000-8000-000000000001',false);
+end;$$;
+-- A bundle is revalidated after edits and can be removed without trapping a cart.
+do $$declare promo uuid;g uuid;denied boolean;begin
+ perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');
+ promo:=public.save_school_promotion(null,'81000000-0000-4000-8000-000000000002','BUNDLE50','Bread and fruit','bundle',1,now()-interval '1 hour',now()+interval '1 day',10,3,
+ '[{"product_id":"81000000-0000-4000-8000-000000000004","quantity":1,"discount_cents":50},{"product_id":"81000000-0000-4000-8000-000000000006","quantity":1,"discount_cents":0}]');
+ perform pg_temp.actor('81111111-1111-4111-8111-111111111111');
+ g:=public.create_group_draft('81000000-0000-4000-8000-000000000002','81000000-0000-4000-8000-000000000008',gen_random_uuid(),'Bundle test',false,4);
+ perform public.replace_group_personal_cart(g,'[{"product_id":"81000000-0000-4000-8000-000000000004","quantity":1},{"product_id":"81000000-0000-4000-8000-000000000006","quantity":1}]');
+ perform public.apply_group_promotion(g,'BUNDLE50',gen_random_uuid());
+ if (select sum(quantity*unit_price_cents) from public.group_cart_items where group_id=g and removed_at is null)<>250 then raise exception 'Bundle quote incorrect';end if;
+ perform public.replace_group_personal_cart(g,'[{"product_id":"81000000-0000-4000-8000-000000000004","quantity":2},{"product_id":"81000000-0000-4000-8000-000000000006","quantity":1}]');
+ denied:=false;begin perform public.confirm_group_order(g,gen_random_uuid(),true,45,9,10,now());exception when others then denied:=true;end;
+ if not denied then raise exception 'Bundle ratio bypass after member edit';end if;
+ perform public.apply_group_promotion(g,'',gen_random_uuid());
+ if (select sum(quantity*unit_price_cents) from public.group_cart_items where group_id=g and removed_at is null)<>500 or exists(select 1 from public.promotion_redemptions where group_id=g and active) then raise exception 'Removing unused coupon did not restore quote and quota';end if;
+end;$$;
 -- Shared tickets expose neither private lines nor another payer's receipt.
 do $$declare g uuid;shared uuid;personal uuid;line uuid;pay uuid;r uuid;denied boolean;
 begin

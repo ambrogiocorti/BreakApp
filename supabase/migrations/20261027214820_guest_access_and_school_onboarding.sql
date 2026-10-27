@@ -1,4 +1,5 @@
 begin;
+alter table public.schools add column require_guest_class boolean not null default false;
 create table app_private.guest_access_keys(
  user_id uuid primary key references auth.users(id) on delete cascade,
  school_id uuid not null references public.schools(id),name text not null check(length(name) between 2 and 100),
@@ -13,10 +14,16 @@ revoke all on app_private.guest_access_keys,app_private.guest_rate_limits from p
 create function public.claim_guest_creation(p_fingerprint text)
 returns void language plpgsql security definer set search_path='' as $$
 declare n integer;begin
- if auth.jwt()->>'role' is distinct from 'service_role' or p_fingerprint!~'^[a-f0-9]{64}$' then raise exception 'Solo backend';end if;
+ if auth.jwt()->>'role' is distinct from 'service_role' or coalesce(p_fingerprint,'')!~'^[a-f0-9]{64}$' then raise exception 'Solo backend';end if;
  insert into app_private.guest_rate_limits(fingerprint,minute_bucket,n) values(p_fingerprint,date_trunc('minute',now()),1)
  on conflict(fingerprint,minute_bucket) do update set n=guest_rate_limits.n+1 returning guest_rate_limits.n into n;
  if n>10 then raise exception 'Troppe richieste: riprova più tardi';end if;
+ insert into app_private.guest_rate_limits(fingerprint,minute_bucket,n) values('global-minute',date_trunc('minute',now()),1)
+ on conflict(fingerprint,minute_bucket) do update set n=guest_rate_limits.n+1 returning guest_rate_limits.n into n;
+ if n>300 then raise exception 'Limite temporaneo del servizio ospiti raggiunto';end if;
+ insert into app_private.guest_rate_limits(fingerprint,minute_bucket,n) values('global-day',date_trunc('day',now()),1)
+ on conflict(fingerprint,minute_bucket) do update set n=guest_rate_limits.n+1 returning guest_rate_limits.n into n;
+ if n>1000 then raise exception 'Limite giornaliero del servizio ospiti raggiunto';end if;
  delete from app_private.guest_rate_limits where minute_bucket<now()-interval '1 day';
 end;$$;
 create function public.create_guest_access(p_user uuid,p_school uuid,p_name text,p_class text,p_hash text)
@@ -24,6 +31,7 @@ returns void language plpgsql security definer set search_path='' as $$
 declare m uuid;begin
  if auth.jwt()->>'role' is distinct from 'service_role' then raise exception 'Solo backend';end if;
  if not exists(select 1 from public.schools where id=p_school and is_active) then raise exception 'Scuola non disponibile';end if;
+ if exists(select 1 from public.schools where id=p_school and require_guest_class) and not exists(select 1 from public.school_classes where school_id=p_school and name=btrim(p_class) and active) then raise exception 'Scegli una classe attiva della scuola';end if;
  insert into app_private.guest_access_keys(user_id,school_id,name,class_name,token_hash) values(p_user,p_school,btrim(p_name),btrim(p_class),p_hash);
  insert into public.school_memberships(school_id,user_id,membership_status) values(p_school,p_user,'active') returning id into m;
  insert into public.role_assignments(membership_id,role_code) values(m,'customer');
@@ -60,8 +68,16 @@ create table public.school_classes(
 create index school_class_school on public.school_classes(school_id);
 alter table public.school_classes enable row level security;
 revoke all on public.school_classes from public,anon,authenticated;
-grant select on public.school_classes to authenticated;
-create policy classes_active on public.school_classes for select to authenticated using(active and exists(select 1 from public.schools s where s.id=school_classes.school_id and s.is_active));
+grant select on public.school_classes to anon,authenticated;
+create policy classes_active on public.school_classes for select to anon,authenticated using(active and exists(select 1 from public.schools s where s.id=school_classes.school_id and s.is_active));
+create function public.set_guest_class_policy(p_school uuid,p_required boolean)
+returns void language plpgsql security definer set search_path='' as $$begin
+ if not app_private.can_review_school_offline(p_school) or p_required is null then raise exception 'Admin con 2FA richiesto';end if;
+ if p_required and not exists(select 1 from public.school_classes where school_id=p_school and active) then raise exception 'Importa prima le classi della scuola';end if;
+ update public.schools set require_guest_class=p_required where id=p_school;
+end;$$;
+revoke all on function public.set_guest_class_policy(uuid,boolean) from public,anon,authenticated;
+grant execute on function public.set_guest_class_policy(uuid,boolean) to authenticated;
 create table app_private.school_onboarding_audit(
  id bigint generated always as identity primary key,school_id uuid not null references public.schools(id),actor_id uuid not null references auth.users(id),
  action text not null,details jsonb not null,created_at timestamptz not null default now()

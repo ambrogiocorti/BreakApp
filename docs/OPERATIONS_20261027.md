@@ -65,4 +65,4 @@ select cron.unschedule('breakapp-push-and-refunds');
 
 Ripristinare il frontend dal precedente commit. Non eliminare registri di cassa, eventi, ricevute, rimborsi o Vault. Con dati reali correggere mediante migrazioni successive e movimenti compensativi. Un rollback delle funzioni deve preservare recupero eventi e cronologia dispositivi.
 
-Per i moduli ancora mancanti vedere `ROADMAP.md`; non dichiarare completa la piattaforma sulla sola base dei test automatici.
+L'incremento successivo completa approvazioni, modifiche, ospiti, promozioni, ticket e offline condiviso: vedere `COMPLETE_WORKFLOWS.md`. Le attivazioni esterne e il collaudo operativo sono elencati in `ROADMAP.md`.

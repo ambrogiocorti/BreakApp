@@ -121,7 +121,9 @@ export function initializeGroupDrafts(client){
   if(!couponBox){couponBox=el('div','','order-actions');couponBox.id='group-coupon-box';const code=el('input');code.id='group-coupon-code';code.maxLength=32;code.placeholder='Codice coupon del gruppo';code.setAttribute('aria-label','Codice coupon del gruppo');
    const apply=el('button','Applica coupon al gruppo','button button-outline button-small');apply.type='button';
    apply.addEventListener('click',async()=>{const r=await client.rpc('apply_group_promotion',{p_group:detail.id,p_code:code.value,p_key:crypto.randomUUID()});if(r.error)return report(r.error.message,true);await showGroup(detail.id);});
-   couponBox.append(code,apply);byId('group-manage').append(couponBox);}
+   const remove=el('button','Rimuovi coupon','button button-outline button-small');remove.type='button';
+   remove.addEventListener('click',async()=>{const r=await client.rpc('apply_group_promotion',{p_group:detail.id,p_code:'',p_key:crypto.randomUUID()});if(r.error)return report(r.error.message,true);code.value='';await showGroup(detail.id);});
+   couponBox.append(code,apply,remove);byId('group-manage').append(couponBox);}
   couponBox.hidden=!managing;
   byId('group-leave').hidden=detail.status!=='draft'||!['accepted','pending'].includes(detail.my_status);
   if(managing){

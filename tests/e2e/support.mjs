@@ -11,7 +11,7 @@ const user={id:'member'},tickets=[],messages=[];window.fixture={calls:[]};
 const groups=[{id:'group-1',school_id:'school-1',title:'Gruppo intervallo',lines:[{id:'own-line',quantity:1,name:'Panino'}],payments:[{id:'own-payment',amount_cents:250,status:'succeeded'}]}];
 const client={auth:{onAuthStateChange(){},async getUser(){return{data:{user}}},mfa:{async getAuthenticatorAssuranceLevel(){return{data:{currentLevel:'aal1'}}}}},
 from(name){let filters=[],only=false;const q={select(){return this},eq(k,v){filters.push([k,v]);return this},order(){return this},limit(){return this},in(){return this},single(){only=true;return this},
-then(resolve,reject){let data=name==='schools'?[{id:'school-1',name:'Scuola'}]:name==='support_tickets'?tickets:name==='support_messages'?messages:[];
+then(resolve,reject){let data=name==='schools'?[{id:'school-1',name:'Scuola',is_active:true}]:name==='support_tickets'?tickets:name==='support_messages'?messages:[];
  data=data.filter(row=>filters.every(([k,v])=>row[k]===v));return Promise.resolve({data:only?data[0]:data}).then(resolve,reject)}};return q},
 async rpc(name,args){window.fixture.calls.push({name,args});
  if(name==='my_support_group_references')return{data:groups};
