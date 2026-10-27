@@ -69,7 +69,7 @@ data, browser/OS, log CI e identificativo build.
 - [ ] OFF-01–OFF-06 con prove su dispositivi fisici
 - [ ] PAY-01 e verifica merchant Stripe abilitato
 - [ ] Flussi ancora mancanti (pagamenti di gruppo e contabilità offline) implementati
-- [x] Test di sicurezza, accessibilità, privacy, backup/ripristino approvati
+- [ ] Test di sicurezza, accessibilità, privacy, backup/ripristino approvati
 
 **Importante:** i test Playwright emulati, i test SQL e la CI sono utili,
 ma **non sostituiscono** il collaudo con app chiusa su smartphone/tablet
