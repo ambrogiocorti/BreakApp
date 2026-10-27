@@ -128,6 +128,10 @@ export function initializeGroupDrafts(client){
    byId('group-reschedule-window').value=detail.pickup_window_id;
    byId('group-transfer').disabled=!candidates.length;
   }
+  byId('group-confirm-panel').hidden=!managing;
+  if(!managing)byId('group-accept-unready').checked=false;
+  byId('group-confirmed-panel').hidden=true;
+  if(detail.status==='confirmed')await loadConfirmedGroup(detail.id,seq);
   const readyButton=byId('group-ready');
   readyButton.textContent=detail.my_ready?'Modifica il mio ordine':'Ho finito';
   cartForm.hidden=!accepted||Boolean(detail.my_ready);
@@ -220,6 +224,71 @@ export function initializeGroupDrafts(client){
   });
   if(error)return report(error.message,true);
   await showGroup(detail.id);
+ });
+ let finalConfirmKey=null;
+ async function loadConfirmedGroup(groupId,seq){
+  const {data:orders,error}=await client.rpc('list_my_confirmed_group_orders');
+  if(seq!==version)return;
+  if(error)return report(error.message,true);
+  const order=(orders||[]).find(o=>o.group_id===groupId);
+  if(!order)return report('Ordine confermato non disponibile.',true);
+  const {data:summary,error:summaryError}=await client.rpc('group_order_details',{
+   p_group_order_id:order.id
+  });
+  if(seq!==version)return;
+  if(summaryError)return report(summaryError.message,true);
+  byId('group-confirmed-panel').hidden=false;
+  byId('group-confirmed-summary').replaceChildren(
+   el('strong','Stato: '+summary.status),
+   el('p','Totale '+money(Number(summary.total_cents||0))+
+     ' · Pagato '+money(Number(summary.paid_cents||0))+
+     ' · Residuo '+money(Number(summary.due_cents||0))),
+   el('p','Ritiro unico dal coordinatore, dopo il saldo completo.')
+  );
+  const box=byId('group-ticket-qr');box.replaceChildren();
+  byId('group-ticket-token').textContent='';
+  if(summary.coordinator&&summary.pickup_token){
+   try{
+    if(typeof window.QRCode!=='function')throw new Error('QR non disponibile');
+    new window.QRCode(box,{text:'breakapp:group:'+summary.pickup_token,
+     width:225,height:225,colorDark:'#080f21',colorLight:'#ffffff',
+     correctLevel:window.QRCode.CorrectLevel.M});
+   }catch{box.append(el('p','Mostra al Barista il codice UUID.'));}
+   byId('group-ticket-token').textContent='Codice di ritiro: '+summary.pickup_token;
+  }
+  const cancel=byId('group-cancel-confirmed');
+  cancel.hidden=!summary.coordinator||!['confirmed','ready'].includes(summary.status);
+  cancel.dataset.orderId=summary.id;
+ }
+ byId('group-confirm').addEventListener('click',async()=>{
+  if(!detail?.coordinator||detail.status!=='draft')return;
+  const unready=byId('group-accept-unready').checked;
+  if(!unready&&Array.isArray(detail.members)&&detail.members.some(
+   m=>m.status==='accepted'&&!m.ready))
+   return report('Conferma esplicitamente i partecipanti non pronti.',true);
+  const button=byId('group-confirm');button.disabled=true;
+  finalConfirmKey ||=crypto.randomUUID();
+  try{
+   report('Verifica GPS, disponibilità e scorte…');
+   const gps=await coordinates();
+   const {data:order,error}=await client.rpc('confirm_group_order',{
+    p_group_id:detail.id,p_request_key:finalConfirmKey,
+    p_accept_unready:unready,...gps
+   });
+   if(error)throw error;
+   finalConfirmKey=null;
+   await myGroups();await showGroup(detail.id);
+   report('Ordine gruppo confermato: '+order.slice(0,8)+'.');
+  }catch(err){report(err.message||'Conferma non riuscita.',true);}
+  finally{button.disabled=false;}
+ });
+ byId('group-cancel-confirmed').addEventListener('click',async()=>{
+  const id=byId('group-cancel-confirmed').dataset.orderId;
+  if(!id||!confirm('Annullare l’intero ordine e liberare le scorte?'))return;
+  const {error}=await client.rpc('cancel_confirmed_group_order',{p_group_order_id:id});
+  if(error)return report(error.message,true);
+  await myGroups();if(detail)await showGroup(detail.id);
+  report('Ordine annullato e scorte ripristinate.');
  });
  async function mutateGroup(rpc,args,{close=false,success='Gruppo aggiornato.'}={}){
   if(!detail)return;

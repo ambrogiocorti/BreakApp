@@ -12,6 +12,7 @@ import { initializeWarehouseInventory } from './features/warehouse/inventory.js'
 import { initializeWorkspaceDashboards } from './features/shell/dashboards.js';
 import { initializePlatformPilot } from './features/shell/platform-pilot.js';
 import { initializeGroupDrafts } from './features/groups/groups.js';
+import { initializeGroupService } from './features/groups/group-service.js';
 import { initializeInAppNotifications } from './features/notifications/notifications.js';
 import { initializeOfflineTerminal } from './features/offline/terminal.js';
 import { initializeOfflineReview } from './features/offline/review.js';
@@ -27,6 +28,7 @@ initializeWarehouseInventory(client);
 initializeWorkspaceDashboards(client);
 initializePlatformPilot(client);
 initializeGroupDrafts(client);
+initializeGroupService(client);
 initializeInAppNotifications(client);
 initializeOfflineTerminal(client);
 initializeOfflineReview(client);
