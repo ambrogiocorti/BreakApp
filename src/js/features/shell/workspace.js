@@ -113,9 +113,39 @@ export function initializeWorkspace(client){
  document.body.append(moreContainer);
  let user=null,contexts=[],active=null,route='',epoch=0,ready=false;
  const storageKey='breakapp:last-workspace-context';
+ const offlineRoleCacheKey='breakapp:offline-bartender-context-v1';
  const safelyStored=()=>{try{return localStorage.getItem(storageKey);}catch{return null;}};
  const remember=key=>{try{localStorage.setItem(storageKey,key);}catch{/* nessun errore funzionale */}};
  const clearStore=()=>{try{localStorage.removeItem(storageKey);}catch{}};
+ function saveVerifiedOfflineRole(ctx){
+  if(!navigator.onLine||ctx.role!=='bartender'||!ctx.verified||!user?.id)return;
+  try{localStorage.setItem(offlineRoleCacheKey,JSON.stringify({
+   userId:user.id,schoolId:ctx.schoolId,schoolName:ctx.schoolName,
+   expiresAt:Date.now()+8*60*60*1000
+  }));}catch{/* Storage denied: offline restore may be unavailable. */}
+ }
+ function restoreOfflineBarista(sessionUser){
+  if(navigator.onLine||!sessionUser)return false;
+  let cached;
+  try{cached=JSON.parse(localStorage.getItem(offlineRoleCacheKey)||'null');}
+  catch{return false;}
+  if(cached?.userId!==sessionUser.id||
+   !/^[0-9a-f-]{36}$/i.test(cached.schoolId||'')||
+   typeof cached.schoolName!=='string'||cached.schoolName.length>150||
+   !Number.isSafeInteger(cached.expiresAt)||cached.expiresAt<Date.now())
+   return false;
+  contexts=[{key:cached.schoolId+':bartender',
+   schoolId:cached.schoolId,schoolName:cached.schoolName,
+   role:'bartender',verified:true}];
+  renderContexts();
+  sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
+  profileSwitcher.hidden=true;select.disabled=true;profileSelect.disabled=true;
+  document.body.dataset.workspace='true';ready=true;
+  setContext(contexts[0],{restoreRoute:true});
+  document.getElementById('school-access-status').textContent=
+   'Ruolo Barista ripristinato dalla cache per operazioni locali: il server rivaliderà ogni evento.';
+  return true;
+ }
  function notifyContext(){
    if(active)window.dispatchEvent(new CustomEvent('breakapp:workspace-context',{
      detail:{schoolId:active.schoolId,role:active.role,barId:null,
@@ -191,6 +221,7 @@ export function initializeWorkspace(client){
  function setContext(context,{restoreRoute=false}={}){
    active=context;
    remember(context.key);
+   saveVerifiedOfflineRole(context);
    select.value=context.key;
    profileSelect.value=context.key;
    schoolLabel.textContent=context.schoolName;
@@ -236,6 +267,7 @@ export function initializeWorkspace(client){
    const token=++epoch;
    user=userNext;
    userId.textContent=userNext.email||'Account BreakApp';
+   if(restoreOfflineBarista(userNext))return;
    const [access,sch,assurance,platform]=await Promise.allSettled([
      loadSchoolAccess(client,userNext.id),
      client.from('schools').select('id,name').eq('is_active',true).order('name'),
@@ -305,8 +337,16 @@ export function initializeWorkspace(client){
    else if(user?.id!==next.id)void refreshSession(next);
  });
  client.auth.onAuthStateChange(onAuth);
- client.auth.getUser().then(({data,error})=>{
+ client.auth.getUser().then(async({data,error})=>{
    if(!error&&data?.user && user?.id!==data.user.id)void refreshSession(data.user);
+   else if(error&&!navigator.onLine){
+    const {data:cached}=await client.auth.getSession();
+    if(cached?.session?.user && user?.id!==cached.session.user.id)
+     void refreshSession(cached.session.user);
+   }
+ });
+ window.addEventListener('online',()=>{
+  if(user)void refreshSession(user);
  });
  return {refresh:()=>{if(user)void refreshSession(user);},getContext:()=>active};
 }
