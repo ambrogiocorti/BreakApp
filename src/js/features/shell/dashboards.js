@@ -1,3 +1,4 @@
+import {exportSchoolOrdersCsv,downloadCsv} from './order-export.js';
 const make=(tag,text,cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
 const money=cents=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(cents/100);
 export function initializeWorkspaceDashboards(client) {
@@ -10,6 +11,18 @@ export function initializeWorkspaceDashboards(client) {
  platformList=document.getElementById('platform-school-list'),
  platformFeedback=document.getElementById('platform-feedback');
  let context=null,version=0,user=null;
+ const exportButton=make('button','Esporta ordini CSV','button');
+ exportButton.type='button';exportButton.addEventListener('click',async()=>{
+  if(!context?.verified||context.role!=='school_admin'||!context.schoolId)return;
+  exportButton.disabled=true;adminFeedback.textContent='Esportazione in corso…';
+  try{const result=await exportSchoolOrdersCsv(client,context.schoolId);
+   if(!context?.verified||context.role!=='school_admin')return;
+   downloadCsv(result.csv,'breakapp-ordini-'+new Date().toISOString().slice(0,10)+'.csv');
+   adminFeedback.textContent=result.count+' ordini esportati'+(result.truncated?' (limite di 20.000 righe raggiunto)':'')+'.';
+  }catch(error){adminFeedback.textContent='Esportazione non riuscita: '+error.message;}
+  finally{exportButton.disabled=false;}
+ });
+ adminFeedback?.parentElement?.append(exportButton);
  function metric(label,value,note){
    const box=make('article','','metric-card');
    box.append(make('p',label),make('strong',String(value)),make('span',note));
