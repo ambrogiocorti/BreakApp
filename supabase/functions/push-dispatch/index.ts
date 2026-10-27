@@ -16,13 +16,14 @@ function constantTime(a:string,b:string){
 }
 Deno.serve(async request=>{
  if(request.method!=='POST')return out({error:'Metodo non consentito'},405);
+ const supplied=request.headers.get('x-breakapp-dispatch-token')||'';
+ if(supplied.length<32||supplied.length>512)return out({error:'Non autorizzato'},401);
  const url=Deno.env.get('SUPABASE_URL');
  const service=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
  if(!url||!service)return out({error:'Dispatcher non configurato'},503);
  const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
  const {data:config}=await db.rpc('push_runtime_configuration');
  const key=config?.breakapp_dispatch_token||Deno.env.get('PUSH_DISPATCH_TOKEN')||'';
- const supplied=request.headers.get('x-breakapp-dispatch-token')||'';
  if(key.length<32||!constantTime(key,supplied))return out({error:'Non autorizzato'},401);
  const vapidPublic=Deno.env.get('VAPID_PUBLIC_KEY')||config?.breakapp_vapid_public;
  const vapidPrivate=Deno.env.get('VAPID_PRIVATE_KEY')||config?.breakapp_vapid_private;
@@ -35,7 +36,7 @@ Deno.serve(async request=>{
   const {error:warningError}=await db.rpc('warn_group_drafts_before_expiry',{p_limit:50});
   const {error:expiryError}=await db.rpc('expire_group_drafts',{p_limit:50});
   if(warningError||expiryError||reminderError)return out({error:'Manutenzione notifiche non disponibile'},503);
-  const {data:jobs,error:claimError}=await db.rpc('claim_push_jobs',{p_limit:5});
+  const {data:jobs,error:claimError}=await db.rpc('claim_push_jobs',{p_limit:50});
   if(claimError)return out({error:'Coda indisponibile'},503);
   const results=await Promise.all(((jobs||[]) as PushJob[]).map(async job=>{
     let ok=false,status=0,err='';

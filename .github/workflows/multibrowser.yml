@@ -31,7 +31,7 @@ jobs:
           node scripts/prepare-github-pages.mjs
       - name: Serve static output
         run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 --base /BreakApp/ &
+          npm run preview -- --host 127.0.0.1 --port 4173 --base /BreakApp/ > /tmp/breakapp-preview.log 2>&1 &
           echo $! > /tmp/breakapp-preview.pid
       - name: Smoke test desktop and mobile on three browsers
         env:
