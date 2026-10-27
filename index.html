@@ -455,6 +455,20 @@
             </form>
           </article>
         </div>
+        <article class="pilot-card">
+          <h3>Ritiri del giorno senza Internet</h3>
+          <p class="catalog-help">Prima di disconnetterti sincronizza gli ordini già pronti. La cache cifrata contiene solo gli ordini del giorno: una consegna resta in sospeso finché il server ne verifica lo stato. Non utilizzare il POS esterno offline.</p>
+          <button id="offline-refresh-manifest" type="button" class="button button-outline button-small">Sincronizza ordini pronti online</button>
+          <p id="offline-manifest-summary" role="status">Ordini non ancora caricati.</p>
+          <form id="offline-pickup-form" hidden>
+            <label for="offline-pickup-token">QR o codice UUID ordine</label>
+            <input id="offline-pickup-token" type="text" autocomplete="off" required
+              placeholder="Incolla il codice QR dell'ordine"/>
+            <button id="offline-pickup-find" type="button" class="button button-outline button-small">Verifica nell'archivio cifrato</button>
+            <div id="offline-pickup-preview" role="status" class="catalog-help"></div>
+            <button type="submit" class="button button-primary">Conferma consegna fisica</button>
+          </form>
+        </article>
         <article class="pilot-card offline-queue-card">
           <h3>Coda locale e riconnessione</h3>
           <p class="catalog-help">Le vendite con lease valido e scorte coerenti vengono riconciliate. Le operazioni dubbie o con conflitto restano in verifica Admin. La conferma digitale non sostituisce il documento fiscale.</p>
