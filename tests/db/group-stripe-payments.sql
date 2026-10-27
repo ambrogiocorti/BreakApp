@@ -107,6 +107,7 @@ select public.finalize_verified_group_checkout('evt_grouptest3',
  current_setting('app.group_stripe_amount')::bigint,
  'eur',true,'{}'::jsonb) as settled \gset
 select set_config('app.group_stripe_settled',:'settled',false);
+reset role;
 do $settled$
 begin
  if current_setting('app.group_stripe_settled')<>'succeeded' or
@@ -114,6 +115,8 @@ begin
    where payment_id=current_setting('app.group_stripe_attempt')::uuid)<>'paid'
  then raise exception 'Payment proof was not committed';end if;
 end;$settled$;
+set role service_role;
+select set_config('request.jwt.claims','{"role":"service_role"}',false);
 select public.finalize_verified_group_checkout('evt_grouptest3',
  'acct_1UUniH2RLt7x5EeZ','cs_test_group1234','pi_grouptest1234',
  current_setting('app.group_stripe_attempt')::uuid,
