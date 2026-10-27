@@ -71,6 +71,9 @@ data, browser/OS, log CI e identificativo build.
 | OFF-04 | Due dispositivi Barista | Trasferire lease mentre il primo è disconnesso | Vecchia generazione revocata; evento dubbio in quarantena | DA ESEGUIRE |
 | OFF-05 | Admin scuola, MFA attivo | Approva/rifiuta con motivazione | Audit immodificabile e nessun incasso automatico | DA ESEGUIRE |
 | OFF-06 | Cliente, altro tenant o Admin senza MFA | Tentare review offline | RPC rifiutata | DA ESEGUIRE |
+| OFF-07 | Tablet Barista offline | Ritiro ordine già pronto/saldato nel manifest cifrato | QR corretto, nessun doppio ritiro, sync una sola volta | DA ESEGUIRE |
+| OFF-08 | Tablet Barista offline | Ritiro pronto con saldo contanti | Incasso fisico, consegna atomica alla riconnessione | DA ESEGUIRE |
+| OFF-09 | Cliente online + tablet offline | Pagamento Stripe mentre il Barista incassa contanti | Rimborso Stripe al pagatore originale con webhook verificato | DA ESEGUIRE |
 | PAY-01 | Stripe sandbox e POS di test | Riconciliare checkout/cash/rimborso | Nessun doppio incasso, webhook firmato e rimborso idempotente | DA ESEGUIRE |
 
 ## 3. Gate di rilascio
@@ -79,7 +82,7 @@ data, browser/OS, log CI e identificativo build.
 - [ ] GET `push-public-key` = 200 e dispatcher eseguito realmente
 - [ ] PUSH-01–PUSH-06 con prove su dispositivi fisici
 - [ ] GROUP-01–GROUP-02 con prove su dispositivi fisici
-- [ ] OFF-01–OFF-06 con prove su dispositivi fisici
+- [ ] OFF-01–OFF-09 con prove su dispositivi fisici
 - [ ] PAY-01 e verifica merchant Stripe abilitato
 - [ ] Rimborsi Stripe di gruppo eseguiti e verificati in sandbox con webhook firmato
 - [ ] Tutti i flussi offline (ritiri, cassa/turni e doppio incasso) completati e verificati
@@ -88,3 +91,11 @@ data, browser/OS, log CI e identificativo build.
 **Importante:** i test Playwright emulati, i test SQL e la CI sono utili,
 ma **non sostituiscono** il collaudo con app chiusa su smartphone/tablet
 reali. Approvare un evento offline non equivale a registrare un pagamento.
+
+## Controllo rimborsi non riconciliati
+
+La coda evita di emettere ripetutamente un rimborso Stripe dopo che
+il server ne ha ricevuto l'ID. Per richieste senza ID oltre il limite
+sicuro della chiave di idempotenza (23 ore), non riemettere automaticamente:
+verificare il PaymentIntent e la lista rimborsi direttamente su Stripe,
+poi riconciliare manualmente. Non cancellare mai l'incasso fisico.
