@@ -57,10 +57,20 @@ Deno.serve(async request=>{
       key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if(!url||!key)return respond({error:'Backend non configurato'},503);
     const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-    const {data,error}=await admin.rpc('reconcile_signed_checkout_expiry',{
-      p_event_id:evt.id,p_stripe_account:evt.account,
-      p_session:expired.id,p_attempt:expired.client_reference_id
+    const {data:kind,error:kindError}=await admin.rpc('stripe_payment_attempt_kind',{
+      p_attempt:expired.client_reference_id
     });
+    if(kindError||!['group','individual'].includes(kind))
+      return respond({error:'Tentativo Stripe sconosciuto'},500);
+    const {data,error}=kind==='group'
+      ?await admin.rpc('reconcile_signed_group_checkout_expiry',{
+        p_event_id:evt.id,p_account:evt.account,
+        p_session:expired.id,p_attempt:expired.client_reference_id
+       })
+      :await admin.rpc('reconcile_signed_checkout_expiry',{
+        p_event_id:evt.id,p_stripe_account:evt.account,
+        p_session:expired.id,p_attempt:expired.client_reference_id
+       });
     if(error)return respond({error:'Scadenza non riconciliata'},500);
     return respond({received:true,result:data},200);
   }
@@ -87,9 +97,11 @@ Deno.serve(async request=>{
     if(error)return respond({error:'Rimborso non riconciliato'},500);
     return respond({received:true,result:data},200);
   }
-  if(evt.type!=='checkout.session.completed')
+  if(!['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(evt.type))
    return respond({received:true,handled:false},200);
   const session=evt.data?.object;
+  if(evt.type==='checkout.session.completed'&&session?.payment_status!=='paid')
+   return respond({received:true,handled:false,deferred:true},200);
   if(!session||session.object!=='checkout.session'||
    session.mode!=='payment'||session.payment_status!=='paid'||
    session.currency!=='eur'||session.amount_total<=0||
@@ -100,16 +112,25 @@ Deno.serve(async request=>{
    key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if(!url||!key)return respond({error:'Backend non configurato'},503);
   const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data,error}=await admin.rpc('finalize_verified_checkout',{
-   p_event_id:evt.id,p_event_account:evt.account,
-   p_session:session.id,p_intent:session.payment_intent,
-   p_attempt:session.metadata.attempt_id,
-   p_amount:session.amount_total,p_currency:session.currency,
-   p_paid:true,p_payload:{
-     event_id:evt.id,event_type:evt.type,session_id:session.id,
-     account:evt.account,amount_total:session.amount_total,currency:session.currency
-   }
+  const {data:kind,error:kindError}=await admin.rpc('stripe_payment_attempt_kind',{
+   p_attempt:session.metadata.attempt_id
   });
+  if(kindError||!['group','individual'].includes(kind))
+   return respond({error:'Tentativo di pagamento non registrato'},500);
+  const verified={
+   p_event_id:evt.id,p_session:session.id,p_intent:session.payment_intent,
+   p_attempt:session.metadata.attempt_id,p_amount:session.amount_total,
+   p_currency:session.currency,p_paid:true,
+   p_payload:{event_id:evt.id,event_type:evt.type,session_id:session.id,
+    account:evt.account,amount_total:session.amount_total,currency:session.currency}
+  };
+  const {data,error}=kind==='group'
+   ?await admin.rpc('finalize_verified_group_checkout',{
+      ...verified,p_account:evt.account
+    })
+   :await admin.rpc('finalize_verified_checkout',{
+      ...verified,p_event_account:evt.account
+    });
   if(error){
    // Stripe retries non-2xx responses. Never acknowledge uncommitted ledger.
    return respond({error:'Registrazione transazione non riuscita'},500);

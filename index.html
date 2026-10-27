@@ -300,6 +300,12 @@
             <button type="button" id="group-cancel" class="button button-outline button-small">Annulla bozza</button>
           </div>
           <button type="button" id="group-leave" class="button button-outline button-small" hidden>Esci dal gruppo</button>
+          <div id="group-payments-panel" hidden>
+            <h4>Paga righe intere con Stripe</h4>
+            <p class="catalog-help">Puoi pagare prodotti tuoi o di altri partecipanti. Ogni riga viene pagata per intero, senza importi arbitrari.</p>
+            <div id="group-payable-list" class="service-list"></div>
+            <button id="group-pay-selected" type="button" class="button button-primary">Paga le righe selezionate</button>
+          </div>
           <div id="group-confirm-panel" hidden>
             <h4>Conferma definitiva dell'ordine di gruppo</h4>
             <p class="catalog-help">Alla conferma verranno riverificate posizione, disponibilità e scorte.</p>

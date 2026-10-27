@@ -109,6 +109,9 @@ export function initializeGroupDrafts(client){
    u.searchParams.set('invite',detail.invite_token);u.hash='groups';
    byId('group-invite-link').value=u.toString();
   }
+  const canPay=detail.my_status==='accepted'&&['draft','confirmed'].includes(detail.status);
+  byId('group-payments-panel').hidden=!canPay;
+  if(canPay)await loadPayableLines(detail.id,seq);
   const accepted=detail.my_status==='accepted'&&detail.status==='draft';
   byId('group-personal').hidden=!accepted;
   byId('group-coordinator-panel').hidden=!detail.coordinator;
@@ -224,6 +227,46 @@ export function initializeGroupDrafts(client){
   });
   if(error)return report(error.message,true);
   await showGroup(detail.id);
+ });
+ async function loadPayableLines(groupId,seq){
+  const {data,error}=await client.rpc('group_payable_lines',{p_group_id:groupId});
+  if(seq!==version)return;
+  const list=byId('group-payable-list');list.replaceChildren();
+  if(error){report(error.message,true);return;}
+  for(const line of data||[]){
+   const row=el('label','','group-member-row');
+   const check=el('input');check.type='checkbox';check.value=line.line_id;
+   check.dataset.amountCents=String(line.amount_cents);
+   check.disabled=line.payment_state!=='available'||Number(line.amount_cents)<=0;
+   const own=line.beneficiary_id?(' · '+line.beneficiary_id.slice(0,8)):'';
+   row.append(check,el('span',line.quantity+' × '+line.product_name+
+    ' · '+money(line.amount_cents)+' · '+line.payment_state+own));
+   list.append(row);
+  }
+  if(!data?.length)list.append(el('p','Nessuna riga da pagare.'));
+ }
+ byId('group-pay-selected').addEventListener('click',async()=>{
+  if(!detail||!['draft','confirmed'].includes(detail.status))return;
+  const lines=[...byId('group-payable-list').querySelectorAll('input[type=checkbox]:checked')]
+   .map(n=>n.value).sort();
+  if(!lines.length)return report('Seleziona almeno una riga disponibile.',true);
+  const button=byId('group-pay-selected');button.disabled=true;
+  const key='breakapp:group-checkout:'+detail.id;
+  const signature=lines.join(',');
+  let requestKey;
+  try{
+   const saved=JSON.parse(sessionStorage.getItem(key)||'null');
+   requestKey=saved?.signature===signature?saved.requestKey:crypto.randomUUID();
+   sessionStorage.setItem(key,JSON.stringify({signature,requestKey}));
+   report('Avvio Checkout Stripe…');
+   const {data,error}=await client.functions.invoke('stripe-checkout-group',{
+    body:{group_id:detail.id,line_ids:lines,request_key:requestKey}
+   });
+   if(error)throw error;
+   if(!data?.checkout_url||!data.checkout_url.startsWith('https://checkout.stripe.com/'))
+    throw new Error(data?.error||'Risposta Checkout incompleta.');
+   location.assign(data.checkout_url);
+  }catch(err){report(err.message||'Checkout non disponibile.',true);button.disabled=false;}
  });
  let finalConfirmKey=null;
  async function loadConfirmedGroup(groupId,seq){
