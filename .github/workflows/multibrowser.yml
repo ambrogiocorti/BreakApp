@@ -39,6 +39,8 @@ jobs:
         run: node tests/e2e/multibrowser.mjs
       - name: Test actual notification controls with an isolated API fixture on three browsers
         run: node tests/e2e/notifications.mjs
+      - name: Test approval, promotion, class import and onboarding controls on three browsers
+        run: node tests/e2e/workflows.mjs
       - name: Stop preview
         if: always()
         run: kill "$(cat /tmp/breakapp-preview.pid)" || true

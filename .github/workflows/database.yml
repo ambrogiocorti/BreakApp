@@ -162,6 +162,8 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/pickup-reminders.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
+      - name: Complete approval, amendment, payer refund, guest, coupon and onboarding workflows
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/complete-workflows.sql
       - name: Snapshot and restore disposable database into a separate empty DB
         run: |
           PG_CONTAINER="${{ job.services.postgres.id }}"

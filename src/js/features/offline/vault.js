@@ -58,6 +58,7 @@ export async function transact(db,storeName,mode,operation){
  });
 }
 export const readDevice=(db,context)=>transact(db,'devices','readonly',s=>s.get(context));
+export const readConfiguredOperators=db=>transact(db,'devices','readonly',s=>s.getAll());
 export async function saveDevice(db,entry){
  return new Promise((resolve,reject)=>{
   const tx=db.transaction('devices','readwrite'),store=tx.objectStore('devices'),request=store.get(entry.context);

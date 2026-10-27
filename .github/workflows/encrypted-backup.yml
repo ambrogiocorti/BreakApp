@@ -1,0 +1,29 @@
+name: Encrypted daily database backup
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Export, encrypt and validate the database archive
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_BACKUP_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          bash scripts/backup-database.sh "$RUNNER_TEMP/encrypted-backup"
+          for archive in "$RUNNER_TEMP/encrypted-backup"/*.dump.gpg; do
+            bash scripts/verify-backup.sh "$archive"
+          done
+      - name: Store only encrypted archives outside the primary database
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-breakapp-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/encrypted-backup/
+          retention-days: 30
+          if-no-files-found: error

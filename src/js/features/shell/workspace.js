@@ -9,9 +9,11 @@ const SCREENS = Object.freeze({
  customer:[
   ['menu','Menu','UtensilsCrossed'],['orders','I miei ordini','ClipboardList'],
   ['groups','Gruppi','UsersRound'],['accesso','Profilo','UserRound']
+  ,['workflow-center','Richieste e modifiche','ClipboardList']
  ],
  bartender:[
   ['staff-orders-section','Ordini da preparare','ClipboardList'],
+  ['workflow-center','Approvazioni ed eccezioni','ClipboardList'],
   ['bar-operations','Servizio e orari','CalendarDays'],
   ['cash-workspace','Cassa e turni','ClipboardList'],
   ['offline-terminal','Operazioni offline','Boxes'],
@@ -26,6 +28,7 @@ const SCREENS = Object.freeze({
   ['admin-overview','Panoramica','LayoutDashboard'],
   ['school-reports','Report e annunci','LayoutDashboard'],
   ['staff-orders-section','Gestione ordini','ClipboardList'],
+  ['workflow-center','Approvazioni ed eccezioni','ClipboardList'],
   ['admin-catalog','Catalogo','ShoppingBag'],
   ['warehouse-inventory','Magazzino','Boxes'],
   ['cash-workspace','Cassa e chiusure','ClipboardList'],
@@ -37,6 +40,7 @@ const SCREENS = Object.freeze({
  ],
  platform_admin:[
   ['platform-overview','Piattaforma','Building2'],
+  ['workflow-center','Nuova scuola','Building2'],
   ['accesso','Profilo e sicurezza','UserRound']
  ]
 });

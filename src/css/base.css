@@ -685,6 +685,11 @@ gap:.55rem;padding:.35rem 0;font-size:.78rem!important;font-weight:650;}
 .notice-row strong{font-size:.75rem;color:var(--muted);}
 .notice-row p{margin:0;font-size:.9rem;overflow-wrap:anywhere;}
 .notice-row a,.notice-row button{justify-self:start;}
+.workflow-center{padding-top:1.4rem;padding-bottom:2rem;}
+.workflow-center form,.completion-panels{display:grid;gap:.8rem;}
+.workflow-center label{display:grid;gap:.3rem;font-size:.88rem;}
+.workflow-center input,.workflow-center select{max-width:100%;min-width:0;min-height:42px;border:1px solid var(--border);border-radius:8px;padding:.55rem;background:var(--surface);color:var(--text);}
+.workflow-center .order-card{margin:1rem 0;padding:1rem;border:1px solid var(--border);border-radius:12px;overflow-wrap:anywhere;}
 
 /* Barista offline: pending-only encrypted staging, never a live cash receipt. */
 .offline-queue-card{margin:1.25rem 0;}

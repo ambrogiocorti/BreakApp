@@ -75,13 +75,13 @@ export function initializeOfflineReview(client){
      await refresh();report('Operazione di turno contabilizzata con audit.');
     });row.append(button);
    }
-   if(event.status==='approved'&&event.event_kind==='cash_pickup'){
+   if(event.status==='approved'&&['cash_pickup','group_pickup'].includes(event.event_kind)){
     const button=element('button','Riconcilia ritiro approvato','button button-primary button-small');
     button.type='button';
     button.addEventListener('click',async()=>{
      if(!confirm('Verificati QR, ordine, contanti fisici ed eventuale rimborso? Confermare la riconciliazione?'))return;
      button.disabled=true;
-     const {data:receipt,error:e}=await client.rpc('apply_approved_offline_pickup_event',{
+     const {data:receipt,error:e}=await client.rpc(event.event_kind==='group_pickup'?'apply_approved_offline_group_pickup':'apply_approved_offline_pickup_event',{
       p_event:event.id
      });
      if(e){report(e.message,true);button.disabled=false;return;}

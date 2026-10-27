@@ -154,7 +154,7 @@ export function initializeAuth(config) {
     headerMenu.hidden = !present;
     headerProfile.hidden = !present;
     document.body.dataset.authenticated = String(present);
-    emailLabel.textContent = present ? (user.email || 'account senza email') : '';
+    emailLabel.textContent = present ? (user.app_metadata?.guest?(user.user_metadata?.display_name||'Ospite'):(user.email || 'account senza email')) : '';
 
     if (!present) {
       activeUser = null;

@@ -1,6 +1,6 @@
 import {formatEuro} from '../catalog/utils.js';
 import {validateOfflinePin,pinSalt,deriveOfflineKey,sealOffline,unsealOffline,
- openOfflineDB,readDevice,saveDevice,appendPending,deletePending,readPending} from './vault.js';
+ openOfflineDB,readDevice,saveDevice,appendPending,deletePending,readPending,readConfiguredOperators} from './vault.js';
 
 const $=id=>document.getElementById(id);
 const make=(tag,text='',cls='')=>{const x=document.createElement(tag);x.textContent=text;x.className=cls;return x;};
@@ -42,6 +42,7 @@ export function initializeOfflineTerminal(client){
  };
  const contextKey=()=>ctx&&user?user.id+':'+ctx.schoolId:null;
  const hasLease=()=>Boolean(device&&Date.parse(device.expiresAt)>Date.now()
+   &&(!localStorage.getItem('breakapp:offline-start')||Date.now()-Number(localStorage.getItem('breakapp:offline-start'))<8*60*60*1000)
    &&device.schoolId===ctx?.schoolId);
  const todayRome=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',
   year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -84,9 +85,10 @@ export function initializeOfflineTerminal(client){
   if(!touch()||!hasLease()||manifest?.service_date!==todayRome()||!pickupCandidate)
    return info('Verifica prima un ordine pronto con QR valido.',true);
   const o=pickupCandidate;
+  if(o.can_pickup_at&&Date.parse(o.can_pickup_at)>Date.now())return info('Attendi la fascia prenotata prima della consegna.',true);
   if(o.pickup_token!==$('offline-pickup-token').value.trim())
    return info('Il QR è cambiato: riverifica il codice.',true);
-  const amount=o.payment_status==='paid'?0:Number(o.total_cents);
+  const amount=Number(o.due_cents??(o.payment_status==='paid'?0:o.total_cents));
   if(!Number.isSafeInteger(amount)||amount<0||amount>1000000)
    return info('Totale non valido.',true);
   if(!confirm(amount
@@ -95,13 +97,13 @@ export function initializeOfflineTerminal(client){
   const pending=await readPending(db,contextKey());
   for(const p of pending){
    const data=await unsealOffline(key,p.encrypted);
-   if(data.kind==='cash_pickup'&&data.order_id===o.id)
+   if(['cash_pickup','group_pickup'].includes(data.kind)&&data.order_id===o.id)
     return info('La consegna è già nella coda locale.',true);
   }
   const eventId=crypto.randomUUID(),now=new Date().toISOString();
   const sessionId=currentCashSession(o.bar_id);
   if(amount&&!sessionId)return info('Apri prima il turno nella sezione Cassa.',true);
-  const payload={kind:'cash_pickup',order_id:o.id,pickup_token:o.pickup_token,
+  const payload={kind:o.kind==='group'?'group_pickup':'cash_pickup',snapshot_id:manifest.snapshot_id,order_id:o.id,pickup_token:o.pickup_token,
    bar_id:o.bar_id,collected_cents:amount,
    cash_session_id:sessionId,
    snapshot_payment_status:o.payment_status,local_recorded_at:now,request_key:eventId};
@@ -251,7 +253,8 @@ export function initializeOfflineTerminal(client){
    try{
      // Reuse physical device ID where present. The backend always advances
      // its generation, revoking a different device without admin approval.
-     const deviceId=device?.deviceId||crypto.randomUUID();
+     const deviceId=device?.deviceId||localStorage.getItem('breakapp:physical-device')||crypto.randomUUID();
+     localStorage.setItem('breakapp:physical-device',deviceId);
      const {data,error}=await client.rpc('transfer_my_offline_device',{
        p_school:ctx.schoolId,p_device:deviceId
      });
@@ -267,6 +270,7 @@ export function initializeOfflineTerminal(client){
        salt,verifier
      };
      await saveDevice(db,device);
+     localStorage.removeItem('breakapp:offline-start');
      key=unlocked;lastTouch=Date.now();
      activateForm.reset();
      try{await refreshCatalog();}
@@ -369,6 +373,8 @@ export function initializeOfflineTerminal(client){
    if(!touch()||!db||!navigator.onLine||!device)
      return info('Sblocca la coda e riconnettiti prima di inviare.',true);
    const records=await readPending(db,contextKey());
+   const identity=await client.auth.getUser();
+   if(identity.error||identity.data?.user?.id!==user?.id)return info('Per sincronizzare questa coda accedi online come operatore '+String(user?.id).slice(0,8)+'. I dati restano conservati.',true);
    syncButton.disabled=true;
    let ok=0;let errors=0;
    for(const record of records){
@@ -377,10 +383,10 @@ export function initializeOfflineTerminal(client){
        const payload=data.kind==='shift_change'
         ?{bar_id:data.bar_id,session_id:data.session_id,action:data.action,
           amount_cents:data.amount_cents,reason:data.reason}
-        :data.kind==='cash_pickup'
+        :['cash_pickup','group_pickup'].includes(data.kind)
         ?{order_id:data.order_id,pickup_token:data.pickup_token,bar_id:data.bar_id,
           collected_cents:data.collected_cents,snapshot_payment_status:data.snapshot_payment_status,
-          ...(data.cash_session_id?{cash_session_id:data.cash_session_id}:{})}
+          ...(data.snapshot_id?{snapshot_id:data.snapshot_id}:{}),...(data.cash_session_id?{cash_session_id:data.cash_session_id}:{})}
         :{bar_id:data.bar_id,method:'cash',amount_cents:data.amount_cents,
           note:data.note,items:data.items,...(data.cash_session_id?{cash_session_id:data.cash_session_id}:{})};
        const {data:receipt,error}=await client.rpc('stage_my_offline_event',{
@@ -392,7 +398,7 @@ export function initializeOfflineTerminal(client){
          throw error||new Error('Il server non ha confermato l’evento.');
        if(receipt.status==='approved')throw new Error('Attendi la contabilizzazione della revisione Admin.');
        if(receipt.status==='quarantined'){
-        const rpc=data.kind==='shift_change'?'reconcile_my_cash_shift_event':data.kind==='cash_pickup'
+        const rpc=data.kind==='group_pickup'?'reconcile_my_offline_group_pickup':data.kind==='shift_change'?'reconcile_my_cash_shift_event':data.kind==='cash_pickup'
          ?'reconcile_my_offline_pickup_event':'reconcile_my_offline_cash_event';
         const {data:reconciled,error:reconcileError}=await client.rpc(rpc,{p_event:receipt.id});
         if(reconcileError)throw reconcileError;
@@ -419,7 +425,7 @@ export function initializeOfflineTerminal(client){
  client.auth.onAuthStateChange((_e,session)=>queueMicrotask(()=>{
    if(!session){authVersion++;lock();user=null;ctx=null;db=null;device=null;panel.hidden=true;}
  }));
- window.addEventListener('offline',()=>{syncButton.disabled=true;info('Connessione assente: solo bozze locali cifrate.');});
+ window.addEventListener('offline',()=>{if(!localStorage.getItem('breakapp:offline-start'))localStorage.setItem('breakapp:offline-start',String(Date.now()));syncButton.disabled=true;info('Connessione assente: operazioni locali cifrate.');});
  window.addEventListener('online',()=>{renderLease();info('Connessione ripristinata: invia la coda per verifica.');});
  setInterval(()=>{
    if(key && Date.now()-lastTouch>=MAX_IDLE_MS){
@@ -427,6 +433,21 @@ export function initializeOfflineTerminal(client){
    }
  },15000);
  window.addEventListener('pagehide',()=>{lock();});
+ const operators=make('select');operators.setAttribute('aria-label','Operatore già configurato su questo dispositivo');
+ const switcher=make('button','Cambia operatore offline','button button-outline button-small');switcher.type='button';
+ panel.append(make('h3','Tablet condiviso'),operators,switcher);
+ switcher.addEventListener('click',async()=>{
+  if(!db||navigator.onLine)return info('Il cambio con PIN è disponibile offline per operatori già configurati. Online accedi con il relativo account.',true);
+  const selected=(await readConfiguredOperators(db)).find(d=>d.context===operators.value&&d.schoolId===ctx?.schoolId);
+  if(!selected)return info('Operatore non configurato su questo dispositivo.',true);
+  lock();user={id:selected.context.split(':')[0]};device=selected;renderLease();await renderQueue();
+  info('Operatore '+user.id.slice(0,8)+' selezionato: sblocca con il suo PIN. Il limite delle otto ore non riparte.');
+ });
+ $('offline-refresh').addEventListener('click',async()=>{
+  if(!db)return;operators.replaceChildren();
+  for(const d of await readConfiguredOperators(db))if(d.schoolId===ctx?.schoolId&&d.deviceId===(device?.deviceId||localStorage.getItem('breakapp:physical-device')))
+   operators.add(new Option('Operatore '+d.context.split(':')[0].slice(0,8),d.context));
+ });
  return {
   isUnlocked:()=>Boolean(key&&device&&ctx),
   getSnapshot:()=>cashSnapshot,
