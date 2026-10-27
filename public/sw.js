@@ -1,5 +1,5 @@
-// Fase 1: SOLO cache di asset e shell. Nessuna operazione di business offline.
-const CACHE_NAME = 'breakapp-shell-v4';
+// Static shell only. Financial events and same-day manifests use the encrypted IndexedDB vault.
+const CACHE_NAME = 'breakapp-shell-v5';
 const BASE_PATH = new URL('./', self.location.href).pathname;
 const SHELL_URL = BASE_PATH;
 self.addEventListener('install', (event) => {

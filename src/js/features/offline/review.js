@@ -65,6 +65,16 @@ export function initializeOfflineReview(client){
     }
     row.append(label,reason,actions);
    }
+   if(event.status==='approved'&&event.event_kind==='shift_change'){
+    const button=element('button','Contabilizza turno verificato','button button-primary button-small');
+    button.type='button';button.addEventListener('click',async()=>{
+     if(!confirm('Confermi di aver verificato turno, sequenza dei movimenti e conteggio fisico?'))return;
+     button.disabled=true;
+     const {error}=await client.rpc('apply_approved_cash_shift_event',{p_event:event.id});
+     if(error){report(error.message,true);button.disabled=false;return;}
+     await refresh();report('Operazione di turno contabilizzata con audit.');
+    });row.append(button);
+   }
    if(event.status==='approved'&&event.event_kind==='cash_pickup'){
     const button=element('button','Riconcilia ritiro approvato','button button-primary button-small');
     button.type='button';

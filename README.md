@@ -1,60 +1,37 @@
 # BreakApp
 
-**BreakApp** è una piattaforma multitenant per la gestione dei bar scolastici.
+PWA multitenant per bar scolastici, con HTML/CSS/JavaScript ES, Supabase e Stripe. Vite è usato per build e sviluppo.
 
-> Stato: **Fase 1/2 — catalogo Admin e menu pubblico online**. Scuole e ruoli sono letti
-> da Supabase. Il codice del catalogo (categorie/prodotti) e la verifica 2FA
-> TOTP Admin sono implementati; le scritture richiedono le policy della migration 03
-> già eseguita nel nuovo Supabase. Il menu pubblico legge solo gli articoli attivi.
-> Non esistono ancora vendite, ordini o pagamenti.
+[Sito di test GitHub Pages](https://ambrogiocorti.github.io/BreakApp/). Vercel genera anteprime dei branch; il pacchetto statico rimane compatibile con Cloudflare Pages.
 
-## Stack
+## Avvio
 
-- HTML semantico, CSS personalizzato e JavaScript vanilla (moduli ES).
-- Vite esclusivamente come strumento di build.
-- Supabase Auth/Postgres/RLS con 2FA TOTP obbligatoria per scritture Admin sul catalogo; tutte le scritture sono autorizzate server-side.
-- Vercel per l'ambiente di test temporaneo; hosting definitivo da stabilire.
-- GitHub Actions per sintassi, test e build a ogni push.
+```bash
+npm ci
+npm run dev
+npm run verify
+```
 
-## Verifiche automatiche
+Il frontend richiede soltanto `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` (vedi `.env.example`). Nessuna credenziale privilegiata deve entrare nel bundle.
 
-Il workflow `.github/workflows/checks.yml` esegue `npm run verify`, che include
-controlli sintattici, test unitari e generazione della build.
+## Funzioni presenti
 
-## Anteprima online su Vercel
+- Ruoli per scuola, Super Admin esclusivo e TOTP Admin.
+- Catalogo, ingredienti/allergeni, immagini, scorte giornaliere, orari, fasce e chiusure.
+- Ordini individuali, preparazione, QR, contanti/POS esterno.
+- Gruppi, inviti, conferma atomica, ritiro unico e ledger multipagatore.
+- Checkout/webhook verificati e rimborsi al pagatore originale. **Merchant di test ancora disabilitato e credenziali Stripe mancanti: incassi online non attivi.**
+- Terminale Barista cifrato, vendite/ritiri individuali offline, riconciliazione e revisione Admin.
+- Turni di cassa online/offline, movimenti, conteggi, chiusure immutabili e rettifiche Admin.
+- Report per scuola con CSV, XLSX e PDF; annunci e notifiche personali.
+- Runtime VAPID e cron di invio configurati; consegna su telefoni fisici da collaudare.
 
-Il progetto usa `npm run build` e pubblica la directory `dist`. L'integrazione
-GitHub/Vercel aggiorna l'ambiente di test a ogni push.
+**Stato: sviluppo avanzato, non certificato per la vendita come piattaforma completa.** [ROADMAP.md](ROADMAP.md) documenta i limiti effettivi.
 
-La schermata di autenticazione sarà abilitata soltanto dopo la configurazione di
-un **nuovo progetto Supabase dedicato** a BreakApp, con URL e chiave
-`sb_publishable_…` impostati come variabili `VITE_SUPABASE_URL` e
-`VITE_SUPABASE_PUBLISHABLE_KEY` su Vercel. Mai esporre `service_role`, chiavi
-segrete, token privati o credenziali in questa repository o nel frontend.
+## Database e verifiche
 
-La configurazione da un **secondo account Supabase**, interamente da browser,
-è descritta in [`docs/SUPABASE_SETUP_ONLINE.md`](docs/SUPABASE_SETUP_ONLINE.md).
-Gli script SQL da eseguire nel nuovo progetto sono in `supabase/sql/`.
-Per attivare il primo catalogo reale, segui [le istruzioni SQL 03 e test online](docs/FASE1_CATALOGO_ADMIN.md).
+La baseline storica è in `supabase/sql/`, nell'ordine specificato dal workflow `database.yml`. Le nuove migrazioni CLI timestampate, in `supabase/migrations/`, vengono applicate dopo la baseline. Non usare `db push` su un database vuoto prima di aver ricostruito e riconciliato la cronologia storica.
 
-## Sicurezza e roadmap
+La CI verifica sintassi, unit test, build, PostgreSQL 17, autorizzazioni, concorrenza stock e restore di un database temporaneo. Un workflow separato usa Chromium/Firefox/WebKit su desktop e mobile emulato. Non sostituisce il pilota fisico.
 
-Il codice pubblicato è solo il bootstrap pubblico. La specifica funzionale
-completa e i documenti di progetto riservati non vengono inclusi nella
-repository pubblica. Le funzioni multi-scuola saranno rilasciate solo dopo
-verifica di RLS, RBAC e isolamento tra tenant con controlli server-side.
-
-La shell PWA di questo incremento **non** consente operazioni offline su ordini,
-cassa o scorte.
-
-
-## Menu pubblico (senza accesso)
-
-La sezione [Menu di BreakApp](https://breakapp-smoky.vercel.app/#menu) consente di scegliere scuola e bar,
-filtrare per categoria e cercare prodotti. Legge in tempo reale le righe pubblicate
-su Supabase tramite chiave pubblica e policy RLS. Mostra uno stato vuoto corretto
-quando l'Admin non ha ancora creato categorie e prodotti. Non permette ordini
-perché la gestione delle disponibilità giornaliere non è ancora attiva.
-
-I controlli e i criteri di prova sono in
-[docs/FASE2_MENU_PUBBLICO.md](docs/FASE2_MENU_PUBBLICO.md).
+Procedure e rollback: [docs/OPERATIONS_20261027.md](docs/OPERATIONS_20261027.md).

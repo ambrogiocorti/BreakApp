@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'supabase/sql/**'
+      - 'supabase/migrations/**'
       - 'tests/db/**'
       - '.github/workflows/database.yml'
   workflow_dispatch:
@@ -144,6 +145,17 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-order-pickups.sql
       - name: Verify offline pickup ledger FK indexes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply timestamped operational migrations
+        run: |
+          for file in supabase/migrations/*.sql; do
+            docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
+          done
+      - name: Test physical cash counts, immutable closings and revoked offline event recovery
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/cash-sessions.sql
+      - name: Test complete school reports and tenant announcement recipients
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/reports-announcements.sql
+      - name: Test private runtime credentials and bounded refund retries
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/runtime-refund-retries.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
       - name: Snapshot and restore disposable database into a separate empty DB

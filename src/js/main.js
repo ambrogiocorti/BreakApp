@@ -16,6 +16,8 @@ import { initializeGroupService } from './features/groups/group-service.js';
 import { initializeInAppNotifications } from './features/notifications/notifications.js';
 import { initializeOfflineTerminal } from './features/offline/terminal.js';
 import { initializeOfflineReview } from './features/offline/review.js';
+import { initializeCashWorkspace } from './features/operations/cash.js';
+import { initializeReports } from './features/shell/reports.js';
 
 initializeTheme();
 const client = initializeAuth(readSupabaseConfig(import.meta.env));
@@ -30,11 +32,13 @@ initializePlatformPilot(client);
 initializeGroupDrafts(client);
 initializeGroupService(client);
 initializeInAppNotifications(client);
-initializeOfflineTerminal(client);
+const offlineTerminal=initializeOfflineTerminal(client);
+initializeCashWorkspace(client,offlineTerminal);
+initializeReports(client);
 initializeOfflineReview(client);
 initializeWorkspace(client);
 
-// Cache statica soltanto: nessuna vendita, consegna o incasso offline in Fase 1.
+// Static shell cache; operational snapshots and pending events use the encrypted vault.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => { /* l'app online resta utilizzabile */ });
