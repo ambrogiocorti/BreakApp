@@ -120,6 +120,12 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-confirmed-orders.sql
       - name: Verify group order FK indexes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply multipayer group Stripe migration 28
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/28_group_stripe_payments.sql
+      - name: Verify payer attribution, idempotence, webhook and paid group confirmation
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-stripe-payments.sql
+      - name: Verify group Stripe claim FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
       - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
       - name: Snapshot and restore disposable database into a separate empty DB
