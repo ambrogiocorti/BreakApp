@@ -872,4 +872,45 @@ grant execute on function public.join_group_draft(uuid,double precision,double p
  to authenticated;
 grant execute on function public.finalize_verified_group_checkout(text,text,text,text,uuid,bigint,text,boolean,jsonb)
  to service_role;
+alter table public.customer_notifications
+ drop constraint customer_notifications_event_type_check;
+alter table public.customer_notifications
+ add constraint customer_notifications_event_type_check check(event_type in
+ ('closure_order_cancelled','order_status','group_join_requested','group_join_approved',
+ 'group_join_rejected','support_reply','group_draft_expiry'));
+
+create table app_private.group_expiry_warnings(
+ group_id uuid not null references public.group_drafts(id) on delete restrict,
+ deadline_at timestamptz not null,
+ created_at timestamptz not null default now(),
+ primary key(group_id,deadline_at)
+);
+
+create or replace function public.warn_group_drafts_before_expiry(p_limit integer default 50)
+returns integer language plpgsql security definer set search_path=''
+as $warn_group_expiry$
+declare v_group public.group_drafts%rowtype;v_id uuid;v_count integer:=0;
+begin
+ if auth.jwt()->>'role'<>'service_role' then raise exception 'Solo dispatcher server';end if;
+ if p_limit is null or p_limit not between 1 and 200 then raise exception 'Limite non valido';end if;
+ for v_group in select * from public.group_drafts
+  where status='draft' and updated_at<=now()-interval '23 hours'
+   and updated_at>now()-interval '24 hours'
+  order by updated_at,id for update skip locked limit p_limit
+ loop
+  v_id:=null;
+  insert into app_private.group_expiry_warnings(group_id,deadline_at)
+   values(v_group.id,v_group.updated_at+interval '24 hours')
+   on conflict do nothing returning group_id into v_id;
+  if v_id is not null then
+   insert into public.customer_notifications(school_id,user_id,group_id,event_type,message)
+   values(v_group.school_id,v_group.coordinator_id,v_group.id,'group_draft_expiry',
+    'La bozza gruppo "'||left(v_group.title,90)||'" scade tra circa un''ora. Confermala o modifica i dati necessari.');
+   v_count:=v_count+1;
+  end if;
+ end loop;
+ return v_count;
+end;$warn_group_expiry$;
+revoke all on function public.warn_group_drafts_before_expiry(integer) from public,anon,authenticated;
+grant execute on function public.warn_group_drafts_before_expiry(integer) to service_role;
 commit;
