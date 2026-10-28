@@ -1,0 +1,84 @@
+import {chromium,firefox,webkit} from 'playwright';
+import {createServer} from 'vite';
+import assert from 'node:assert/strict';
+import {workspaceFixture} from './workspace-fixture.mjs';
+const origin='http://127.0.0.1:5178';
+const server=await createServer({base:'/',server:{host:'127.0.0.1',port:5178,strictPort:true},plugins:[{name:'isolated-workspace-fixture',configureServer(vite){vite.middlewares.use('/__workspace-qa',(_req,res)=>{res.setHeader('Content-Type','text/html');res.end(workspaceFixture)})}}]});
+await server.listen();let browser;
+const engines=process.env.WORKSPACE_BROWSER==='chromium'?{chromium}:{chromium,firefox,webkit};
+try{
+ for(const[name,engine]of Object.entries(engines)){
+  browser=await engine.launch({headless:true});
+  for(const viewport of [{width:1440,height:1000},{width:768,height:1024},{width:390,height:844}]){
+   const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',error=>errors.push(error.message));
+   await page.goto(origin+'/__workspace-qa');
+   await page.getByRole('heading',{name:'Panoramica',exact:true}).waitFor();
+   await page.locator('#platform-metrics .metric-card').first().waitFor();
+   assert.deepEqual(await page.locator('#platform-metrics .metric-card>strong').allTextContents(),['3','2','3','1']);
+   assert.equal(await page.locator('#platform-pilot-tools').isVisible(),false);
+   assert.equal(await page.locator('#platform-overview').isVisible(),true);
+   assert.equal(await page.getByRole('heading',{level:1}).count(),1);
+   const layout=await page.evaluate(()=>({main:document.querySelector('.app-main').scrollTop,window:scrollY}));
+   assert.equal(layout.main,0,JSON.stringify(layout));
+   assert.equal(layout.window,0,JSON.stringify(layout));
+   if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/overview-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
+   if(viewport.width>1023)assert.equal(await page.locator('#workspace-sidebar').isVisible(),true);
+   await page.getByRole('link',{name:'Vedi tutte'}).click();
+   await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
+   await page.getByLabel('Cerca una scuola o un bar').fill('Caffè');
+   assert.equal(await page.locator('#platform-directory-list tbody tr').count(),1);
+   assert.match(await page.locator('#platform-directory-list').innerText(),/Marie Curie/);
+   await page.getByLabel('Cerca una scuola o un bar').fill('nessuna-corrispondenza');
+   await page.getByText('Nessun risultato',{exact:true}).waitFor();
+   await page.getByLabel('Cerca una scuola o un bar').fill('');
+   await page.locator('#platform-school-filter').selectOption('paused');
+   assert.equal(await page.locator('#platform-directory-list tbody tr').count(),1);
+   await page.getByRole('button',{name:'Riattiva Istituto Ada Lovelace',exact:true}).click();
+   await page.getByRole('dialog').getByLabel('Motivazione',{exact:true}).fill('Servizio nuovamente disponibile');
+   await page.getByRole('button',{name:'Riattiva scuola',exact:true}).click();
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='platform_set_school_active'&&c.args.p_active===true));
+   await page.getByText('Nessun risultato',{exact:true}).waitFor();
+   await page.locator('#platform-school-filter').selectOption('all');
+   await page.getByRole('link',{name:'Gestisci Liceo Leonardo',exact:true}).click();
+   await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
+   await page.waitForFunction(()=>document.getElementById('pilot-school').value==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+   assert.equal(await page.getByRole('tabpanel',{name:'Catalogo',exact:true}).isVisible(),true);
+   await page.getByRole('tab',{name:'Personale',exact:true}).click();
+   await page.getByRole('heading',{name:'Personale della scuola'}).waitFor();
+   await page.getByLabel('Email persona').fill('collega@example.invalid');
+   await page.getByRole('tab',{name:'Personale',exact:true}).press('ArrowRight');
+   await page.getByRole('heading',{name:'Orari settimanali'}).waitFor();
+   await page.getByRole('tab',{name:'Orari e ritiri',exact:true}).press('ArrowLeft');
+   assert.equal(await page.getByLabel('Email persona').inputValue(),'collega@example.invalid');
+   assert.equal(await page.getByRole('tabpanel',{name:'Catalogo',exact:true}).isVisible(),false);
+   if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/configuration-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
+   if(viewport.width<1024){
+    await page.getByRole('button',{name:'Altro',exact:true}).click();
+    await page.locator('#workspace-more-items').getByRole('link',{name:'Nuova scuola',exact:true}).click();
+   }else await page.locator('#app-desktop-nav').getByRole('link',{name:'Nuova scuola',exact:true}).click();
+   await page.locator('.onboarding-layout').waitFor();
+   assert.equal(await page.locator('#workflow-center').isVisible(),true);
+   assert.equal(await page.locator('#workflow-center').getByRole('heading',{name:'Grandi ordini'}).count(),0);
+   await page.getByLabel('Nome della scuola',{exact:true}).fill('La nuova scuola');
+   if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/onboarding-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
+   await page.getByRole('button',{name:'Passa al tema scuro'}).click();
+   assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
+   if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/dark-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
+   assert.equal(await page.getByLabel('Nome della scuola',{exact:true}).inputValue(),'La nuova scuola');
+   const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert.ok(width.scroll<=width.viewport+3,JSON.stringify(width));
+   await page.evaluate(()=>window.fixture.customer());
+   await page.waitForFunction(()=>document.body.dataset.activeRole==='customer');
+   assert.equal(await page.locator('#platform-overview').isVisible(),false);
+   assert.equal(await page.locator('#platform-directory-list').textContent(),'');
+   await page.goto(origin+'/__workspace-qa');await page.locator('#platform-metrics .metric-card').first().waitFor();
+   await page.evaluate(()=>{window.fixture.fail=true});await page.getByRole('button',{name:'Aggiorna',exact:true}).click();
+   await page.getByText('Non riusciamo a caricare i dati',{exact:true}).waitFor();
+   assert.equal(await page.locator('#platform-metrics .metric-card').count(),0);
+   await page.evaluate(()=>{window.fixture.fail=false});await page.getByRole('button',{name:'Aggiorna',exact:true}).click();await page.locator('#platform-metrics .metric-card').first().waitFor();
+   await page.evaluate(()=>{window.fixture.delay=200});await page.getByRole('button',{name:'Aggiorna',exact:true}).click();await page.evaluate(()=>window.fixture.logout());
+   await page.waitForTimeout(300);assert.equal(await page.locator('#platform-metrics').textContent(),'');assert.equal(await page.locator('#workspace-sidebar').isVisible(),false);
+   assert.deepEqual(errors,[]);console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'workspace navigation, live metrics, search, school state, configuration tabs, onboarding, themes and role isolation'}));await page.close();
+  }
+  await browser.close();browser=null;
+ }
+}finally{await browser?.close();await server.close();}

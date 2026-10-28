@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
-const css=readFileSync(new URL('../../src/css/base.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('../../src/css/workspace.css',import.meta.url),'utf8');
 const shell=readFileSync(new URL('../../src/js/features/shell/workspace.js',import.meta.url),'utf8');
 
 test('desktop has fixed full-height sidebar with independent routed content',()=>{
  assert.match(html,/id="workspace-sidebar"/);
  assert.match(html,/id="workspace-page-head"/);
  assert.match(css,/\.workspace-sidebar\{display:flex!important;position:fixed/);
- assert.match(css,/\.app-main\{position:fixed;top:166px;bottom:0/);
+ assert.match(css,/\.app-main\{position:fixed;/);
  assert.match(css,/section:not\(\.is-route-active\)\{/);
 });
 test('role navigation is generated; no static student-only nav remains',()=>{

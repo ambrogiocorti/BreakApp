@@ -1,4 +1,5 @@
 import {readClassNames} from './class-import.js';
+import {icon} from '../../core/icons.js';
 const node=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 function input(form,label,type='text',value=''){
  const wrapper=node('label',label),field=node('input');field.type=type;field.value=value;field.required=true;wrapper.append(field);form.append(wrapper);return field;
@@ -14,11 +15,18 @@ export function initializeCompletionUI(client){
   const staff=['bartender','school_admin'].includes(context.role),admin=context.role==='school_admin';
   try{
    if(context.role==='platform_admin'){
-    const f=formCard(extra,'Nuova scuola'),slug=input(f,'Identificativo della scuola (es. liceo-verdi)'),name=input(f,'Nome della scuola'),bar=input(f,'Nome del bar'),lat=input(f,'Latitudine','number'),lon=input(f,'Longitudine','number');
+    extra.classList.add('onboarding-layout');
+    const f=formCard(extra,'Dati della scuola'),slug=input(f,'Identificativo della scuola (es. liceo-verdi)'),name=input(f,'Nome della scuola'),bar=input(f,'Nome del bar'),lat=input(f,'Latitudine','number'),lon=input(f,'Longitudine','number');
+    f.prepend(name.closest('label'));name.closest('label').classList.add('onboarding-wide');
+    slug.placeholder='es. liceo-verdi';name.placeholder='Es. Liceo Giuseppe Verdi';bar.placeholder='Es. Bar centrale';lat.placeholder='45,5200';lon.placeholder='9,3300';lat.min='-90';lat.max='90';lon.min='-180';lon.max='180';
     lat.step='any';lon.step='any';const mode=select(f,'Preparazione',[['active','Preparazione su ordine'],['ready_made','Prodotti già pronti']]),email=input(f,'Email verificata del primo Admin','email');
-    submit(f,'Crea scuola e bar',()=>rpc('platform_onboard_school',{p_slug:slug.value,p_name:name.value,p_bar_name:bar.value,p_latitude:Number(lat.value),p_longitude:Number(lon.value),p_mode:mode.value,p_admin_email:email.value}),act);
-    const all=await client.from('schools').select('id,name,is_active').order('name');
-    for(const s of all.data||[])extra.append(node('p',s.name+' · '+(s.is_active?'attiva':'sospesa')),button(s.is_active?'Sospendi '+s.name:'Riattiva '+s.name,b=>act(b,async()=>{const reason=prompt('Motivazione (almeno 8 caratteri)');if(reason)await rpc('platform_set_school_active',{p_school:s.id,p_active:!s.is_active,p_reason:reason});})));return;
+    email.placeholder='admin@scuola.it';
+    submit(f,'Crea scuola e bar',async()=>{
+     const result=await rpc('platform_onboard_school',{p_slug:slug.value,p_name:name.value,p_bar_name:bar.value,p_latitude:Number(lat.value),p_longitude:Number(lon.value),p_mode:mode.value,p_admin_email:email.value});
+     window.dispatchEvent(new CustomEvent('breakapp:platform-onboarded',{detail:result}));
+    },act);
+    const note=node('aside','','onboarding-note');note.append(icon('Building2'),node('h3','Uno spazio, una scuola'),node('p','La nuova scuola parte con le prenotazioni in pausa, così puoi preparare il servizio con calma.'));
+    const steps=node('ol');for(const text of ['Usa l’email di un Admin che ha già creato e verificato il proprio account.','Completa catalogo, personale e orari nella sezione Configurazione.','Verifica il servizio prima di aprire le prenotazioni.'])steps.append(node('li',text));note.append(steps);extra.append(note);return;
    }
    const [individual,groups,changes,refunds,documents]=await Promise.all([
     client.from('orders').select('id,display_no,bar_id,status').eq(staff?'school_id':'customer_id',staff?context.schoolId:user.id).order('created_at',{ascending:false}).limit(100),

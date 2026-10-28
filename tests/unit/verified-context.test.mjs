@@ -20,6 +20,8 @@ test('workspace propagates the authoritative MFA verification state',()=>{
 test('dashboard never promotes a context to verified on its own',()=>{
  const source=read('src/js/features/shell/dashboards.js');
  assert.doesNotMatch(source,/context\.verified\s*=\s*true/);
- assert.match(source,/context\.role==='school_admin' && context\.verified/);
- assert.match(source,/context\.role==='platform_admin'&&context\.verified/);
+ assert.match(source,/context\?\.role==='school_admin'&&context\.verified/);
+ const platform=read('src/js/features/shell/platform-dashboard.js');
+ assert.doesNotMatch(platform,/context\.verified\s*=\s*true/);
+ assert.match(platform,/context\?\.role==='platform_admin'&&context\.verified/);
 });

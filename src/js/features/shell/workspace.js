@@ -1,4 +1,5 @@
 import { loadSchoolAccess } from '../auth/access.js';
+import {icon} from '../../core/icons.js';
 
 const LABELS = Object.freeze({
  customer:'Cliente',bartender:'Barista',
@@ -39,15 +40,19 @@ const SCREENS = Object.freeze({
   ['accesso','Profilo e sicurezza','UserRound']
  ],
  platform_admin:[
-  ['platform-overview','Piattaforma','Building2'],
-  ['workflow-center','Nuova scuola','Building2'],
+  ['platform-overview','Panoramica','LayoutDashboard'],
+  ['platform-schools','Scuole','Building2'],
+  ['platform-configuration','Configurazione','SlidersHorizontal'],
+  ['workflow-center','Nuova scuola','Plus'],
   ['accesso','Profilo e sicurezza','UserRound']
  ]
 });
-const ICONS=Object.freeze({
- UtensilsCrossed:'▤',ClipboardList:'▣',UserRound:'◉',UsersRound:'♧',CalendarDays:'▦',
- MessageSquareText:'▢',Boxes:'▧',LayoutDashboard:'◫',
- ShoppingBag:'▥',SlidersHorizontal:'⚙',Building2:'◇'
+const PAGE_NOTES=Object.freeze({
+ 'platform-overview':'Uno sguardo alla rete delle tue scuole.',
+ 'platform-schools':'Tutte le scuole, i bar e il loro stato, in un unico posto.',
+ 'platform-configuration':'Scegli una scuola e organizza il suo servizio.',
+ 'admin-overview':'Ordini, catalogo e servizio: la giornata a colpo d’occhio.',
+ 'workflow-center':'Gestisci le richieste che richiedono la tua attenzione.'
 });
 const DOM={
  nav:()=>document.getElementById('app-desktop-nav'),
@@ -113,6 +118,14 @@ export function initializeWorkspace(client){
  const profileSelect=document.getElementById('workspace-profile-context-select');
  const profileSwitcher=document.getElementById('workspace-profile-switcher');
  const routeSections=[...root.children].filter(x=>x.tagName==='SECTION'&&x.id);
+ const breadcrumb=document.getElementById('workspace-breadcrumb');
+ const contextName=document.getElementById('workspace-context-name');
+ const accountLink=document.getElementById('workspace-account');
+ const identityAvatar=document.getElementById('workspace-avatar');
+ const topAvatar=document.getElementById('workspace-account-avatar');
+ const notificationsToggle=document.getElementById('notifications-toggle');
+ if(notificationsToggle){notificationsToggle.firstChild?.remove();notificationsToggle.prepend(icon('Bell'));}
+ document.getElementById('workspace-signout').prepend(icon('LogOut'));
  const moreContainer=create('div','workspace-more');
  moreContainer.hidden=true;
  moreContainer.id='workspace-more-items';
@@ -148,6 +161,8 @@ export function initializeWorkspace(client){
   sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
   profileSwitcher.hidden=true;select.disabled=true;profileSelect.disabled=true;
   document.body.dataset.workspace='true';ready=true;
+  if(breadcrumb)breadcrumb.hidden=false;
+  if(accountLink)accountLink.hidden=false;
   setContext(contexts[0],{restoreRoute:true});
   document.getElementById('school-access-status').textContent=
    'Ruolo Barista ripristinato dalla cache per operazioni locali: il server rivaliderà ogni evento.';
@@ -171,22 +186,27 @@ export function initializeWorkspace(client){
    nav.replaceChildren();mobile.replaceChildren();moreContainer.replaceChildren();
    const available=active?.verified?SCREENS[active?.role]||[]:[['accesso','Profilo e sicurezza','UserRound']];
    function linkOf(screen,compact=false){
-     const [id,label,icon]=screen;
+     const [id,label,iconName]=screen;
      const a=create('a',compact?'workspace-link mobile-link':'workspace-link');
      a.href='#'+id;a.dataset.route=id;
-     a.append(create('span','workspace-link-icon',ICONS[icon]||'•'),
+     const pictogram=create('span','workspace-link-icon');pictogram.append(icon(iconName));
+     a.append(pictogram,
        create(compact?'small':'span','workspace-link-label',label));
      if(id===route)a.setAttribute('aria-current','page');
      return a;
    }
-   for(const screen of available)nav.append(linkOf(screen));
+   for(const screen of available){
+     if(screen[0]==='accesso')nav.append(create('span','workspace-nav-caption','Account'));
+     nav.append(linkOf(screen));
+   }
    const compact=available.length>4?[...available.slice(0,3)]:available;
    compact.forEach(screen=>mobile.append(linkOf(screen,true)));
    if(available.length>4){
      const more=create('button','workspace-link workspace-more-button');
      more.type='button';more.setAttribute('aria-controls','workspace-more-items');
      more.setAttribute('aria-expanded','false');
-     more.append(create('span','workspace-link-icon','☷'),
+     const moreIcon=create('span','workspace-link-icon');moreIcon.append(icon('More'));
+     more.append(moreIcon,
        create('small','workspace-link-label','Altro'));
      more.addEventListener('click',()=>{
        moreContainer.hidden=!moreContainer.hidden;
@@ -194,10 +214,12 @@ export function initializeWorkspace(client){
      });
      mobile.append(more);
      for(const screen of available.slice(3))moreContainer.append(linkOf(screen));
+     if(available.slice(3).some(([id])=>id===route))more.setAttribute('aria-current','page');
    }
  }
  function switchRoute(next,{history=true}={}){
    if(!active)return;
+   const moveFocus=Boolean(document.activeElement?.closest('#app-desktop-nav,#app-mobile-nav,#workspace-more-items,.app-main section'));
    const requested=next||fallback();
    const target=allowedRoute(active.role,requested) && active.verified?requested:
      requested==='accesso'?'accesso':fallback();
@@ -207,7 +229,7 @@ export function initializeWorkspace(client){
    if(target!=='accesso'&&document.getElementById(target)?.hidden){
      if(!active.verified)route='accesso';
    }
-   if(history && location.hash!=='#'+route)location.hash=route;
+   if(history && location.hash!=='#'+route)window.history.pushState(null,'','#'+route);
    updateSectionVisibility();
    renderLinks();
    moreContainer.hidden=true;
@@ -215,12 +237,22 @@ export function initializeWorkspace(client){
      SCREENS[active.role]?.find(([id])=>id===route)?.[1]||'Profilo';
    title.textContent=name;
    subtitle.textContent=active.verified?
-     active.schoolName+' · '+LABELS[active.role]:
+     active.role==='platform_admin'&&route==='workflow-center'?'Il primo passo per un nuovo bar scolastico.':
+     PAGE_NOTES[route]||active.schoolName:
      'Completa la verifica a due fattori per accedere alle funzioni riservate.';
-   pageSection.textContent='AREA '+LABELS[active.role].toUpperCase();
+   pageSection.textContent=active.role==='platform_admin'?'Gestione piattaforma':active.schoolName;
    roleLabel.textContent=LABELS[active.role];
-   if(window.matchMedia('(min-width: 1024px)').matches)root.scrollTop=0;
-   else window.scrollTo({top:0,behavior:'instant'});
+   if(breadcrumb)breadcrumb.textContent=LABELS[active.role]+' / '+name;
+   document.title=name+' · BreakApp';
+   if(moveFocus)title.focus({preventScroll:true});
+   const resetScroll=()=>{
+     root.scrollTop=0;
+     window.scrollTo({top:0,behavior:'instant'});
+   };
+   resetScroll();
+   // Let fragment navigation and the newly displayed section finish their layout.
+   // Otherwise the browser can scroll past the page heading during initial Auth.
+   requestAnimationFrame(()=>{if(route===target)resetScroll();});
    window.dispatchEvent(new CustomEvent('breakapp:route-changed',{
      detail:{route,schoolId:active.schoolId,role:active.role}
    }));
@@ -232,6 +264,8 @@ export function initializeWorkspace(client){
    select.value=context.key;
    profileSelect.value=context.key;
    schoolLabel.textContent=context.schoolName;
+   if(contextName)contextName.textContent=LABELS[context.role];
+   document.getElementById('workspace-identity-role').textContent=LABELS[context.role];
    document.body.dataset.activeRole=context.role;
    document.body.dataset.activeSchool=context.schoolId||'global';
    notifyContext();
@@ -265,6 +299,8 @@ export function initializeWorkspace(client){
    document.body.removeAttribute('data-active-role');
    document.body.removeAttribute('data-active-school');
    sidebar.hidden=true;nav.hidden=true;mobile.hidden=true;heading.hidden=true;
+   if(breadcrumb)breadcrumb.hidden=true;
+   if(accountLink)accountLink.hidden=true;
    profileSwitcher.hidden=true;
    moreContainer.hidden=true;
    routeSections.forEach(s=>s.classList.remove('is-route-active'));
@@ -274,6 +310,9 @@ export function initializeWorkspace(client){
    const token=++epoch;
    user=userNext;
    userId.textContent=userNext.email||'Account BreakApp';
+   const initials=(userNext.email||'B').split('@')[0].split(/[.\s_-]+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
+   if(identityAvatar)identityAvatar.textContent=initials;
+   if(topAvatar)topAvatar.textContent=initials;
    if(restoreOfflineBarista(userNext))return;
    const [access,sch,assurance,platform]=await Promise.allSettled([
      loadSchoolAccess(client,userNext.id),
@@ -289,6 +328,8 @@ export function initializeWorkspace(client){
      active=null;nav.replaceChildren();mobile.replaceChildren();
      routeSections.forEach(s=>s.classList.remove('is-route-active'));
      sidebar.hidden=true;heading.hidden=true;
+     if(breadcrumb)breadcrumb.hidden=true;
+     if(accountLink)accountLink.hidden=true;
      document.body.dataset.workspace='false';
      document.getElementById('school-access-status').textContent=
        'Impossibile verificare ruolo e scuola. Riprova dal Profilo.';
@@ -308,7 +349,11 @@ export function initializeWorkspace(client){
    // A sole Super Admin context must not offer a meaningless role switcher.
    profileSwitcher.hidden=contexts.length<2;
    select.disabled=contexts.length<2;
+   select.hidden=contexts.length<2;
+   if(contextName)contextName.hidden=contexts.length>1;
    profileSelect.disabled=contexts.length<2;
+   if(breadcrumb)breadcrumb.hidden=false;
+   if(accountLink)accountLink.hidden=false;
    document.body.dataset.workspace='true';ready=true;
    setContext(selected,{restoreRoute:!!previous});
  }
@@ -323,20 +368,41 @@ export function initializeWorkspace(client){
  document.getElementById('workspace-signout').addEventListener('click',()=>{
    document.getElementById('logout-button').click();
  });
- window.addEventListener('hashchange',()=>{
+ const routeFromLocation=()=>{
    if(!ready)return;
    const next=decodeURIComponent(location.hash.slice(1));
    if(next!==route)switchRoute(next,{history:false});
- });
+ };
+ window.addEventListener('hashchange',routeFromLocation);
+ window.addEventListener('popstate',routeFromLocation);
  window.addEventListener('breakapp:access-updated',()=>{
    if(user)void refreshSession(user);
  });
  window.addEventListener('breakapp:mfa-verified',()=>{
    if(user)void refreshSession(user);
  });
+ window.addEventListener('breakapp:platform-onboarded',()=>{
+   if(active?.role==='platform_admin'&&active.verified)switchRoute('platform-configuration');
+ });
  window.addEventListener('click',event=>{
+   const link=event.target.closest('a[href^="#"]');
+   if(ready&&link&&!event.defaultPrevented&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){
+     const destination=link.getAttribute('href').slice(1);
+     if(!destination||routeSections.some(section=>section.id===destination)){
+       event.preventDefault();switchRoute(destination||fallback());
+     }
+   }
    if(!moreContainer.hidden && !moreContainer.contains(event.target) &&
-      !mobile.contains(event.target))moreContainer.hidden=true;
+      !mobile.contains(event.target)){
+     moreContainer.hidden=true;
+     mobile.querySelector('.workspace-more-button')?.setAttribute('aria-expanded','false');
+   }
+ });
+ window.addEventListener('keydown',event=>{
+   if(event.key==='Escape'&&!moreContainer.hidden){
+     moreContainer.hidden=true;
+     const more=mobile.querySelector('.workspace-more-button');more?.setAttribute('aria-expanded','false');more?.focus();
+   }
  });
  const onAuth=(_event,session)=>queueMicrotask(()=>{
    const next=session?.user||null;

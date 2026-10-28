@@ -18,42 +18,37 @@
           <span class="brand-symbol" aria-hidden="true">B<span>.</span></span>
           <span>Break<span class="brand-highlight">App</span></span>
         </a>
+        <div id="workspace-breadcrumb" class="workspace-breadcrumb" hidden></div>
         <nav aria-label="Navigazione principale" class="header-actions">
           <a id="header-menu-link" class="header-link" href="#menu" hidden>Menu</a>
           <a id="header-profile-link" class="header-link" href="#accesso" hidden>Profilo</a>
           <button type="button" class="icon-button notice-button" id="notifications-toggle"
             aria-label="Apri notifiche" title="Notifiche" hidden>♧<span id="notifications-unread" class="notice-count" hidden></span></button>
           <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
+          <a id="workspace-account" class="workspace-account" href="#accesso" aria-label="Apri profilo e sicurezza" hidden><span id="workspace-account-avatar">B</span></a>
         </nav>
       </div>
     </header>
 
     <aside id="workspace-sidebar" class="workspace-sidebar" hidden aria-label="Navigazione di lavoro">
-      <div class="workspace-sidebar-brand">
+      <a class="workspace-sidebar-brand" href="#" aria-label="BreakApp, pagina iniziale">
         <span class="workspace-sidebar-mark" aria-hidden="true">B.</span>
-        <span><strong>BreakApp</strong><small>GESTIONALE SCOLASTICO</small></span>
-      </div>
+        <span><strong>BreakApp<span class="brand-highlight">.</span></strong><small>Ogni intervallo, più semplice.</small></span>
+      </a>
       <div class="workspace-context">
-        <label for="workspace-context-select">STAI OPERANDO COME</label>
+        <label for="workspace-context-select">Spazio di lavoro</label>
         <select id="workspace-context-select" aria-label="Scuola e ruolo attivi"></select>
+        <strong id="workspace-context-name"></strong>
         <span id="workspace-school-label" class="workspace-school-label"></span>
       </div>
-      <div class="workspace-nav-caption">AREA DI LAVORO</div>
+      <div class="workspace-nav-caption">Principale</div>
       <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Menu del ruolo attivo" hidden></nav>
       <div class="workspace-sidebar-bottom">
-        <div id="workspace-identity" class="workspace-identity"></div>
+        <a href="#accesso" class="workspace-identity-card" aria-label="Il tuo profilo"><span id="workspace-avatar" class="workspace-avatar">B</span><span><strong id="workspace-identity-role"></strong><span id="workspace-identity" class="workspace-identity"></span></span></a>
         <button id="workspace-signout" type="button" class="workspace-signout">Esci dall'account</button>
       </div>
     </aside>
     <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Menu del ruolo attivo" hidden></nav>
-    <div id="workspace-page-head" class="workspace-page-head" hidden>
-      <div>
-        <p class="workspace-eyebrow" id="workspace-page-section"></p>
-        <h1 id="workspace-page-title">BreakApp</h1>
-        <p id="workspace-page-subtitle" class="workspace-page-subtitle"></p>
-      </div>
-      <span class="workspace-page-role" id="workspace-page-role"></span>
-    </div>
     <dialog id="notifications-dialog" class="auth-dialog notice-dialog" aria-labelledby="notifications-heading">
       <div class="dialog-header"><h2 id="notifications-heading">Notifiche</h2>
         <button id="notifications-close" class="button button-outline button-small" type="button">Chiudi</button></div>
@@ -79,6 +74,14 @@
       <div id="notifications-list" class="service-list"></div>
     </dialog>
     <main id="main-content" class="app-main">
+      <div id="workspace-page-head" class="workspace-page-head" hidden>
+        <div>
+          <p class="workspace-eyebrow" id="workspace-page-section"></p>
+          <h1 id="workspace-page-title" tabindex="-1">BreakApp</h1>
+          <p id="workspace-page-subtitle" class="workspace-page-subtitle"></p>
+        </div>
+        <span class="workspace-page-role" id="workspace-page-role"></span>
+      </div>
       <section class="access-section" id="accesso" aria-labelledby="access-heading">
         <div class="container access-layout">
           <div class="auth-card">
@@ -828,16 +831,14 @@
 
 
       <section id="admin-overview" class="container orders-section workspace-page" hidden aria-labelledby="dashboard-title">
-        <div class="section-heading"><span class="eyebrow">DASHBOARD · DATI EFFETTIVI</span>
-          <h2 id="dashboard-title">Panoramica della scuola</h2>
-          <p id="dashboard-subtitle">Statistiche lette in tempo reale dal database, limitate alla scuola autorizzata.</p>
-        </div>
+        <h2 id="dashboard-title" class="sr-only">Panoramica della scuola</h2>
+        <div class="dashboard-toolbar"><span id="dashboard-subtitle" class="dashboard-period">La giornata nella tua scuola</span><div class="dashboard-toolbar-actions"><button id="dashboard-refresh" class="button button-outline button-small" type="button"><span data-icon="Refresh"></span>Aggiorna</button><span id="dashboard-export"></span></div></div>
         <div id="dashboard-metrics" class="dashboard-metrics"></div>
-        <div class="dashboard-section">
-          <h3>Ordini recenti</h3>
-          <div id="dashboard-recent-orders" class="service-list"></div>
+        <div class="dashboard-columns">
+          <div class="dashboard-section"><div class="panel-heading"><h3>Ultimi ordini</h3><a href="#staff-orders-section" class="text-link">Tutti gli ordini <span data-icon="ArrowUpRight"></span></a></div><div id="dashboard-recent-orders" class="service-list"></div></div>
+          <div class="dashboard-section"><div class="panel-heading"><h3>Stato degli ordini</h3><span data-icon="ClipboardList"></span></div><div id="dashboard-order-status" class="dashboard-order-status"></div><a href="#workflow-center" class="dashboard-shortcut">Approvazioni e modifiche <span data-icon="ArrowRight"></span></a></div>
         </div>
-        <p id="dashboard-feedback" role="status" aria-live="polite"></p>
+        <p id="dashboard-feedback" class="dashboard-feedback" role="status" aria-live="polite"></p>
       </section>
       <section id="warehouse-inventory" class="container orders-section workspace-page" hidden aria-labelledby="warehouse-heading">
         <div class="section-heading"><span class="eyebrow">MAGAZZINO · SCORTE REALI</span>
@@ -853,15 +854,26 @@
         <div id="warehouse-items" class="warehouse-items"></div>
       </section>
       <section id="platform-overview" class="container orders-section workspace-page" hidden aria-labelledby="platform-heading">
-        <div class="section-heading"><span class="eyebrow">SUPER ADMIN · ACCESSO AAL2</span>
-          <h2 id="platform-heading">Piattaforma BreakApp</h2>
-          <p>Directory delle scuole e dei bar attivi. Le operazioni globali non ancora disponibili non vengono simulate.</p>
+        <h2 id="platform-heading" class="sr-only">Panoramica della piattaforma</h2>
+        <div class="dashboard-toolbar"><span class="dashboard-period" id="platform-date"></span><div class="dashboard-toolbar-actions"><button id="platform-refresh" type="button" class="button button-outline button-small"><span data-icon="Refresh"></span>Aggiorna</button><a href="#workflow-center" class="button button-primary button-small"><span data-icon="Plus"></span>Nuova scuola</a></div></div>
+        <div id="platform-metrics" class="dashboard-metrics platform-metrics" aria-busy="true"></div>
+        <div class="dashboard-columns">
+          <div class="dashboard-section school-preview-panel"><div class="panel-heading"><div><h3>Le tue scuole <span id="platform-school-count" class="count-pill"></span></h3><p>Gli spazi che gestisci con BreakApp.</p></div><a href="#platform-schools" class="text-link">Vedi tutte <span data-icon="ArrowUpRight"></span></a></div><div id="platform-school-list"></div></div>
+          <div class="dashboard-section network-panel"><div class="panel-heading"><h3>La rete scolastica</h3><span data-icon="Building2"></span></div><div id="platform-network"></div><a href="#platform-schools" class="dashboard-shortcut">Gestisci le scuole <span data-icon="ArrowRight"></span></a></div>
         </div>
-        <div id="platform-school-list" class="dashboard-metrics"></div>
-        <div class="platform-pilot-tools" id="platform-pilot-tools">
+        <div class="dashboard-section"><div class="panel-heading"><h3>Da dove vuoi iniziare?</h3></div><div class="quick-action-grid"><a href="#workflow-center" class="quick-action"><span class="quick-action-icon" data-icon="Plus"></span><span><strong>Aggiungi una scuola</strong><small>Crea il suo spazio e assegna il primo Admin.</small></span><span data-icon="ArrowUpRight"></span></a><a href="#platform-configuration" class="quick-action"><span class="quick-action-icon" data-icon="SlidersHorizontal"></span><span><strong>Organizza il servizio</strong><small>Catalogo, personale e orari del bar.</small></span><span data-icon="ArrowUpRight"></span></a><a href="#accesso" class="quick-action"><span class="quick-action-icon" data-icon="ShieldCheck"></span><span><strong>Proteggi il tuo account</strong><small>Profilo e verifica in due passaggi.</small></span><span data-icon="ArrowUpRight"></span></a></div></div>
+        <p id="platform-feedback" class="dashboard-feedback" role="status" aria-live="polite"></p>
+      </section>
+      <section id="platform-schools" class="container orders-section workspace-page" hidden aria-labelledby="platform-schools-heading">
+        <h2 id="platform-schools-heading" class="sr-only">Directory delle scuole</h2>
+        <div class="dashboard-section school-directory"><div class="directory-toolbar"><label class="search-field"><span data-icon="Search"></span><input id="platform-school-search" type="search" placeholder="Cerca una scuola o un bar…" aria-label="Cerca una scuola o un bar" /></label><label class="directory-filter">Stato<select id="platform-school-filter"><option value="all">Tutte le scuole</option><option value="active">Attive</option><option value="paused">Sospese</option></select></label><a href="#workflow-center" class="button button-primary button-small"><span data-icon="Plus"></span>Nuova scuola</a></div><p id="platform-directory-count" class="directory-count" role="status" aria-live="polite"></p><div id="platform-directory-list"></div><p id="platform-directory-feedback" class="dashboard-feedback" role="status" aria-live="polite"></p></div>
+      </section>
+      <section id="platform-configuration" class="container orders-section workspace-page" hidden aria-labelledby="platform-configuration-heading">
+        <h2 id="platform-configuration-heading" class="sr-only">Configurazione della scuola</h2>
+        <div class="platform-pilot-tools" id="platform-pilot-tools" hidden>
           <div class="platform-pilot-heading">
-            <div><h3>Attivazione del bar scolastico</h3><p>Configurazione reale del servizio. Nessun dato dimostrativo viene salvato automaticamente.</p></div>
-            <button id="pilot-reload" class="button button-outline button-small" type="button">Verifica disponibilità</button>
+            <div><h3>Il servizio della scuola</h3><p>Seleziona il bar da configurare.</p></div>
+            <button id="pilot-reload" class="button button-outline button-small" type="button"><span data-icon="Refresh"></span>Aggiorna</button>
           </div>
           <div class="pilot-context">
             <label for="pilot-school">Scuola attiva
@@ -871,10 +883,11 @@
               <select id="pilot-bar" required></select>
             </label>
           </div>
-          <div id="pilot-readiness" class="pilot-readiness" role="status" aria-live="polite"></div>
+          <details class="readiness-details"><summary>Preparazione al servizio <span id="pilot-readiness-count" class="count-pill"></span></summary><div id="pilot-readiness" class="pilot-readiness" role="status" aria-live="polite"></div></details>
           <p id="pilot-status" class="catalog-status" role="status" aria-live="polite"></p>
-          <div class="pilot-grid">
-            <article class="pilot-card">
+          <div id="pilot-tabs" class="workspace-tabs" role="tablist" aria-label="Configurazione del bar"><button id="pilot-tab-catalog" type="button" role="tab" aria-controls="pilot-panel-catalog" aria-selected="true">Catalogo</button><button id="pilot-tab-people" type="button" role="tab" aria-controls="pilot-panel-people" aria-selected="false" tabindex="-1">Personale</button><button id="pilot-tab-service" type="button" role="tab" aria-controls="pilot-panel-service" aria-selected="false" tabindex="-1">Orari e ritiri</button><button id="pilot-tab-stock" type="button" role="tab" aria-controls="pilot-panel-stock" aria-selected="false" tabindex="-1">Scorte e allergeni</button><button id="pilot-tab-refunds" type="button" role="tab" aria-controls="pilot-panel-refunds" aria-selected="false" tabindex="-1">Rimborsi</button></div>
+          <div class="pilot-grid" id="pilot-panel-catalog" role="tabpanel" aria-labelledby="pilot-tab-catalog" tabindex="0">
+            <article class="pilot-card" id="pilot-categories-card">
               <h4>Categorie del catalogo</h4>
               <p class="catalog-help">Crea categorie o modifica quelle esistenti. Non vengono cancellate le categorie collegate a ordini o prodotti.</p>
               <form id="pilot-category-form">
@@ -889,7 +902,7 @@
               </form>
               <div id="pilot-category-list" class="service-list"></div>
             </article>
-            <article class="pilot-card">
+            <article class="pilot-card" id="pilot-products-card">
               <h4>Prodotti e prezzi</h4>
               <p class="catalog-help">Crea o modifica i prodotti del bar. Un prodotto pubblicato deve contenere ingredienti e dichiarazione allergeni corretti.</p>
               <form id="pilot-product-form">
@@ -917,6 +930,8 @@
               </form>
               <div id="pilot-product-list" class="service-list"></div>
             </article>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-refunds" role="tabpanel" aria-labelledby="pilot-tab-refunds" tabindex="0" hidden>
             <article class="pilot-card">
               <h4>Rimborsi Stripe verificati</h4>
               <p class="catalog-help">Soltanto ordini individuali già consegnati e pagati online. Il rimborso torna al pagatore originario e viene confermato dal webhook Stripe.</p>
@@ -929,6 +944,8 @@
                 <button type="submit" class="button button-primary">Richiedi rimborso completo (test)</button>
               </form>
             </article>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-people" role="tabpanel" aria-labelledby="pilot-tab-people" tabindex="0" hidden>
             <article class="pilot-card">
               <h4>Personale della scuola</h4>
               <p class="catalog-help">L'utente deve avere già registrato e confermato la propria email in BreakApp. Le credenziali non vengono condivise.</p>
@@ -945,6 +962,8 @@
               </form>
               <div id="pilot-staff-list" class="service-list"></div>
             </article>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-service" role="tabpanel" aria-labelledby="pilot-tab-service" tabindex="0" hidden>
             <article class="pilot-card">
               <h4>Orari settimanali</h4>
               <p class="catalog-help">Un intervallo per riga, ad esempio 08:00-11:30. Per un giorno chiuso, lascia vuoto.</p>
@@ -976,6 +995,8 @@
               </form>
               <div id="pilot-windows-list" class="service-list"></div>
             </article>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-stock" role="tabpanel" aria-labelledby="pilot-tab-stock" tabindex="0" hidden>
             <article class="pilot-card">
               <h4>Scorte giornaliere</h4>
               <p class="catalog-help">La disponibilità è specifica del giorno. Lascia la quantità vuota per disponibilità illimitata, oppure inserisci un numero reale.</p>
@@ -1006,9 +1027,9 @@
             </article>
           </div>
         </div>
-        <p id="platform-feedback" role="status"></p>
       </section>
     </main>
+    <dialog id="platform-school-state-dialog" class="auth-dialog platform-dialog" aria-labelledby="platform-school-state-title"><form id="platform-school-state-form"><div class="dialog-header"><h2 id="platform-school-state-title">Stato della scuola</h2><button type="button" id="platform-school-state-close" class="icon-button" aria-label="Chiudi"><span data-icon="Close"></span></button></div><p id="platform-school-state-description"></p><label for="platform-school-state-reason">Motivazione</label><textarea id="platform-school-state-reason" required minlength="8" maxlength="500" rows="3" placeholder="Descrivi il motivo della modifica"></textarea><p id="platform-school-state-feedback" role="status" aria-live="polite"></p><div class="dialog-actions"><button type="button" id="platform-school-state-cancel" class="button button-outline">Annulla</button><button id="platform-school-state-submit" type="submit" class="button button-primary">Conferma</button></div></form></dialog>
     <div id="cart-strip" class="cart-strip" hidden>
       <button type="button" id="cart-open" class="button button-primary ba-block">
         <span>Carrello · <span id="cart-count">0</span> articoli</span>

@@ -22,7 +22,20 @@ export function initializePlatformPilot(client){
   readiness=$('pilot-readiness');
  let allowed=false,schools=[],bars=[],products=[],categories=[],staff=[],hours=[],windows=[],stocks=[],token=0;
  let currentUser=null,authEpoch=0;
+ let requestedSchool=null,refreshEpoch=0;
  const refundRequestKeys=new Map();
+ const tabs=[...$('pilot-tabs').querySelectorAll('[role="tab"]')];
+ function activateTab(selected,focus=false){
+   for(const tab of tabs){const active=tab===selected;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;$(tab.getAttribute('aria-controls')).hidden=!active;}
+   if(focus)selected.focus();
+ }
+ tabs.forEach((tab,index)=>{
+   tab.addEventListener('click',()=>activateTab(tab));
+   tab.addEventListener('keydown',event=>{
+     const next=event.key==='ArrowRight'?(index+1)%tabs.length:event.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:event.key==='Home'?0:event.key==='End'?tabs.length-1:null;
+     if(next!==null){event.preventDefault();activateTab(tabs[next],true);}
+   });
+ });
 
  for(const [id] of [['pilot-window-date'],['pilot-stock-date']]){
    $(id).value=todayRome();
@@ -53,10 +66,11 @@ export function initializePlatformPilot(client){
    replaceOptions(barSelect,b.map(x=>[x.id,x.name]),old);
    void updateBar();
  }
- async function fetchSchoolStaff(){
+ async function fetchSchoolStaff(expectedToken){
    const current=school();
    if(!current)return [];
    const {data,error}=await client.rpc('platform_list_school_staff',{p_school_id:current.id});
+   if(expectedToken!==token||!allowed)return [];
    if(error)throw error;
    staff=Array.isArray(data)?data:[];
    staffList.replaceChildren();
@@ -201,16 +215,17 @@ export function initializePlatformPilot(client){
      readiness.append(row);
    }
    const all=checks.every(c=>c[1]);
+   $('pilot-readiness-count').textContent=checks.filter(c=>c[1]).length+'/'+checks.length;
    const msg=textNode('strong',all?
     'Configurazione preliminare completa: procedi ai test reali con Cliente e Barista.':
     'Configurazione incompleta: i controlli mancanti sono indicati qui sopra.');
    readiness.prepend(msg);
  }
  async function updateBar(){
+   const myToken=++token;
    const b=bar();products=[];categories=[];hours=[];windows=[];stocks=[];staff=[];
    if(!b){renderCatalog();renderProducts();renderWindows();renderHours();renderReadiness();return;}
-   const myToken=++token;
-   say('Verifica impostazioni e registrazioni su Supabase…');
+   say('Caricamento della configurazione…');
    const [p,c,h,w,st]=await Promise.all([
      client.from('products').select('id,category_id,name,description,price_cents,ingredients,allergens,image_path,is_active')
        .eq('school_id',b.school_id).eq('bar_id',b.id).order('name'),
@@ -229,22 +244,24 @@ export function initializePlatformPilot(client){
    const error=p.error||c.error||h.error||w.error||st.error;
    if(error){say('Lettura configurazione fallita: '+error.message,true);return;}
    products=p.data||[];categories=c.data||[];hours=h.data||[];windows=w.data||[];stocks=st.data||[];
-   try{await fetchSchoolStaff();}catch(err){say(err.message,true);return;}
+   try{await fetchSchoolStaff(myToken);}catch(err){if(myToken===token)say(err.message,true);return;}
    if(myToken!==token)return;
    renderHours();renderWindows();renderCatalog();renderProducts();renderReadiness();
-   say('Dati operativi verificati sul progetto BreakApp.');
+   say('Configurazione aggiornata.');
  }
  async function refresh(){
    if(!allowed)return;
-   const selected=school()?.id;
+   const refreshToken=++refreshEpoch,selected=requestedSchool||school()?.id;
    const currentBar=bar()?.id;
    const [s,b]=await Promise.all([
      client.from('schools').select('id,name,is_active,latitude,longitude').eq('is_active',true).order('name'),
      client.from('bars').select('id,name,school_id,is_active').eq('is_active',true).order('name')
    ]);
+   if(refreshToken!==refreshEpoch||!allowed)return;
    if(s.error||b.error){say((s.error||b.error).message,true);return;}
    schools=s.data||[];bars=b.data||[];
    replaceOptions(schoolSelect,schools.map(x=>[x.id,x.name]),selected);
+   requestedSchool=null;
    updateSchool();
    if(currentBar&&bars.some(x=>x.id===currentBar&&x.school_id===schoolSelect.value)){
      barSelect.value=currentBar;void updateBar();
@@ -394,6 +411,12 @@ export function initializePlatformPilot(client){
  $('pilot-stock-product').addEventListener('change',renderStock);
  $('pilot-food-product').addEventListener('change',renderFood);
  $('pilot-reload').addEventListener('click',()=>void refresh());
+ window.addEventListener('breakapp:platform-open-school',event=>{
+   if(!allowed)return;requestedSchool=event.detail?.schoolId;
+   activateTab(tabs[0]);void refresh();
+ });
+ window.addEventListener('breakapp:platform-school-updated',()=>{if(allowed)void refresh();});
+ window.addEventListener('breakapp:platform-onboarded',event=>{if(allowed){requestedSchool=event.detail?.school_id||null;void refresh();}});
 
  async function enter(){
    const seq=++authEpoch;
@@ -417,11 +440,11 @@ export function initializePlatformPilot(client){
  }
  window.addEventListener('breakapp:workspace-context',event=>{
    if(event.detail?.role==='platform_admin')void enter();
-   else {authEpoch++;allowed=false;section.hidden=true;}
+   else {authEpoch++;refreshEpoch++;token++;allowed=false;section.hidden=true;}
  });
  client.auth.onAuthStateChange((_e,session)=>queueMicrotask(()=>{
    currentUser=session?.user||null;
-   if(!currentUser){authEpoch++;token++;allowed=false;section.hidden=true;schools=[];bars=[];}
+   if(!currentUser){authEpoch++;refreshEpoch++;token++;allowed=false;section.hidden=true;schools=[];bars=[];}
  }));
  client.auth.getUser().then(({data,error})=>{if(!error)currentUser=data?.user||null;});
 }
