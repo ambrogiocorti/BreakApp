@@ -1,4 +1,5 @@
 import '../css/base.css';
+import '../css/workspace.css';
 import { readSupabaseConfig } from './core/config.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeAuth } from './features/auth/auth.js';

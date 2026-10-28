@@ -45,6 +45,8 @@ jobs:
         run: node tests/e2e/support.mjs
       - name: Test guest creation, verified email binding and recovery controls on three browsers
         run: node tests/e2e/guest.mjs
+      - name: Test workspace navigation, school directory and configuration on three browsers
+        run: node tests/e2e/workspace.mjs
       - name: Stop preview
         if: always()
         run: kill "$(cat /tmp/breakapp-preview.pid)" || true

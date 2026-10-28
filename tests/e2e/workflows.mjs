@@ -51,7 +51,7 @@ try{
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='save_school_promotion'&&c.args.p_code==='TEST20'));
    assert.deepEqual(await page.evaluate(()=>window.fixture.testExcel()),['5A','5B']);
    await page.evaluate(()=>window.fixture.switchRole('platform_admin'));
-   const onboarding=page.locator('article').filter({has:page.getByRole('heading',{name:'Nuova scuola'})});
+   const onboarding=page.locator('article').filter({has:page.getByRole('heading',{name:'Dati della scuola'})});
    await onboarding.getByLabel('Identificativo della scuola (es. liceo-verdi)').fill('test-school');await onboarding.getByLabel('Nome della scuola',{exact:true}).fill('Test school');
    await onboarding.getByLabel('Nome del bar',{exact:true}).fill('Test bar');await onboarding.getByLabel('Latitudine').fill('45');await onboarding.getByLabel('Longitudine').fill('9');
    await onboarding.getByLabel('Email verificata del primo Admin').fill('admin@test.invalid');await onboarding.getByRole('button',{name:'Crea scuola e bar'}).click();

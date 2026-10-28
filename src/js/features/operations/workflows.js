@@ -4,7 +4,7 @@ const button=(text,run)=>{const b=make('button',text,'button button-outline butt
 export function initializeOrderWorkflows(client){
  if(!client)return;
  const section=make('section','','container workflow-center');section.id='workflow-center';section.hidden=true;
- section.append(make('h2','Richieste e gestione ordini'));
+ const heading=make('h2','Richieste e gestione ordini');section.append(heading);
  const status=make('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  const controls=make('div','','order-actions'),barSelect=make('select'),presence=make('input');presence.type='checkbox';
  barSelect.setAttribute('aria-label','Bar di servizio');
@@ -22,8 +22,16 @@ export function initializeOrderWorkflows(client){
  async function reload(){
   if(!user||!context)return;
   const v=++epoch,staff=['bartender','school_admin'].includes(context.role);
+  section.hidden=!context.verified||!['customer','bartender','school_admin','platform_admin'].includes(context.role);
   controls.hidden=!staff;presence.closest('label').hidden=context.role!=='bartender';capacity.hidden=context.role!=='school_admin';
+  list.hidden=context.role==='platform_admin';
+  heading.textContent=context.role==='platform_admin'?'Nuova scuola':'Richieste e gestione ordini';
+  if(section.hidden)return;
   try{
+   if(context.role==='platform_admin'){
+    list.replaceChildren();
+    window.dispatchEvent(new CustomEvent('breakapp:workflow-loaded',{detail:{section,context,user,client,rpc,act,make,button,formatEuro}}));return;
+   }
    const rows=await rpc('list_order_approvals',{p_school:staff?context.schoolId:null});if(v!==epoch)return;
    if(context.role==='school_admin'){
     const settings=await client.from('schools').select('max_active_approvals').eq('id',context.schoolId);
@@ -64,14 +72,15 @@ export function initializeOrderWorkflows(client){
  window.addEventListener('breakapp:workspace-context',async e=>{
   if(activeBar&&presence.checked&&navigator.onLine)void rpc('set_staff_service_presence',{p_bar:activeBar,p_present:false}).catch(()=>{});
   presence.checked=false;context=e.detail;epoch++;
+  section.hidden=!context?.verified||!['customer','bartender','school_admin','platform_admin'].includes(context.role);
   if(['bartender','school_admin'].includes(context?.role)){
    const r=await client.from('bars').select('id,name').eq('school_id',context.schoolId).eq('is_active',true);
    if(!r.error){barSelect.replaceChildren();for(const b of r.data||[])barSelect.add(new Option(b.name,b.id));activeBar=barSelect.value;}
   }
   void reload();
  });
- client.auth.onAuthStateChange((_e,s)=>queueMicrotask(()=>{user=s?.user||null;if(!user){epoch++;list.replaceChildren();presence.checked=false;}else void reload();}));
+ client.auth.onAuthStateChange((_e,s)=>queueMicrotask(()=>{user=s?.user||null;if(!user){epoch++;section.hidden=true;context=null;list.replaceChildren();section.querySelector('.completion-panels')?.remove();presence.checked=false;}else void reload();}));
  client.auth.getUser().then(({data})=>{user=data?.user||null;void reload();});
- setInterval(()=>{void heartbeat();if(!section.hidden&&document.visibilityState==='visible'&&!section.contains(document.activeElement))void reload();},45000);
+ setInterval(()=>{void heartbeat();if(context?.role!=='platform_admin'&&!section.hidden&&document.visibilityState==='visible'&&!section.contains(document.activeElement))void reload();},45000);
  return {section,reload,rpc,act,make,button,get context(){return context;},get user(){return user;}};
 }

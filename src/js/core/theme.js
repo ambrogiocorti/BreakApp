@@ -1,3 +1,4 @@
+import {icon} from './icons.js';
 const STORAGE_KEY = 'breakapp-theme';
 
 export function initializeTheme() {
@@ -12,7 +13,7 @@ export function initializeTheme() {
     const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
     const dark = value === 'dark' || (value === 'system' && systemDark);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    button.textContent = dark ? '☀' : '☾';
+    button.replaceChildren(icon(dark ? 'Sun' : 'Moon'));
     button.setAttribute('aria-label', dark ? 'Passa al tema chiaro' : 'Passa al tema scuro');
     button.title = dark ? 'Tema chiaro' : 'Tema scuro';
   }
