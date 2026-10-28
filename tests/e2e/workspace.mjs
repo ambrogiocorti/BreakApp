@@ -10,7 +10,7 @@ try{
  for(const[name,engine]of Object.entries(engines)){
   browser=await engine.launch({headless:true});
   for(const viewport of [{width:1440,height:1000},{width:768,height:1024},{width:390,height:844}]){
-   const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',error=>errors.push(error.message));
+   let page=await browser.newPage({viewport});const errors=[];page.on('pageerror',error=>errors.push(error.message));
    await page.goto(origin+'/__workspace-qa');
    await page.getByRole('heading',{name:'Panoramica',exact:true}).waitFor();
    await page.locator('#platform-metrics .metric-card').first().waitFor();
@@ -45,8 +45,10 @@ try{
    await page.getByRole('link',{name:'Gestisci Liceo Leonardo',exact:true}).click();
    await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
    await page.waitForFunction(()=>document.getElementById('pilot-school').value==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
-   await page.goBack();await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
-   await page.goForward();await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
+   // Exercise same-document SPA history through the DOM History API. A driver
+   // document-navigation lifecycle is not part of this application transition.
+   await page.evaluate(()=>history.back());await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
+   await page.evaluate(()=>history.forward());await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
    assert.equal(await page.getByRole('tabpanel',{name:'Catalogo',exact:true}).isVisible(),true);
    await page.getByRole('tab',{name:'Personale',exact:true}).click();
    await page.getByRole('heading',{name:'Personale della scuola'}).waitFor();
@@ -75,6 +77,9 @@ try{
    await page.waitForFunction(()=>document.body.dataset.activeRole==='customer');
    assert.equal(await page.locator('#platform-overview').isVisible(),false);
    assert.equal(await page.locator('#platform-directory-list').textContent(),'');
+   // API failure/recovery starts with an isolated authenticated session, separate
+   // from the completed navigation and role-revocation scenario above.
+   await page.close();page=await browser.newPage({viewport});page.on('pageerror',error=>errors.push(error.message));
    await page.goto(origin+'/__workspace-qa');await page.locator('#platform-metrics .metric-card').first().waitFor();
    await page.evaluate(()=>{window.fixture.fail=true});await page.getByRole('button',{name:'Aggiorna',exact:true}).click();
    await page.getByText('Non riusciamo a caricare i dati',{exact:true}).waitFor();
