@@ -6,13 +6,14 @@ import { getAdminSchools } from '../catalog/utils.js';
 import { initializeAdminCatalog } from '../catalog/catalog.js';
 import { initializeAdminMfa } from './mfa.js';
 import { initializeAdminOrderSetup } from '../orders/admin-setup.js';
+import {oauthRequest,readOAuthProviders,oauthReturnError,registerWithPassword} from './sign-in.js';
 
 function setFeedback(element, message, isError = false) {
   element.textContent = message;
   element.dataset.type = isError ? 'error' : 'information';
 }
 
-export function initializeAuth(config) {
+export function initializeAuth(config,clientFactory=createClient) {
   const environment = document.querySelector('#environment-status');
   const feedback = document.querySelector('#auth-feedback');
   const signedIn = document.querySelector('#signed-in-view');
@@ -47,7 +48,27 @@ export function initializeAuth(config) {
 
   environment.textContent = '';
   environment.hidden = true;
-  const client = createClient(config.url, config.publishableKey);
+  const client = clientFactory(config.url, config.publishableKey,{auth:{flowType:'pkce',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}});
+  let oauthProviders=null,busy=false,providerCheckFailed=false;
+  const socialNote=document.getElementById('social-auth-status');
+  function refreshSocialControls(){
+    google.disabled=busy||oauthProviders?.google!==true;
+    microsoft.disabled=busy||oauthProviders?.azure!==true;
+    if(socialNote){
+      const unavailable=[oauthProviders?.google===false?'Google':null,oauthProviders?.azure===false?'Microsoft':null].filter(Boolean);
+      socialNote.hidden=Boolean(oauthProviders)&&!unavailable.length;
+      socialNote.textContent=unavailable.length?unavailable.join(' e ')+(unavailable.length===1?' non è disponibile al momento.':' non sono disponibili al momento.')+' Puoi usare email e password.':providerCheckFailed?'Non è possibile verificare gli accessi esterni. Puoi usare email e password.':oauthProviders?'':'Verifica dei metodi di accesso…';
+    }
+  }
+  refreshSocialControls();
+  void readOAuthProviders(config).then(providers=>{oauthProviders=providers;refreshSocialControls();}).catch(()=>{providerCheckFailed=true;refreshSocialControls();});
+  const callbackError=oauthReturnError(window.location);
+  if(callbackError){
+    setFeedback(feedback,callbackError,true);
+    const clean=new URL(window.location.href);for(const key of ['error','error_code','error_description'])clean.searchParams.delete(key);
+    if(new URLSearchParams(clean.hash.slice(1)).has('error'))clean.hash='accesso';
+    window.history.replaceState(null,'',clean.pathname+clean.search+clean.hash);
+  }
 
   let activeUser = null;
   let accessRequestId = 0;
@@ -182,8 +203,11 @@ export function initializeAuth(config) {
     }
   });
   function setBusy(value) {
+    busy=value;
     controls.forEach((button) => { button.disabled = value; });
+    refreshSocialControls();
     logout.disabled = value;
+    form.setAttribute('aria-busy',String(value));
   }
   async function runOperation(operation, successMessage) {
     setBusy(true);
@@ -222,17 +246,15 @@ export function initializeAuth(config) {
     const credentials = getCredentials();
     if (!credentials) return;
     const data = await runOperation(
-      () => client.auth.signUp({
-        ...credentials,
-        options: { emailRedirectTo: authRedirectUrl(window.location.origin, import.meta.env.BASE_URL) }
-      }),
+      () => registerWithPassword(client,credentials,authRedirectUrl(window.location.origin, import.meta.env.BASE_URL)),
       'Richiesta ricevuta. Se necessario, verifica l’indirizzo email per attivare l’account.'
     );
-    if (data?.session?.user) showUser(data.session.user);
+    if (data?.session?.user){showUser(data.session.user);setFeedback(feedback,'Account pronto. Accesso completato.');}
   });
   async function oauth(provider) {
+    if(oauthProviders?.[provider]!==true){setFeedback(feedback,'Questo metodo di accesso non è disponibile al momento. Usa email e password.',true);return;}
     await runOperation(
-      () => client.auth.signInWithOAuth({ provider, options: { redirectTo: authRedirectUrl(window.location.origin, import.meta.env.BASE_URL) } }),
+      () => client.auth.signInWithOAuth(oauthRequest(provider,authRedirectUrl(window.location.origin, import.meta.env.BASE_URL))),
       'Reindirizzamento al provider in corso…'
     );
   }

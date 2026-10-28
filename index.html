@@ -101,9 +101,10 @@
               </form>
               <div class="auth-divider"><span>oppure continua con</span></div>
               <div class="social-actions">
-                <button type="button" id="google-button" class="button button-secondary">Google</button>
-                <button type="button" id="microsoft-button" class="button button-secondary">Microsoft</button>
+                <button type="button" id="google-button" class="button button-secondary social-button" aria-describedby="social-auth-status"><svg viewBox="0 0 24 24" aria-hidden="true" class="provider-mark"><path fill="#4285f4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.61 4.61 0 0 1-2 3.03v2.52h3.23c1.89-1.74 2.99-4.3 2.99-7.38Z"/><path fill="#34a853" d="M12 22c2.7 0 4.96-.9 6.61-2.39l-3.23-2.52c-.9.6-2.05.97-3.38.97-2.6 0-4.81-1.76-5.6-4.12H3.06v2.6A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" d="M6.4 13.94a6 6 0 0 1 0-3.88v-2.6H3.06a10 10 0 0 0 0 9.08Z"/><path fill="#ea4335" d="M12 5.94c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.58 9.58 0 0 0 12 2a10 10 0 0 0-8.94 5.46l3.34 2.6A5.99 5.99 0 0 1 12 5.94Z"/></svg>Google</button>
+                <button type="button" id="microsoft-button" class="button button-secondary social-button" aria-describedby="social-auth-status"><svg viewBox="0 0 24 24" aria-hidden="true" class="provider-mark"><path fill="#f25022" d="M2 2h9v9H2z"/><path fill="#7fba00" d="M13 2h9v9h-9z"/><path fill="#00a4ef" d="M2 13h9v9H2z"/><path fill="#ffb900" d="M13 13h9v9h-9z"/></svg>Microsoft</button>
               </div>
+              <p id="social-auth-status" class="social-auth-status" role="status" aria-live="polite" hidden></p>
             </div>
             <div id="signed-in-view" hidden>
               <span class="auth-tag">ACCOUNT</span>
@@ -143,7 +144,6 @@
                   <p>Il QR originale non può essere recuperato: un responsabile autorizzato del progetto Supabase BreakApp deve prima rimuovere il vecchio fattore 2FA. Il fattore non può essere reimpostato con la sola password.</p>
                   <button type="button" id="mfa-refresh-button" class="button button-outline button-small">Ho ripristinato il fattore · Ricarica stato</button>
                 </div>
-                <button type="button" id="mfa-backup-button" class="button button-outline button-small" hidden>Aggiungi Authenticator di riserva</button>
               </div>
               <button type="button" id="logout-button" class="button button-secondary">Esci dall'account</button>
             </div>

@@ -4,7 +4,7 @@ Aggiornato il 27 ottobre 2026. La specifica privata resta la fonte dei requisiti
 
 | Area | Implementazione | Verifica |
 | --- | --- | --- |
-| Account e scuole | RBAC per scuola, TOTP Admin/Super Admin, ospiti con link privato e recupero email verificata, import CSV/XLSX, creazione/sospensione/riattivazione scuole e assegnazione personale | RLS, ruoli, ospite non coordinatore, onboarding transazionale; OAuth Google/Microsoft richiede configurazione dei provider |
+| Account e scuole | RBAC per scuola, TOTP Admin/Super Admin con blocco di ulteriori Authenticator, registrazione senza conferma per il dominio esatto `admin.breakapp.it`, ospiti con link privato e recupero email verificata, import CSV/XLSX, creazione/sospensione/riattivazione scuole e assegnazione personale | RLS, ruoli, ospite non coordinatore, onboarding transazionale; flusso Google/Microsoft con PKCE implementato, attivazione soggetta alle credenziali OAuth dei provider |
 | Catalogo e scorte | Prodotti, immagini, ingredienti/allergeni, scorte giornaliere, vendite, conta motivata anche sotto il prenotato, priorità di ritiro e sostituzioni | Ultima unità concorrente; isolamento prodotto/giorno; un ammanco non cancella arbitrariamente gli ordini confermati |
 | Ordini | GPS, idempotenza, QR, preparazione/ritiro, preferiti, riordino, modifica atomica, sostituzioni e proposte di orario con consenso | Ordine originale preservato su errore, cutoff, allergeni, nessuno spostamento tacito |
 | Grandi ordini | Coda senza stock, presenza Barista, limite attivazioni, riserva di 10 minuti, priorità fascia, nuova fascia o risposta entro 2 ore | Attivazione, scadenze, rifiuto, rilascio e rimborso; nessuna autoconferma sopra soglia |
