@@ -33,8 +33,8 @@ test('provider availability is read without session credentials and errors remai
 });
 
 function registrationFixture({rateError=null,createError=null}={}){
- const calls=[];const handler=createAdminRegistrationHandler({env:name=>({SUPABASE_URL:'https://project.example.invalid',SUPABASE_SERVICE_ROLE_KEY:'fixture-service-key'})[name],createClient:()=>({async rpc(name,args){calls.push({rpc:name,args});return {error:rateError}},auth:{admin:{async createUser(args){calls.push({create:args});return {data:{user:{id:'new-user'}},error:createError}}}}})});
- const request=body=>handler(new Request('https://project.example.invalid/functions/v1/admin-registration',{method:'POST',headers:{'content-type':'application/json','x-forwarded-for':'192.0.2.5'},body:JSON.stringify(body)}));return {calls,request,handler};
+ const calls=[];const handler=createAdminRegistrationHandler({env:name=>({SUPABASE_URL:'https://project.example.invalid',SUPABASE_SERVICE_ROLE_KEY:'fixture-service-key',SUPABASE_PUBLISHABLE_KEYS:'{"default":"fixture-public-key"}'})[name],createClient:()=>({async rpc(name,args){calls.push({rpc:name,args});return {error:rateError}},auth:{admin:{async createUser(args){calls.push({create:args});return {data:{user:{id:'new-user'}},error:createError}}}}})});
+ const request=body=>handler(new Request('https://project.example.invalid/functions/v1/admin-registration',{method:'POST',headers:{'content-type':'application/json','x-forwarded-for':'192.0.2.5',apikey:'fixture-public-key'},body:JSON.stringify(body)}));return {calls,request,handler};
 }
 test('registration service confirms internal accounts without accepting role or metadata input',async()=>{
  const f=registrationFixture(),response=await f.request({email:' A@ADMIN.BREAKAPP.IT ',password:'fixture-pass',app_metadata:{role:'platform_admin'},user_metadata:{admin:true}});
@@ -45,6 +45,9 @@ test('registration service confirms internal accounts without accepting role or 
 test('registration service rejects other domains and short passwords before privileged operations',async()=>{
  const f=registrationFixture();for(const email of ['a@example.invalid','a@admin.breakapp.it.evil.test','a@sub.admin.breakapp.it'])assert.equal((await f.request({email,password:'fixture-pass'})).status,400);
  assert.equal((await f.request({email:'a@admin.breakapp.it',password:'short'})).status,400);assert.equal(f.calls.length,0);
+});
+test('registration requires a valid project API key before privileged operations',async()=>{
+ const f=registrationFixture();for(const key of ['', 'different-project-key']){const r=await f.handler(new Request('https://example.invalid/',{method:'POST',headers:{apikey:key},body:JSON.stringify({email:'a@admin.breakapp.it',password:'fixture-pass'})}));assert.equal(r.status,401);}assert.equal(f.calls.length,0);
 });
 test('rate limits prevent account creation; duplicate signup never overwrites the old account',async()=>{
  const limited=registrationFixture({rateError:{message:'limit'}});assert.equal((await limited.request({email:'a@admin.breakapp.it',password:'fixture-pass'})).status,429);assert.equal(limited.calls.length,1);

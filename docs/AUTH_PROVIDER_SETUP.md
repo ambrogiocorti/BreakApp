@@ -35,7 +35,7 @@ La funzione Edge `admin-registration` gestisce esclusivamente email con dominio 
 
 Il servizio non accetta `app_metadata`, ruoli o iscrizioni a scuole e non modifica account già esistenti. La conferma dell’email non costituisce assegnazione del ruolo Admin. Il nome del dominio non è una regola di autorizzazione. Per gli account esistenti valgono password, assegnazioni e 2FA già configurate.
 
-I limiti sono 5 richieste al minuto per sorgente, 30 al minuto complessive e 200 al giorno complessive. La sorgente è rappresentata da un’impronta HMAC: nessun indirizzo IP o password è scritto nelle tabelle di controllo.
+La funzione autentica la chiave pubblica del progetto usando le variabili native `SUPABASE_PUBLISHABLE_KEYS` / `SUPABASE_ANON_KEY`. Usa `verify_jwt: false` perché la chiave pubblicabile non è un JWT; questo non conferisce privilegi di utente. I limiti sono 5 richieste al minuto per sorgente, 30 al minuto complessive e 200 al giorno complessive. La sorgente è rappresentata da un’impronta HMAC: nessun indirizzo IP o password è scritto nelle tabelle di controllo.
 
 ## Un solo nuovo Authenticator
 

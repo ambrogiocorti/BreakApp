@@ -15,6 +15,14 @@ export function createAdminRegistrationHandler({createClient,env}){
   if(Number(request.headers.get('content-length')||0)>4096)return out({error:'Richiesta troppo grande.'},413);
   const url=env('SUPABASE_URL'),key=env('SUPABASE_SERVICE_ROLE_KEY');
   if(!url||!key)return out({error:'Registrazione temporaneamente non disponibile.'},503);
+  // Publishable keys are not JWTs: authenticate the project API key here rather
+  // than enabling the legacy JWT-only gateway check for this public signup API.
+  let publicKeys;
+  try{publicKeys=Object.values(JSON.parse(env('SUPABASE_PUBLISHABLE_KEYS')||'{}')).filter(value=>typeof value==='string');}
+  catch{return out({error:'Registrazione temporaneamente non disponibile.'},503);}
+  const legacyAnon=env('SUPABASE_ANON_KEY');if(legacyAnon)publicKeys.push(legacyAnon);
+  if(!publicKeys.length)return out({error:'Registrazione temporaneamente non disponibile.'},503);
+  if(!publicKeys.includes(request.headers.get('apikey')||''))return out({error:'Richiesta non autorizzata.'},401);
   let body;
   try{body=await readBody(request);}catch{return out({error:'Richiesta non valida.'},400);}
   const email=typeof body?.email==='string'?body.email.trim().toLowerCase():'',password=body?.password;
