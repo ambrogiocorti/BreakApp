@@ -47,6 +47,8 @@ jobs:
         run: node tests/e2e/guest.mjs
       - name: Test workspace navigation, school directory and configuration on three browsers
         run: node tests/e2e/workspace.mjs
+      - name: Test OAuth, domain-specific registration and primary Authenticator controls on three browsers
+        run: node tests/e2e/auth.mjs
       - name: Stop preview
         if: always()
         run: kill "$(cat /tmp/breakapp-preview.pid)" || true

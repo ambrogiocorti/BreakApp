@@ -4,6 +4,16 @@ create role authenticated nologin;
 create role service_role nologin;
 create schema auth;
 create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz);
+-- Auth-owned MFA persistence contract used by the application enrollment guard.
+create role supabase_auth_admin nologin;
+create table auth.mfa_factors(
+ id uuid primary key,user_id uuid not null references auth.users(id) on delete cascade,
+ friendly_name text,factor_type text not null,status text not null,secret text,
+ created_at timestamptz not null default now(),updated_at timestamptz not null default now(),last_challenged_at timestamptz
+);
+create index mfa_factors_user_idx on auth.mfa_factors(user_id);
+grant usage on schema auth to supabase_auth_admin;
+grant select,insert,update,delete on auth.mfa_factors to supabase_auth_admin;
 create or replace function auth.uid() returns uuid language sql stable as
 $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid; $$;
 create or replace function auth.jwt() returns jsonb language sql stable as

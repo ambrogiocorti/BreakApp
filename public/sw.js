@@ -1,5 +1,5 @@
 // Static shell only. Financial events and same-day manifests use the encrypted IndexedDB vault.
-const CACHE_NAME = 'breakapp-shell-v6';
+const CACHE_NAME = 'breakapp-shell-v7';
 const BASE_PATH = new URL('./', self.location.href).pathname;
 const SHELL_URL = BASE_PATH;
 self.addEventListener('install', (event) => {

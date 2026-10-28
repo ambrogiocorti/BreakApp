@@ -13,7 +13,6 @@ export function initializeAdminMfa(client, onAccessChange) {
   const codeButton = document.querySelector('#mfa-code-button');
   const lostPanel = document.querySelector('#mfa-lost-panel');
   const refreshButton = document.querySelector('#mfa-refresh-button');
-  const backupButton = document.querySelector('#mfa-backup-button');
   let factorId = null;
   let epoch = 0;
 
@@ -26,7 +25,6 @@ export function initializeAdminMfa(client, onAccessChange) {
     qrPanel.hidden = true;
     codeInput.value = '';
     lostPanel.hidden = true;
-    backupButton.hidden = true;
   }
   function hide() {
     epoch += 1;
@@ -55,8 +53,7 @@ export function initializeAdminMfa(client, onAccessChange) {
       if (assurance.error) throw assurance.error;
       const totp = (factors.data.totp || []).find((factor) => factor.status === 'verified');
       if (assurance.data.currentLevel === 'aal2' && totp) {
-        state('Autenticazione a due fattori verificata. Puoi gestire il catalogo. Per non perdere l’accesso, registra anche un Authenticator di riserva.');
-        backupButton.hidden = false;
+        state('Verifica in due passaggi completata. Le funzioni amministrative sono abilitate.');
         onAccessChange(true);
         return;
       }
@@ -75,30 +72,31 @@ export function initializeAdminMfa(client, onAccessChange) {
     }
   }
 
-  async function enrollNewFactor(isBackup) {
+  async function enrollNewFactor() {
+    if(enrollButton.disabled)return;
     const token = epoch;
-    const source = isBackup ? backupButton : enrollButton;
+    const source = enrollButton;
     source.disabled = true;
     state('Generazione del nuovo QR protetto…');
     try {
-      // Un secondo fattore di riserva è consentito soltanto dopo aver raggiunto AAL2.
-      if (isBackup) {
-        const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (assurance.error) throw assurance.error;
-        if (assurance.data.currentLevel !== 'aal2') {
-          throw new Error('Verifica prima la 2FA corrente per aggiungere un dispositivo di riserva.');
-        }
-      } else {
-        // Evita che un utente in AAL1 aggiri un vecchio fattore TOTP verificato.
-        const factors = await client.auth.mfa.listFactors();
-        if (factors.error) throw factors.error;
-        if (factors.data.totp?.some((item) => item.status === 'verified')) {
-          throw new Error('Il fattore esistente deve essere rimosso tramite recupero amministrativo autorizzato prima di generare un nuovo QR.');
-        }
+      // Never enroll a second verified Authenticator, including from an AAL2 session.
+      const factors = await client.auth.mfa.listFactors();
+      if(token!==epoch)return;
+      if (factors.error) throw factors.error;
+      if (factors.data.totp?.some((item) => item.status === 'verified')) {
+        source.hidden=true;
+        state('Il fattore esistente deve essere rimosso tramite recupero amministrativo autorizzato prima di generare un nuovo QR.',true);
+        return;
+      }
+      // A QR that was never verified cannot be retrieved again. Restart only an
+      // unfinished enrollment, never remove a verified factor from this screen.
+      for(const pending of factors.data.totp||[]){
+        const removed=await client.auth.mfa.unenroll({factorId:pending.id});
+        if(token!==epoch)return;if(removed.error)throw removed.error;
       }
       const { data, error } = await client.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: isBackup ? `BreakApp riserva ${Date.now()}` : 'BreakApp Admin'
+        friendlyName: 'BreakApp Admin'
       });
       if (error) throw error;
       if (token !== epoch) return;
@@ -111,7 +109,6 @@ export function initializeAdminMfa(client, onAccessChange) {
       qrPanel.hidden = false;
       codeForm.hidden = false;
       enrollButton.hidden = true;
-      backupButton.hidden = true;
       lostPanel.hidden = true;
       state('Nuovo QR generato. Scansionalo in Authenticator e inserisci il codice a 6 cifre per attivarlo.');
     } catch (error) {
@@ -122,8 +119,7 @@ export function initializeAdminMfa(client, onAccessChange) {
       source.disabled = false;
     }
   }
-  enrollButton.addEventListener('click', () => { void enrollNewFactor(false); });
-  backupButton.addEventListener('click', () => { void enrollNewFactor(true); });
+  enrollButton.addEventListener('click', () => { void enrollNewFactor(); });
   refreshButton.addEventListener('click', () => { void show(); });
 
   codeForm.addEventListener('submit', async (event) => {
