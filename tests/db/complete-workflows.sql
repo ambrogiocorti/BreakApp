@@ -238,13 +238,13 @@ do $$declare denied boolean;begin
  perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');perform public.set_guest_class_policy('81000000-0000-4000-8000-000000000001',false);
 end;$$;
 -- Recovery binds a verified mailbox identity, preserving the guest's financial ID.
-do $$declare r uuid;linked uuid;denied boolean;j jsonb;begin
+do $$declare r uuid;original_request uuid;linked uuid;denied boolean;j jsonb;begin
  insert into auth.users(id,email,email_confirmed_at) values
   ('86666666-6666-4666-8666-666666666666','guest-recovery@test.invalid',now()),
   ('87777777-7777-4777-8777-777777777777','unverified-recovery@test.invalid',null),
   ('88888888-8888-4888-8888-888888888888','another-guest@test.invalid',now());
  perform pg_temp.actor('82222222-2222-4222-8222-222222222222','service_role');
- r:=public.prepare_guest_email_recovery('82222222-2222-4222-8222-222222222222',repeat('e',64));
+ r:=public.prepare_guest_email_recovery('82222222-2222-4222-8222-222222222222',repeat('e',64));original_request:=r;
  if public.prepare_guest_email_recovery('82222222-2222-4222-8222-222222222222',repeat('e',64))<>r then raise exception 'Recovery retry created another request';end if;
  denied:=false;begin perform public.confirm_guest_email_recovery(r,'86666666-6666-4666-8666-666666666666',repeat('f',64));exception when others then denied:=true;end;
  if not denied then raise exception 'Foreign mailbox accepted recovery request';end if;
@@ -266,6 +266,8 @@ do $$declare r uuid;linked uuid;denied boolean;j jsonb;begin
  perform pg_temp.actor(linked);if not public.my_guest_email_recovery_status() then raise exception 'Guest cannot see its own verified recovery state';end if;
  perform public.remove_my_guest_email_recovery();
  perform pg_temp.actor(linked,'service_role');if public.resolve_verified_guest_recovery('86666666-6666-4666-8666-666666666666') is not null then raise exception 'Removed mailbox still recovers guest';end if;
+ denied:=false;begin perform public.confirm_guest_email_recovery(original_request,'86666666-6666-4666-8666-666666666666',repeat('e',64));exception when others then denied:=true;end;
+ if not denied then raise exception 'Old verified request bypassed email recovery removal';end if;
  perform pg_temp.actor('81111111-1111-4111-8111-111111111111');denied:=false;
  begin perform public.prepare_guest_email_recovery(linked,repeat('f',64));exception when others then denied:=true;end;
  if not denied then raise exception 'Client called trusted email verification boundary';end if;
