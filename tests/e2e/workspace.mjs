@@ -25,6 +25,9 @@ try{
    if(viewport.width>1023)assert.equal(await page.locator('#workspace-sidebar').isVisible(),true);
    await page.getByRole('link',{name:'Vedi tutte'}).click();
    await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
+   await page.reload();
+   await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
+   await page.locator('#platform-directory-list tbody tr').first().waitFor();
    await page.getByLabel('Cerca una scuola o un bar').fill('Caffè');
    assert.equal(await page.locator('#platform-directory-list tbody tr').count(),1);
    assert.match(await page.locator('#platform-directory-list').innerText(),/Marie Curie/);
@@ -42,6 +45,8 @@ try{
    await page.getByRole('link',{name:'Gestisci Liceo Leonardo',exact:true}).click();
    await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
    await page.waitForFunction(()=>document.getElementById('pilot-school').value==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+   await page.goBack();await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
+   await page.goForward();await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
    assert.equal(await page.getByRole('tabpanel',{name:'Catalogo',exact:true}).isVisible(),true);
    await page.getByRole('tab',{name:'Personale',exact:true}).click();
    await page.getByRole('heading',{name:'Personale della scuola'}).waitFor();

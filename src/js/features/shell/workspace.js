@@ -355,7 +355,7 @@ export function initializeWorkspace(client){
    if(breadcrumb)breadcrumb.hidden=false;
    if(accountLink)accountLink.hidden=false;
    document.body.dataset.workspace='true';ready=true;
-   setContext(selected,{restoreRoute:!!previous});
+   setContext(selected,{restoreRoute:true});
  }
  select.addEventListener('change',()=>{
    const next=contexts.find(x=>x.key===select.value);
