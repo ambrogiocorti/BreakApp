@@ -237,6 +237,40 @@ do $$declare denied boolean;begin
  if not denied then raise exception 'Guest request rate limit bypassed';end if;
  perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');perform public.set_guest_class_policy('81000000-0000-4000-8000-000000000001',false);
 end;$$;
+-- Recovery binds a verified mailbox identity, preserving the guest's financial ID.
+do $$declare r uuid;linked uuid;denied boolean;j jsonb;begin
+ insert into auth.users(id,email,email_confirmed_at) values
+  ('86666666-6666-4666-8666-666666666666','guest-recovery@test.invalid',now()),
+  ('87777777-7777-4777-8777-777777777777','unverified-recovery@test.invalid',null),
+  ('88888888-8888-4888-8888-888888888888','another-guest@test.invalid',now());
+ perform pg_temp.actor('82222222-2222-4222-8222-222222222222','service_role');
+ r:=public.prepare_guest_email_recovery('82222222-2222-4222-8222-222222222222',repeat('e',64));
+ if public.prepare_guest_email_recovery('82222222-2222-4222-8222-222222222222',repeat('e',64))<>r then raise exception 'Recovery retry created another request';end if;
+ denied:=false;begin perform public.confirm_guest_email_recovery(r,'86666666-6666-4666-8666-666666666666',repeat('f',64));exception when others then denied:=true;end;
+ if not denied then raise exception 'Foreign mailbox accepted recovery request';end if;
+ denied:=false;begin perform public.confirm_guest_email_recovery(r,'87777777-7777-4777-8777-777777777777',repeat('e',64));exception when others then denied:=true;end;
+ if not denied then raise exception 'Unverified email accepted recovery request';end if;
+ j:=public.list_verified_guest_recovery('86666666-6666-4666-8666-666666666666',repeat('e',64));
+ if jsonb_array_length(j->'pending')<>1 or jsonb_array_length(j->'linked')<>0 then raise exception 'Verified recovery request listing incorrect';end if;
+ linked:=public.confirm_guest_email_recovery(r,'86666666-6666-4666-8666-666666666666',repeat('e',64));
+ if linked<>'82222222-2222-4222-8222-222222222222'::uuid or public.resolve_verified_guest_recovery('86666666-6666-4666-8666-666666666666')<>linked then raise exception 'Recovery changed original guest identity';end if;
+ if public.confirm_guest_email_recovery(r,'86666666-6666-4666-8666-666666666666',repeat('e',64))<>linked then raise exception 'Verified recovery retry failed';end if;
+ if public.resolve_verified_guest_recovery('81111111-1111-4111-8111-111111111111') is not null then raise exception 'Unrelated identity recovered guest';end if;
+ perform public.rotate_guest_private_link(linked,repeat('9',64));
+ if public.resolve_guest_access(repeat('8',64)) is not null or public.resolve_guest_access(repeat('9',64))<>linked then raise exception 'Email recovery did not invalidate lost private link';end if;
+ if app_private.is_registered_group_user(linked) then raise exception 'Email recovery silently promoted guest to coordinator';end if;
+ perform public.create_guest_access('88888888-8888-4888-8888-888888888888','81000000-0000-4000-8000-000000000001','Other Guest','5A',repeat('b',64));
+ r:=public.prepare_guest_email_recovery('88888888-8888-4888-8888-888888888888',repeat('e',64));denied:=false;
+ begin perform public.confirm_guest_email_recovery(r,'86666666-6666-4666-8666-666666666666',repeat('e',64));exception when others then denied:=true;end;
+ if not denied then raise exception 'Verified mailbox reassigned another existing guest';end if;
+ perform pg_temp.actor(linked);if not public.my_guest_email_recovery_status() then raise exception 'Guest cannot see its own verified recovery state';end if;
+ perform public.remove_my_guest_email_recovery();
+ perform pg_temp.actor(linked,'service_role');if public.resolve_verified_guest_recovery('86666666-6666-4666-8666-666666666666') is not null then raise exception 'Removed mailbox still recovers guest';end if;
+ perform pg_temp.actor('81111111-1111-4111-8111-111111111111');denied:=false;
+ begin perform public.prepare_guest_email_recovery(linked,repeat('f',64));exception when others then denied:=true;end;
+ if not denied then raise exception 'Client called trusted email verification boundary';end if;
+end;$$;
+
 -- A bundle is revalidated after edits and can be removed without trapping a cart.
 do $$declare promo uuid;g uuid;denied boolean;begin
  perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');

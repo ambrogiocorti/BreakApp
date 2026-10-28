@@ -52,7 +52,12 @@ begin
     'public.attach_verified_stripe_refund(uuid,text)',
     'public.finalize_verified_stripe_refund(text,text,uuid,text,text,bigint,text,text)',
     'public.claim_push_jobs(integer)',
-    'public.finish_push_job(uuid,boolean,integer,text)'
+    'public.finish_push_job(uuid,boolean,integer,text)',
+    'public.prepare_guest_email_recovery(uuid,text)',
+    'public.list_verified_guest_recovery(uuid,text)',
+    'public.confirm_guest_email_recovery(uuid,uuid,text)',
+    'public.resolve_verified_guest_recovery(uuid)',
+    'public.rotate_guest_private_link(uuid,text)'
   ] loop
     v_oid:=pg_catalog.to_regprocedure(v_function)::oid;
     if v_oid is null then

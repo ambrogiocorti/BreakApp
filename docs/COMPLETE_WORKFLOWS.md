@@ -28,7 +28,9 @@ Per una riga confermata scoperta si apre una proposta di rimozione; il Barista p
 
 ## Ospiti e nuove scuole
 
-L'ospite inserisce nome, scuola e classe; il servizio crea un'identità Supabase e restituisce una sola volta il link privato con token casuale di 256 bit. Sul database rimane l'hash. Il link scade dopo 30 giorni; nel browser viene rimosso dall'indirizzo appena acquisito. L'email opzionale va verificata prima del recupero. Il link privato non è l'invito al gruppo. L'ospite può partecipare e pagare ma non creare/coordinare un gruppo o ricevere incarichi del personale.
+L'ospite inserisce nome, scuola e classe; il servizio crea un'identità Supabase e restituisce una sola volta il link privato con token casuale di 256 bit. Sul database rimane l'hash. Il link scade dopo 30 giorni; nel browser viene rimosso dall'indirizzo appena acquisito. Per l'email opzionale, dal profilo ospite scegliere **Verifica email di recupero**, aprire il link ricevuto e poi **Verifica o recupera accesso ospite**. La richiesta scade dopo un'ora; il collegamento richiede una scelta esplicita sul proprio nome/scuola. In seguito il link email permette di riprendere la stessa identità ospite, con tutti gli ordini e pagamenti originali. L'account email che dimostra il possesso della casella rimane distinto dal profilo ospite; nessun ledger viene trasferito e il guest non diventa coordinatore. Il recupero rigenera il link privato e invalida il precedente. Dal profilo si può rimuovere il collegamento email.
+
+La verifica non usa il cambio dell'indirizzo tecnico e non richiede una conferma impossibile sulla casella sintetica. La doppia conferma del cambio email per gli account registrati resta attiva. Il provider SMTP e i redirect Auth devono essere operativi per gli indirizzi del pubblico; la verifica della ricezione reale appartiene al collaudo. Il link privato non è l'invito al gruppo. L'ospite può partecipare e pagare ma non creare/coordinare un gruppo o ricevere incarichi del personale.
 
 Il Super Admin con 2FA crea scuola, primo bar e primo Admin già registrato con email verificata. Il bar nasce con prenotazioni sospese: l'Admin completa menu, orari, fasce, scorte e configurazione del merchant, poi apre il servizio. L'Admin può richiedere agli ospiti una delle classi importate. Il servizio limita i tentativi per origine e globalmente (300/minuto e 1000/giorno). Classi CSV/XLSX: prima colonna, massimo 2 MB e 1000 nomi; nessuna valutazione di formule o macro. Le scuole si possono sospendere/riattivare senza cancellare lo storico.
 
@@ -46,10 +48,12 @@ Nel centro assistenza si può associare un gruppo e scegliere conversazione cond
 
 ## Distribuzione e verifiche
 
-Le sette migrazioni `20261027214803`..`20261027225739` si applicano dopo la baseline e gli incrementi precedenti. Non rieseguire file già registrati nel progetto. Il connettore può assegnare un timestamp remoto differente: riconciliare la cronologia prima di usare `supabase db push`.
+Le otto migrazioni `20261027214803`..`20261027231220` si applicano dopo la baseline e gli incrementi precedenti. Non rieseguire file già registrati nel progetto. Il connettore può assegnare un timestamp remoto differente: riconciliare la cronologia prima di usare `supabase db push`.
 
 Distribuire `guest-access`, `push-dispatch` e `stripe-full-refund`. Queste Edge Functions gestiscono internamente l'autenticazione prevista dal rispettivo ingresso; il dispatcher verifica il token Vault, il rimborso verifica la sessione e il guest endpoint scambia un link privato con una sessione verificata. Il cron esistente richiama manutenzione approvazioni, proposte e chiusure prima degli invii push.
 
 `npm run verify` controlla sintassi, unit test e build. `complete-workflows.sql` esercita transazioni, ruoli, scorte, differenze, veri riferimenti ai pagatori, coupon, ospiti, onboarding, ticket/RLS, no-show e sovrapposizione contanti/Stripe in un database isolato. I test Playwright importano i moduli ES reali con API fixture, su Chromium, Firefox e WebKit desktop/mobile. La suite PostgreSQL 17 comprende anche la concorrenza sull'ultima unità e il ripristino dei backup cifrati.
 
 La conferma di un pagamento esterno resta dipendente dal webhook Stripe firmato. Le conferme interne e i report non sostituiscono un documento fiscale.
+
+Riferimenti Auth: [Magic Link e opzioni di signup](https://supabase.com/docs/guides/auth/auth-email-passwordless) e [doppia conferma email](https://supabase.com/docs/guides/auth/auth-hooks/send-email-hook#email-change-behavior-and-token-hash-mapping).
