@@ -22,7 +22,7 @@ Deno.serve(async(req)=>{
   if(!token)return json({error:'Accesso richiesto'},401);
   const url=Deno.env.get('SUPABASE_URL'),anon=Deno.env.get('SUPABASE_ANON_KEY'),
    secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),stripeKey=Deno.env.get('STRIPE_SECRET_KEY');
-  if(!url||!anon||!secret||!stripeKey||!stripeKey.startsWith('sk_test_'))
+  if(!url||!anon||!secret||!stripeKey||!/^[sr]k_test_[A-Za-z0-9]+$/.test(stripeKey))
    return json({error:'Rimborsi Stripe test non configurati'},503);
   const userClient=createClient(url,anon,{
    global:{headers:{Authorization:'Bearer '+token}},
