@@ -12,7 +12,7 @@ const isolated = source.replace(
 );
 const compiled = stripTypeScriptTypes(isolated);
 
-function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY' } = {}) {
+function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY', stripeStatus = 200, stripeCode = 'resource_missing' } = {}) {
   let handler;
   const outbound = [];
   const env = {
@@ -21,7 +21,7 @@ function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY' 
     STRIPE_ONBOARDING_KEY: key
   };
   const context = {
-    Response, URL, JSON,
+    Response, URL, JSON, console: { error() {} },
     Deno: { env: { get: (name) => env[name] }, serve: (callback) => { handler = callback; } },
     __createClient: () => ({
       auth: { getUser: async () => authenticated ? { data: { user: { id: 'user-1' } }, error: null } : { data: {}, error: new Error('not authenticated') } },
@@ -29,8 +29,11 @@ function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY' 
     }),
     fetch: async (url, options) => {
       outbound.push({ url, options });
-      return new Response(JSON.stringify({ url: 'https://connect.stripe.com/setup/s/test-only' }), {
-        status: 200, headers: { 'Content-Type': 'application/json' }
+      return new Response(JSON.stringify(stripeStatus === 200
+        ? { url: 'https://connect.stripe.com/setup/s/test-only' }
+        : { error: { type: 'invalid_request_error', code: stripeCode, message: 'SENSITIVE NEVER DISPLAY' } }), {
+        status: stripeStatus,
+        headers: { 'Content-Type': 'application/json', 'request-id': 'req_TESTONLY123456' }
       });
     }
   };
@@ -116,4 +119,25 @@ test('Stripe onboarding targets only the fixed test account and authenticates at
   assert.equal(body.use_case.type, 'account_onboarding');
   assert.equal(body.use_case.account_onboarding.collection_options.fields, 'eventually_due');
   assert.equal(body.use_case.account_onboarding.return_url, origin + '/BreakApp/#platform-configuration');
+});
+
+test('Stripe rejection includes safe HTTP/code diagnostics, not provider PII', async () => {
+  const h = harness({ stripeStatus: 404, stripeCode: 'resource_missing' });
+  const response = await h.invoke();
+  assert.equal(response.status, 502);
+  const body = await response.json();
+  assert.equal(body.stripe_status, 404);
+  assert.equal(body.stripe_code, 'resource_missing');
+  assert.equal(body.stripe_request_id, 'req_TESTONLY123456');
+  assert.match(body.error, /merchant demo/i);
+  assert.ok(!JSON.stringify(body).includes('SENSITIVE'));
+});
+
+test('Stripe permission denial is explained without disclosing the provider response', async () => {
+  const h = harness({ stripeStatus: 403, stripeCode: 'permission_denied' });
+  const response = await h.invoke();
+  assert.equal(response.status, 502);
+  const body = await response.json();
+  assert.match(body.error, /permessi Account Links/);
+  assert.equal(body.stripe_code, 'permission_denied');
 });
