@@ -53,6 +53,27 @@ export function initializePlatformPilot(client){
    wrapper.append(check,textNode('span',label));productAllergens.append(wrapper);
  }
  const say=(msg,error=false)=>{status.textContent=msg;status.dataset.type=error?'error':'information';};
+ const stripeButton=$('pilot-stripe-onboarding'),stripeFeedback=$('pilot-stripe-feedback');
+ stripeButton.addEventListener('click',async()=>{
+   if(!allowed||stripeButton.disabled)return;
+   stripeButton.disabled=true;
+   stripeFeedback.textContent='Generazione del link sicuro Stripe…';
+   stripeFeedback.dataset.type='information';
+   try{
+     const {data,error}=await client.functions.invoke('stripe-connect-onboarding',{body:{}});
+     if(error||data?.error)throw new Error(data?.error||error.message||'Link non disponibile');
+     const destination=new URL(data.onboarding_url);
+     if(destination.protocol!=='https:'||
+       !(destination.hostname==='stripe.com'||destination.hostname.endsWith('.stripe.com')))
+       throw new Error('Indirizzo di attivazione non valido');
+     stripeFeedback.textContent='Reindirizzamento verso Stripe…';
+     window.location.assign(destination.href);
+   }catch(error){
+     stripeFeedback.dataset.type='error';
+     stripeFeedback.textContent='Impossibile avviare Stripe: '+error.message;
+     stripeButton.disabled=false;
+   }
+ });
  const school=()=>schools.find(s=>s.id===schoolSelect.value);
  const bar=()=>bars.find(b=>b.id===barSelect.value);
  function replaceOptions(select,items,selected){
@@ -426,7 +447,7 @@ export function initializePlatformPilot(client){
    if(seq!==authEpoch)return;
    currentUser=!session.error?session.data?.user||null:null;
    if(!currentUser){
-     allowed=false;section.hidden=true;return;
+     allowed=false;stripeButton.disabled=true;section.hidden=true;return;
    }
    const [role,level]=await Promise.all([
      client.rpc('is_current_platform_admin'),
@@ -434,13 +455,14 @@ export function initializePlatformPilot(client){
    ]);
    if(seq!==authEpoch)return;
    allowed=!role.error&&role.data===true&&!level.error&&level.data?.currentLevel==='aal2';
+   stripeButton.disabled=!allowed;
    section.hidden=!allowed;
    if(allowed)await refresh();
    else say('Pannello disponibile solo al Super Admin con 2FA verificata.',true);
  }
  window.addEventListener('breakapp:workspace-context',event=>{
    if(event.detail?.role==='platform_admin')void enter();
-   else {authEpoch++;refreshEpoch++;token++;allowed=false;section.hidden=true;}
+   else {authEpoch++;refreshEpoch++;token++;allowed=false;stripeButton.disabled=true;section.hidden=true;}
  });
  client.auth.onAuthStateChange((_e,session)=>queueMicrotask(()=>{
    currentUser=session?.user||null;
