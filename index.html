@@ -248,33 +248,66 @@
           <p>Organizza un ordine con i compagni. Una bozza non riserva scorte; la conferma e i pagamenti saranno disponibili solo dopo le verifiche finanziarie.</p>
         </div>
         <p id="groups-feedback" class="catalog-status" role="status" aria-live="polite"></p>
-        <div class="pilot-grid">
-          <article class="pilot-card">
-            <h3>Crea un gruppo</h3>
-            <form id="groups-create-form">
-              <label for="groups-create-title">Nome del gruppo</label>
-              <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Classe 5A" />
-              <label for="groups-school">Scuola</label><select id="groups-school" required></select>
-              <label for="groups-bar">Bar</label><select id="groups-bar" required></select>
-              <label for="groups-window">Data e fascia di ritiro</label><select id="groups-window" required></select>
-              <label for="groups-entry-mode">Accesso con invito</label>
-              <select id="groups-entry-mode"><option value="open">Ingresso diretto</option><option value="approval">Richiede approvazione coordinatore</option></select>
-              <label for="groups-limit">Numero massimo partecipanti (facoltativo)</label>
-              <input id="groups-limit" type="number" min="1" max="100" placeholder="Senza limite" />
-              <button class="button button-primary" type="submit">Crea bozza gruppo</button>
+        <div class="pilot-grid group-entry-grid">
+          <article class="pilot-card group-panel group-panel-create">
+            <div class="group-panel-heading">
+              <span class="group-step">01 · ORGANIZZA</span>
+              <h3>Crea un gruppo</h3>
+              <p>Prepara un ordine condiviso e scegli come invitare i partecipanti.</p>
+            </div>
+            <form id="groups-create-form" class="group-create-form">
+              <div class="group-field group-field-wide">
+                <label for="groups-create-title">Nome del gruppo</label>
+                <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Classe 5A" />
+              </div>
+              <div class="group-field">
+                <label for="groups-school">Scuola</label>
+                <select id="groups-school" required></select>
+              </div>
+              <div class="group-field">
+                <label for="groups-bar">Bar</label>
+                <select id="groups-bar" required></select>
+              </div>
+              <div class="group-field group-field-wide">
+                <label for="groups-window">Data e fascia di ritiro</label>
+                <select id="groups-window" required></select>
+              </div>
+              <div class="group-field">
+                <label for="groups-entry-mode">Accesso con invito</label>
+                <select id="groups-entry-mode"><option value="open">Ingresso diretto</option><option value="approval">Richiede approvazione coordinatore</option></select>
+              </div>
+              <div class="group-field">
+                <label for="groups-limit">Numero massimo partecipanti <span class="group-optional">facoltativo</span></label>
+                <input id="groups-limit" type="number" min="1" max="100" placeholder="Senza limite" />
+              </div>
+              <div class="group-form-actions">
+                <p>La bozza non riserva scorte e non avvia pagamenti.</p>
+                <button class="button button-primary" type="submit">Crea bozza gruppo</button>
+              </div>
             </form>
           </article>
-          <article class="pilot-card">
-            <h3>Entra in un gruppo</h3>
-            <p class="catalog-help">All'ingresso viene richiesta la posizione una sola volta, per verificare che ti trovi vicino alla scuola.</p>
-            <form id="groups-join-form">
-              <label for="groups-invite-token">Link o codice invito</label>
-              <input id="groups-invite-token" required placeholder="Incolla il link ricevuto" />
+          <article class="pilot-card group-panel group-panel-join">
+            <div class="group-panel-heading">
+              <span class="group-step">02 · PARTECIPA</span>
+              <h3>Entra in un gruppo</h3>
+              <p>Hai ricevuto un invito? Inseriscilo per unirti ai tuoi compagni.</p>
+            </div>
+            <form id="groups-join-form" class="group-join-form">
+              <div class="group-field">
+                <label for="groups-invite-token">Link o codice invito</label>
+                <input id="groups-invite-token" required placeholder="Incolla il link ricevuto" />
+              </div>
+              <p class="group-location-note">Per partecipare, ti chiederemo una sola verifica della posizione vicino alla scuola.</p>
               <button class="button button-primary" type="submit">Verifica posizione e partecipa</button>
             </form>
-            <h3>Gruppi recenti</h3>
-            <button type="button" id="groups-refresh" class="button button-outline button-small">Aggiorna elenco</button>
-            <div id="groups-list" class="service-list"></div>
+            <div class="group-recent-heading">
+              <div>
+                <span class="group-step">LE TUE ATTIVITÀ</span>
+                <h3>Gruppi recenti</h3>
+              </div>
+              <button type="button" id="groups-refresh" class="button button-outline button-small">Aggiorna</button>
+            </div>
+            <div id="groups-list" class="service-list" aria-live="polite"></div>
           </article>
         </div>
         <article id="group-detail" class="pilot-card group-detail" hidden>
@@ -300,8 +333,8 @@
           </div>
           <div id="group-manage" hidden>
             <h4>Gestione della bozza</h4>
-            <label><input type="checkbox" id="group-accepting" /> Accetta nuovi partecipanti</label>
-            <label><input type="checkbox" id="group-approval" /> Richiedi approvazione per entrare</label>
+            <label class="group-toggle"><input type="checkbox" id="group-accepting" /> Accetta nuovi partecipanti</label>
+            <label class="group-toggle"><input type="checkbox" id="group-approval" /> Richiedi approvazione per entrare</label>
             <label for="group-limit">Limite partecipanti (vuoto: senza limite)</label>
             <input id="group-limit" type="number" min="1" max="100" />
             <button type="button" id="group-save-settings" class="button button-outline button-small">Salva impostazioni</button>
