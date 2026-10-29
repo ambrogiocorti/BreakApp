@@ -112,7 +112,7 @@ test('Stripe onboarding targets only the fixed test account and authenticates at
   assert.equal(h.outbound.length, 1);
   const request = h.outbound[0];
   assert.equal(request.url, 'https://api.stripe.com/v2/core/account_links');
-  assert.equal(request.options.headers['Stripe-Version'], '2026-09-30.preview');
+  assert.equal(request.options.headers['Stripe-Version'], '2026-09-30.endive');
   assert.equal(request.options.headers['Stripe-Account'], undefined);
   const body = JSON.parse(request.options.body);
   assert.equal(body.account, 'acct_1UVx5F2RLtxMJCNo');
