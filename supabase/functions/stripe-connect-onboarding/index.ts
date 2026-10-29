@@ -9,7 +9,7 @@ const TEST_ACCOUNT = 'acct_1UVx5F2RLtxMJCNo';
 const ALLOWED_HEADERS = {
   'access-control-allow-origin': ORIGIN,
   'access-control-allow-methods': 'POST, OPTIONS',
-  'access-control-allow-headers': 'authorization, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage',
   'cache-control': 'no-store',
   'vary': 'Origin'
 };
