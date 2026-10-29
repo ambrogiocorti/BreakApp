@@ -28,7 +28,7 @@ Deno.serve(async req=>{
   if(!token)return response({error:'Autenticazione richiesta'},401);
   const url=required('SUPABASE_URL'),anon=required('SUPABASE_ANON_KEY');
   const key=required('STRIPE_SECRET_KEY');
-  if(!key.startsWith('sk_test_'))return response({error:'Solo sandbox Stripe abilitata'},503);
+  if(!/^[sr]k_test_[A-Za-z0-9]+$/.test(key))return response({error:'Solo sandbox Stripe abilitata'},503);
   const client=createClient(url,anon,{global:{headers:{Authorization:'Bearer '+token}},
    auth:{persistSession:false,autoRefreshToken:false}});
   const {data:identity,error:identityError}=await client.auth.getUser(token);
