@@ -683,6 +683,23 @@
         <div id="staff-scan-result"></div>
       </dialog>
 
+      <dialog id="staff-refund-dialog" class="ba-dialog" aria-labelledby="staff-refund-title">
+        <form id="staff-refund-form">
+          <h2 id="staff-refund-title">Rimborsa ordine</h2>
+          <p id="staff-refund-summary" class="catalog-help"></p>
+          <p class="catalog-help">Stripe accredita il pagatore originale in modo asincrono. Contanti e POS esterno richiedono una restituzione effettiva da registrare separatamente: questa conferma non certifica che il denaro sia già stato restituito.</p>
+          <label for="staff-refund-reason">Motivo del rimborso</label>
+          <textarea id="staff-refund-reason" required minlength="8" maxlength="300" rows="3" placeholder="Spiega perché l'ordine viene rimborsato"></textarea>
+          <label class="pilot-inline-check" for="staff-refund-confirm">
+            <input id="staff-refund-confirm" type="checkbox" required /> Confermo di voler rimborsare l'intero credito residuo di questo ordine.
+          </label>
+          <p id="staff-refund-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+          <div class="order-actions">
+            <button id="staff-refund-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-refund-submit" type="submit" class="button button-primary">Conferma rimborso</button>
+          </div>
+        </form>
+      </dialog>
       <dialog id="product-dialog" class="ba-dialog" aria-labelledby="product-name">
         <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
         <span class="auth-tag">PRODOTTO</span>
@@ -924,7 +941,7 @@
             <p id="pilot-stripe-feedback" class="catalog-status" role="status" aria-live="polite"></p>
           </div>
           <p id="pilot-status" class="catalog-status" role="status" aria-live="polite"></p>
-          <div id="pilot-tabs" class="workspace-tabs" role="tablist" aria-label="Configurazione del bar"><button id="pilot-tab-catalog" type="button" role="tab" aria-controls="pilot-panel-catalog" aria-selected="true">Catalogo</button><button id="pilot-tab-people" type="button" role="tab" aria-controls="pilot-panel-people" aria-selected="false" tabindex="-1">Personale</button><button id="pilot-tab-service" type="button" role="tab" aria-controls="pilot-panel-service" aria-selected="false" tabindex="-1">Orari e ritiri</button><button id="pilot-tab-stock" type="button" role="tab" aria-controls="pilot-panel-stock" aria-selected="false" tabindex="-1">Scorte e allergeni</button><button id="pilot-tab-refunds" type="button" role="tab" aria-controls="pilot-panel-refunds" aria-selected="false" tabindex="-1">Rimborsi</button></div>
+          <div id="pilot-tabs" class="workspace-tabs" role="tablist" aria-label="Configurazione del bar"><button id="pilot-tab-catalog" type="button" role="tab" aria-controls="pilot-panel-catalog" aria-selected="true">Catalogo</button><button id="pilot-tab-people" type="button" role="tab" aria-controls="pilot-panel-people" aria-selected="false" tabindex="-1">Personale</button><button id="pilot-tab-service" type="button" role="tab" aria-controls="pilot-panel-service" aria-selected="false" tabindex="-1">Orari e ritiri</button><button id="pilot-tab-stock" type="button" role="tab" aria-controls="pilot-panel-stock" aria-selected="false" tabindex="-1">Scorte e allergeni</button></div>
           <div class="pilot-grid" id="pilot-panel-catalog" role="tabpanel" aria-labelledby="pilot-tab-catalog" tabindex="0">
             <article class="pilot-card" id="pilot-categories-card">
               <h4>Categorie del catalogo</h4>
@@ -968,20 +985,6 @@
                 <button class="button button-primary" type="submit">Salva prodotto</button>
               </form>
               <div id="pilot-product-list" class="service-list"></div>
-            </article>
-          </div>
-          <div class="pilot-grid" id="pilot-panel-refunds" role="tabpanel" aria-labelledby="pilot-tab-refunds" tabindex="0" hidden>
-            <article class="pilot-card">
-              <h4>Rimborsi Stripe verificati</h4>
-              <p class="catalog-help">Soltanto ordini individuali già consegnati e pagati online. Il rimborso torna al pagatore originario e viene confermato dal webhook Stripe.</p>
-              <form id="pilot-refund-form">
-                <label for="pilot-refund-order">UUID ordine individuale</label>
-                <input id="pilot-refund-order" required autocomplete="off"
-                 pattern="[a-fA-F0-9-]{36}" placeholder="Identificatore ordine"/>
-                <label for="pilot-refund-reason">Motivo dettagliato</label>
-                <textarea id="pilot-refund-reason" required minlength="8" maxlength="300" rows="3"></textarea>
-                <button type="submit" class="button button-primary">Richiedi rimborso completo (test)</button>
-              </form>
             </article>
           </div>
           <div class="pilot-grid" id="pilot-panel-people" role="tabpanel" aria-labelledby="pilot-tab-people" tabindex="0" hidden>
