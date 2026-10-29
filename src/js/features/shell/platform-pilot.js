@@ -23,7 +23,6 @@ export function initializePlatformPilot(client){
  let allowed=false,schools=[],bars=[],products=[],categories=[],staff=[],hours=[],windows=[],stocks=[],token=0;
  let currentUser=null,authEpoch=0;
  let requestedSchool=null,refreshEpoch=0;
- const refundRequestKeys=new Map();
  const tabs=[...$('pilot-tabs').querySelectorAll('[role="tab"]')];
  function activateTab(selected,focus=false){
    for(const tab of tabs){const active=tab===selected;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;$(tab.getAttribute('aria-controls')).hidden=!active;}
@@ -61,7 +60,17 @@ export function initializePlatformPilot(client){
    stripeFeedback.dataset.type='information';
    try{
      const {data,error}=await client.functions.invoke('stripe-connect-onboarding',{body:{}});
-     if(error||data?.error)throw new Error(data?.error||error.message||'Link non disponibile');
+     if(error){
+       let reason=error.message||'Link non disponibile';
+       try{
+         const payload=await error.context?.json();
+         if(typeof payload?.error==='string')reason=payload.error;
+         if(typeof payload?.stripe_code==='string')reason+=' (codice Stripe: '+payload.stripe_code+')';
+         if(typeof payload?.stripe_request_id==='string')reason+=' · Riferimento: '+payload.stripe_request_id;
+       }catch{/* The response body might not be JSON. */}
+       throw new Error(reason);
+     }
+     if(data?.error)throw new Error(data.error);
      const destination=new URL(data.onboarding_url);
      if(destination.protocol!=='https:'||
        !(destination.hostname==='stripe.com'||destination.hostname.endsWith('.stripe.com')))
@@ -346,26 +355,6 @@ export function initializePlatformPilot(client){
        }
      }
      say('Prodotto, prezzo e ingredienti salvati su Supabase.');
-   });
- });
- $('pilot-refund-form').addEventListener('submit',event=>{
-   event.preventDefault();void run(event.currentTarget,async()=>{
-     const order=$('pilot-refund-order').value.trim();
-     const reason=$('pilot-refund-reason').value.trim();
-     if(!/^[0-9a-f-]{36}$/i.test(order)||reason.length<8)
-       throw new Error('Identificativo ordine o motivo non validi.');
-     if(!confirm('Confermi il rimborso COMPLETO sul pagamento Stripe originale (test)?'))
-       throw new Error('Richiesta annullata.');
-     const requestKey=refundRequestKeys.get(order)||crypto.randomUUID();
-     refundRequestKeys.set(order,requestKey);
-     const {data,error}=await client.functions.invoke('stripe-full-refund',{
-       body:{order_id:order,request_key:requestKey,reason}
-     });
-     if(error)throw error;
-     if(data?.error)throw new Error(data.error);
-     $('pilot-refund-order').value='';$('pilot-refund-reason').value='';
-     say('Rimborso Stripe in '+data?.status+
-       '. L’esito contabile definitivo viene registrato dal webhook firmato.');
    });
  });
   $('pilot-staff-form').addEventListener('submit',event=>{

@@ -41,6 +41,46 @@ export function initializeOrders(client) {
   let staffContextSchool=null;
   const stripeAttemptKeys=new Map();
   const stripeRefundKeys=new Map();
+  const refundDialog=document.querySelector('#staff-refund-dialog');
+  const refundForm=document.querySelector('#staff-refund-form');
+  const refundSummary=document.querySelector('#staff-refund-summary');
+  const refundReason=document.querySelector('#staff-refund-reason');
+  const refundFeedback=document.querySelector('#staff-refund-feedback');
+  const refundConfirm=document.querySelector('#staff-refund-confirm');
+  const refundSubmit=document.querySelector('#staff-refund-submit');
+  let selectedRefund=null;
+  document.querySelector('#staff-refund-cancel').addEventListener('click',()=>refundDialog.close());
+  refundDialog.addEventListener('close',()=>{selectedRefund=null;refundForm.reset();refundFeedback.textContent='';});
+  refundForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const o=selectedRefund;
+    if(!user||!o||!refundForm.reportValidity()||refundSubmit.disabled)return;
+    if(!staffSchools.includes(o.school_id)||!['delivered','no_show'].includes(o.status)||o.payment_status!=='paid'){
+      report(refundFeedback,'L’ordine non è più rimborsabile. Aggiorna la lista.',true);return;
+    }
+    refundSubmit.disabled=true;
+    report(refundFeedback,'Registrazione della richiesta di rimborso…');
+    const key=stripeRefundKeys.get(o.id)||crypto.randomUUID();
+    stripeRefundKeys.set(o.id,key);
+    try{
+      const {data,error}=await client.rpc('request_completed_order_refund',{
+        p_kind:'individual',p_order:o.id,p_key:key,p_reason:refundReason.value.trim()
+      });
+      if(error)throw error;
+      const online=Array.isArray(data?.online)?data.online:[];
+      const cash=Number(data?.cash_pending||0);
+      if(!online.length&&!cash)throw new Error('Il server non ha restituito un credito rimborsabile.');
+      stripeRefundKeys.delete(o.id);
+      refundDialog.close();
+      const parts=[];
+      if(online.length)parts.push('Rimborso Stripe richiesto: '+online.length+' transazione/i in elaborazione. L’esito definitivo sarà confermato dal webhook.');
+      if(cash>0)parts.push('Restituzione al banco/POS esterno da effettuare e registrare in cassa: '+formatEuro(cash)+'. Non risulta ancora restituita.');
+      report(staffFeedback,parts.join(' '));
+      await fetchStaffOrders();
+    }catch(e){
+      report(refundFeedback,'Rimborso non registrato o esito incerto: '+(e?.message||'riprovare verificando prima lo stato ordine')+'. In caso di errore di rete, riprova dalla stessa finestra.',true);
+    }finally{refundSubmit.disabled=false;}
+  });
   const coupon=document.createElement('input');coupon.maxLength=32;coupon.placeholder='Codice coupon (facoltativo)';coupon.setAttribute('aria-label','Codice coupon facoltativo');
   checkoutReview.parentElement.insertBefore(coupon,checkoutReview);
   const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
@@ -394,34 +434,20 @@ export function initializeOrders(client) {
           return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
         });
       }
-      if(document.body.dataset.activeRole==='school_admin' &&
-          o.payment_status==='paid'&&o.payment_method==='stripe' &&
-          ['delivered','no_show'].includes(o.status)){
-        const refund=elem('button','Richiedi rimborso Stripe (test)','button button-outline button-small');
+      if(o.payment_status==='paid'&&['delivered','no_show'].includes(o.status)){
+        const refund=elem('button','Rimborsa','button button-outline button-small');
         refund.type='button';
-        refund.addEventListener('click',async()=>{
-          const reason=prompt('Motivo del rimborso completo di '+formatEuro(o.total_cents)+
-            '. Sarà accreditato sul pagamento Stripe originale:');
-          if(reason===null)return;
-          if(reason.trim().length<8||reason.length>300)
-            return report(staffFeedback,'Specifica un motivo di almeno 8 caratteri.',true);
-          if(!confirm('Confermi la richiesta di rimborso completo in modalità test?'))return;
-          const requestKey=stripeRefundKeys.get(o.id)||crypto.randomUUID();
-          stripeRefundKeys.set(o.id,requestKey);
-          refund.disabled=true;
-          try{
-            const {data,error}=await client.functions.invoke('stripe-full-refund',{
-              body:{order_id:o.id,request_key:requestKey,reason:reason.trim()}
-            });
-            if(error)throw error;
-            if(data?.error)throw new Error(data.error);
-            report(staffFeedback,'Rimborso Stripe: '+data.status+
-              '. L’esito contabile definitivo arriva dal webhook firmato.');
-            await fetchStaffOrders();
-          }catch(e){
-            report(staffFeedback,'Rimborso non completato: '+(e.message||'Stripe non disponibile'),true);
-            refund.disabled=false;
-          }
+        refund.setAttribute('aria-label','Rimborsa ordine numero '+o.display_no);
+        refund.addEventListener('click',()=>{
+          if(!user||!staffSchools.includes(o.school_id))return;
+          selectedRefund=o;
+          refundForm.reset();
+          refundFeedback.textContent='';
+          refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents)+
+            ' · '+(o.payment_method==='stripe'?'Pagamento online Stripe':o.payment_method==='external_pos'?'POS esterno':'Pagamento al banco')+
+            '. Verrà rimborsato solo il credito residuo effettivamente incassato.';
+          refundDialog.showModal();
+          refundReason.focus();
         });
         actions.append(refund);
       }
@@ -444,6 +470,7 @@ export function initializeOrders(client) {
   }
   window.addEventListener('breakapp:workspace-context',event=>{
     const role=event.detail?.role||'customer';
+    if(refundDialog.open)refundDialog.close();
     if(role!=='customer'){
       if(productDialog.open)productDialog.close();
       if(cartDialog.open)cartDialog.close();
@@ -457,7 +484,7 @@ export function initializeOrders(client) {
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
-    if(!user){staffPanel.hidden=true;cart=[];showCartBar();return;}
+    if(!user){if(refundDialog.open)refundDialog.close();staffPanel.hidden=true;cart=[];showCartBar();return;}
     if(changed){cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();}
   }
   client.auth.onAuthStateChange((_event,session)=>queueMicrotask(()=>setUser(session?.user||null)));
