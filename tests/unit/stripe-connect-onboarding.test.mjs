@@ -38,6 +38,14 @@ function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY' 
   runInNewContext(compiled, context);
   return {
     outbound,
+    preflight: (requestOrigin = origin) => handler(new Request(
+      'https://example.supabase.co/functions/v1/stripe-connect-onboarding',
+      { method: 'OPTIONS', headers: {
+        Origin: requestOrigin,
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'authorization, x-client-info, apikey, content-type'
+      } }
+    )),
     invoke: (authorization = 'Bearer token', requestOrigin = origin) => handler(
       new Request('https://example.supabase.co/functions/v1/stripe-connect-onboarding', {
         method: 'POST', headers: { Authorization: authorization, Origin: requestOrigin }
@@ -45,6 +53,21 @@ function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY' 
     )
   };
 }
+
+test('Stripe onboarding preflight permits the Supabase SDK headers on the trusted origin', async () => {
+  const h = harness();
+  const result = await h.preflight();
+  assert.equal(result.status, 204);
+  assert.equal(result.headers.get('access-control-allow-origin'), origin);
+  assert.equal(result.headers.get('access-control-allow-methods'), 'POST, OPTIONS');
+  const allowed = result.headers.get('access-control-allow-headers').split(',').map(v => v.trim());
+  for (const header of ['authorization', 'x-client-info', 'apikey', 'content-type']) {
+    assert.ok(allowed.includes(header), `Missing CORS header ${header}`);
+  }
+  assert.equal(h.outbound.length, 0);
+  const foreign = await h.preflight('https://attacker.example');
+  assert.equal(foreign.headers.get('access-control-allow-origin'), origin);
+});
 
 test('Stripe onboarding is only callable from the published BreakApp origin', async () => {
   const h = harness();
