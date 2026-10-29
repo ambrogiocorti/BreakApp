@@ -67,7 +67,7 @@ Deno.serve(async (request: Request) => {
       headers: {
         Authorization: 'Bearer ' + stripeKey,
         'Content-Type': 'application/json',
-        'Stripe-Version': '2026-09-30.preview'
+        'Stripe-Version': '2026-09-30.endive'
       },
       body: JSON.stringify({
         account: TEST_ACCOUNT,
