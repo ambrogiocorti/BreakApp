@@ -62,24 +62,23 @@ Deno.serve(async (request: Request) => {
       return respond({ error: 'Chiave Stripe di test per onboarding non configurata' }, 503);
     }
 
-    const response = await fetch('https://api.stripe.com/v2/core/account_links', {
+    // Questo merchant demo esistente è un account Connect Standard (Accounts v1).
+    // Il relativo flusso Stripe-hosted usa /v1/account_links; nessun account viene creato.
+    const params = new URLSearchParams({
+      account: TEST_ACCOUNT,
+      type: 'account_onboarding',
+      'collection_options[fields]': 'eventually_due',
+      return_url: RETURN_URL,
+      refresh_url: RETURN_URL
+    });
+    const response = await fetch('https://api.stripe.com/v1/account_links', {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + stripeKey,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
         'Stripe-Version': '2026-09-30.endive'
       },
-      body: JSON.stringify({
-        account: TEST_ACCOUNT,
-        use_case: {
-          type: 'account_onboarding',
-          account_onboarding: {
-            collection_options: { fields: 'eventually_due' },
-            return_url: RETURN_URL,
-            refresh_url: RETURN_URL
-          }
-        }
-      })
+      body: params
     });
 
     // Leggiamo l'errore strutturato di Stripe senza esporre dati dell'account.
