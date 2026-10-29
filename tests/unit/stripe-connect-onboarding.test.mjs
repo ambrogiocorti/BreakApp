@@ -21,7 +21,7 @@ function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY',
     STRIPE_ONBOARDING_KEY: key
   };
   const context = {
-    Response, URL, JSON, console: { error() {} },
+    Response, URL, URLSearchParams, JSON, console: { error() {} },
     Deno: { env: { get: (name) => env[name] }, serve: (callback) => { handler = callback; } },
     __createClient: () => ({
       auth: { getUser: async () => authenticated ? { data: { user: { id: 'user-1' } }, error: null } : { data: {}, error: new Error('not authenticated') } },
@@ -111,14 +111,15 @@ test('Stripe onboarding targets only the fixed test account and authenticates at
   assert.ok(data.onboarding_url.startsWith('https://connect.stripe.com/'));
   assert.equal(h.outbound.length, 1);
   const request = h.outbound[0];
-  assert.equal(request.url, 'https://api.stripe.com/v2/core/account_links');
+  assert.equal(request.url, 'https://api.stripe.com/v1/account_links');
   assert.equal(request.options.headers['Stripe-Version'], '2026-09-30.endive');
   assert.equal(request.options.headers['Stripe-Account'], undefined);
-  const body = JSON.parse(request.options.body);
-  assert.equal(body.account, 'acct_1UVx5F2RLtxMJCNo');
-  assert.equal(body.use_case.type, 'account_onboarding');
-  assert.equal(body.use_case.account_onboarding.collection_options.fields, 'eventually_due');
-  assert.equal(body.use_case.account_onboarding.return_url, origin + '/BreakApp/#platform-configuration');
+  const body = new URLSearchParams(request.options.body);
+  assert.equal(body.get('account'), 'acct_1UVx5F2RLtxMJCNo');
+  assert.equal(body.get('type'), 'account_onboarding');
+  assert.equal(body.get('collection_options[fields]'), 'eventually_due');
+  assert.equal(body.get('return_url'), origin + '/BreakApp/#platform-configuration');
+  assert.equal(body.get('refresh_url'), origin + '/BreakApp/#platform-configuration');
 });
 
 test('Stripe rejection includes safe HTTP/code diagnostics, not provider PII', async () => {
