@@ -1,10 +1,10 @@
 # Stato della piattaforma
 
-Aggiornato il 27 ottobre 2026. La specifica privata resta la fonte dei requisiti. Le verifiche automatiche usano database e pagamenti sintetici isolati; il servizio collegato è l'ambiente di sviluppo.
+Aggiornato il 29 ottobre 2026. La specifica privata resta la fonte dei requisiti. Le verifiche automatiche usano database e pagamenti sintetici isolati; il servizio collegato è l'ambiente di sviluppo. La pagina Gruppi ha un'interfaccia responsive dedicata; nessun ruolo amministrativo è stato assegnato agli account social usati per il test.
 
 | Area | Implementazione | Verifica |
 | --- | --- | --- |
-| Account e scuole | RBAC per scuola, TOTP Admin/Super Admin con blocco di ulteriori Authenticator, registrazione senza conferma per il dominio esatto `admin.breakapp.it`, ospiti con link privato e recupero email verificata, import CSV/XLSX, creazione/sospensione/riattivazione scuole e assegnazione personale | RLS, ruoli, ospite non coordinatore, onboarding transazionale; flusso Google/Microsoft con PKCE implementato, attivazione soggetta alle credenziali OAuth dei provider |
+| Account e scuole | RBAC per scuola, TOTP Admin/Super Admin con blocco di ulteriori Authenticator, registrazione senza conferma per il dominio esatto `admin.breakapp.it`, ospiti con link privato e recupero email verificata, import CSV/XLSX, creazione/sospensione/riattivazione scuole e assegnazione personale | RLS, ruoli, ospite non coordinatore, onboarding transazionale; accessi Google e Microsoft confermati manualmente il 29 ottobre, senza funzioni Admin per gli account privi di ruolo |
 | Catalogo e scorte | Prodotti, immagini, ingredienti/allergeni, scorte giornaliere, vendite, conta motivata anche sotto il prenotato, priorità di ritiro e sostituzioni | Ultima unità concorrente; isolamento prodotto/giorno; un ammanco non cancella arbitrariamente gli ordini confermati |
 | Ordini | GPS, idempotenza, QR, preparazione/ritiro, preferiti, riordino, modifica atomica, sostituzioni e proposte di orario con consenso | Ordine originale preservato su errore, cutoff, allergeni, nessuno spostamento tacito |
 | Grandi ordini | Coda senza stock, presenza Barista, limite attivazioni, riserva di 10 minuti, priorità fascia, nuova fascia o risposta entro 2 ore | Attivazione, scadenze, rifiuto, rilascio e rimborso; nessuna autoconferma sopra soglia |
@@ -18,8 +18,8 @@ Aggiornato il 27 ottobre 2026. La specifica privata resta la fonte dei requisiti
 
 ## Attivazioni e collaudi esterni
 
-1. **Stripe:** merchant scolastico abilitato e `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`; quindi prova reale sandbox di pagamento e rimborso firmato. Non è stato simulato un incasso esterno riuscito.
-2. **OAuth:** configurazione Google/Microsoft e URL di redirect del dominio effettivo.
+1. **Stripe — ancora bloccato:** merchant scolastico di sandbox `acct_1UUweO2RLteSvLtN` con `card_payments=inactive`, `charges_enabled=false` e 19 requisiti scaduti al 29 ottobre. Webhook di sandbox attivo per checkout completato/scaduto, pagamento asincrono riuscito e rimborso aggiornato; una richiesta deliberatamente non firmata viene respinta HTTP 400. Edge Functions checkout/rimborso aggiornate per accettare chiavi `rk_test_` e `sk_test_` (mai live); presenza/permessi di `STRIPE_SECRET_KEY` ancora da verificare mediante collaudo autenticato. Mancano attivazione merchant, pagamento con carta di test, verifica riconciliazione via webhook e rimborso reale di sandbox. Non alterare i flag DB prima della verifica effettiva con Stripe.
+2. **OAuth — completato per il sito di test:** Google e Microsoft configurati e verificati manualmente con ritorno autenticato su BreakApp il 29 ottobre.
 3. **Backup operativo:** `SUPABASE_BACKUP_DB_URL` e `BACKUP_PASSPHRASE` nei segreti GitHub; prova di ripristino del servizio in un progetto separato, comprese configurazioni e file Storage.
 4. **Pilota:** telefoni Android/iPhone fisici, stampante/dispositivo fiscale esterno, revoca di dispositivi realmente disconnessi, recupero dopo perdita/reinstallazione, procedure privacy e responsabilità del gestore.
 5. **Hosting definitivo:** il sito di test è GitHub Pages; anteprima Vercel e compatibilità Cloudflare restano distinte dalla promozione manuale in produzione.
