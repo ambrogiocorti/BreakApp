@@ -38,7 +38,7 @@ Deno.serve(async(req)=>{
   const url=required('SUPABASE_URL');
   const anon=required('SUPABASE_ANON_KEY');
   const stripeKey=required('STRIPE_SECRET_KEY');
-  if(!stripeKey.startsWith('sk_test_'))return json({error:'Checkout non attivo in ambiente di test'},503);
+  if(!/^[sr]k_test_[A-Za-z0-9]+$/.test(stripeKey))return json({error:'Checkout non attivo in ambiente di test'},503);
   const db=createClient(url,anon,{global:{headers:{Authorization:'Bearer '+token}},
     auth:{persistSession:false,autoRefreshToken:false}});
   const {data:identity,error:authError}=await db.auth.getUser(token);
