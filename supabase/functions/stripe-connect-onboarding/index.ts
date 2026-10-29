@@ -82,12 +82,32 @@ Deno.serve(async (request: Request) => {
       })
     });
 
+    // Leggiamo l'errore strutturato di Stripe senza esporre dati dell'account.
+    const data = await response.json().catch(() => ({})) as {
+      url?: unknown;
+      expires_at?: unknown;
+      error?: { type?: unknown; code?: unknown }
+    };
     if (!response.ok) {
-      // I messaggi Stripe possono contenere dati dell'account: non inoltrarli.
-      return respond({ error: 'Stripe non ha generato il link (' + response.status + '). Controlla la chiave e i permessi Account Links.' }, 502);
+      const type = typeof data.error?.type === 'string' && /^[a-z_]{1,64}$/.test(data.error.type)
+        ? data.error.type : 'unknown';
+      const code = typeof data.error?.code === 'string' && /^[a-z0-9_]{1,64}$/.test(data.error.code)
+        ? data.error.code : 'unknown';
+      const requestId = response.headers.get('request-id') || '';
+      const safeRequestId = /^req_[a-zA-Z0-9]{8,64}$/.test(requestId) ? requestId : '';
+      console.error('Stripe account onboarding rejected', { status: response.status, type, code, requestId: safeRequestId });
+      const reason = response.status === 401
+        ? 'Stripe ha rifiutato la chiave API di test. Verifica che sia valida e appartenga alla piattaforma.'
+        : response.status === 403
+          ? 'La chiave Stripe non è autorizzata a creare link Connect: controlla i permessi Account Links.'
+          : code === 'resource_missing' || response.status === 404
+            ? 'Il merchant demo indicato non è accessibile alla piattaforma Stripe usata dalla chiave.'
+            : response.status === 400
+              ? 'Stripe ha respinto la richiesta di onboarding: controlla parametri, modalità test e stato del merchant.'
+              : 'Stripe non ha generato il link di attivazione.';
+      return respond({ error: reason, stripe_status: response.status, stripe_type: type,
+        stripe_code: code, ...(safeRequestId ? { stripe_request_id: safeRequestId } : {}) }, 502);
     }
-
-    const data = await response.json() as { url?: unknown; expires_at?: unknown };
     if (typeof data.url !== 'string') {
       return respond({ error: 'Stripe non ha restituito un link utilizzabile' }, 502);
     }
