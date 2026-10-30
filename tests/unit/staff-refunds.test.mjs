@@ -48,6 +48,6 @@ test('staff can register actual cash/POS return only after explicit confirmation
 
 test('cash refund completion is not falsely described as an automatic POS refund',()=>{
   assert.match(html,/Non esegue uno storno sul terminale POS esterno/);
-  assert.match(html,/dopo aver restituito/i);
+  assert.match(html,/Confermo di aver già restituito realmente/);
   assert.match(orders,/Il sistema non può accreditare automaticamente contanti/);
 });
