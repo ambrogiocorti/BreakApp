@@ -22,7 +22,7 @@ Il frontend richiede soltanto `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_K
 - Gruppi, inviti, conferma atomica, ritiro unico, ledger multipagatore e supplementi di sostituzione.
 - Grandi ordini: coda senza stock, presenza, priorità, riserva di dieci minuti e ripianificazione.
 - Ospiti con link privato, onboarding scuole, import classi, coupon/bundle e ticket condivisi o personali.
-- Checkout/webhook verificati e rimborsi al pagatore originale. **Merchant di test ancora disabilitato e credenziali Stripe mancanti: incassi online non attivi.**
+- Checkout e webhook firmati, rimborsi Stripe ai pagatori originali, avvio rimborso direttamente dall'ordine per Admin scuola e Barista, e riconciliazione separata dei contanti/POS esterno. **Merchant Stripe TEST della scuola pilota attivato e collegato al 30/10/2026; collaudo end-to-end di pagamento + webhook + rimborso ancora da completare. Nessun pagamento live abilitato.**
 - Terminale Barista cifrato e condiviso, vendite e ritiri individuali/gruppi offline, riconciliazione del saldo e revisione Admin.
 - Turni di cassa online/offline, movimenti, conteggi, chiusure immutabili e rettifiche Admin.
 - Report per scuola con CSV, XLSX e PDF; annunci e notifiche personali.
