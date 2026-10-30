@@ -49,6 +49,44 @@ export function initializeOrders(client) {
   const refundConfirm=document.querySelector('#staff-refund-confirm');
   const refundSubmit=document.querySelector('#staff-refund-submit');
   let selectedRefund=null;
+  const cashRefundList=document.querySelector('#staff-cash-refunds-list');
+  const cashRefundFeedback=document.querySelector('#staff-cash-refunds-feedback');
+  const cashReturnDialog=document.querySelector('#staff-cash-return-dialog');
+  const cashReturnForm=document.querySelector('#staff-cash-return-form');
+  const cashReturnSummary=document.querySelector('#staff-cash-return-summary');
+  const cashReturnReason=document.querySelector('#staff-cash-return-reason');
+  const cashReturnFeedback=document.querySelector('#staff-cash-return-feedback');
+  const cashReturnSubmit=document.querySelector('#staff-cash-return-submit');
+  let cashRefunds=[],selectedCashRefund=null,cashRefundVersion=0;
+  document.querySelector('#staff-cash-return-cancel').addEventListener('click',()=>cashReturnDialog.close());
+  cashReturnDialog.addEventListener('close',()=>{
+    selectedCashRefund=null;cashReturnForm.reset();cashReturnFeedback.textContent='';
+  });
+  cashReturnForm.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const obligation=selectedCashRefund;
+    if(!user||!obligation||cashReturnSubmit.disabled||!cashReturnForm.reportValidity())return;
+    if(!staffSchools.includes(obligation.school_id)||obligation.status==='returned'){
+      report(cashReturnFeedback,'Restituzione non più disponibile: aggiorna la lista.',true);return;
+    }
+    const actor=user.id;
+    cashReturnSubmit.disabled=true;
+    report(cashReturnFeedback,'Registrazione della restituzione in cassa…');
+    try{
+      const {error}=await client.rpc('confirm_cash_refund_return',{
+        p_refund:obligation.id,p_reason:cashReturnReason.value.trim()
+      });
+      if(error)throw error;
+      if(user?.id!==actor)return;
+      cashReturnDialog.close();
+      report(staffFeedback,'Restituzione di '+formatEuro(obligation.amount_cents)+' registrata in cassa. Il movimento è salvato dal server.');
+      await fetchStaffOrders();
+    }catch(error){
+      if(user?.id===actor)report(cashReturnFeedback,
+        'Restituzione non confermata: '+(error?.message||'errore sconosciuto')+
+        '. Se hai già consegnato il denaro, verifica i movimenti di cassa prima di riprovare.',true);
+    }finally{cashReturnSubmit.disabled=false;}
+  });
   document.querySelector('#staff-refund-cancel').addEventListener('click',()=>refundDialog.close());
   refundDialog.addEventListener('close',()=>{selectedRefund=null;refundForm.reset();refundFeedback.textContent='';});
   refundForm.addEventListener('submit',async event=>{
@@ -402,6 +440,66 @@ export function initializeOrders(client) {
       ?[staffContextSchool]:staffSchools).order('created_at',{ascending:false}).limit(100);
     if(error){report(staffFeedback,error.message,true);return;}
     staffOrders=data||[];drawStaff();
+    await loadCashRefunds();
+  }
+  async function loadCashRefunds(){
+    const version=++cashRefundVersion;
+    if(!user||!staffSchools.length){
+      cashRefunds=[];drawCashRefunds();return;
+    }
+    const actor=user.id;
+    const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
+      ?[staffContextSchool]:staffSchools;
+    const results=await Promise.all(schools.map(schoolId=>
+      client.rpc('list_staff_pending_cash_refunds',{p_school:schoolId})
+    ));
+    if(version!==cashRefundVersion||user?.id!==actor)return;
+    const failure=results.find(result=>result.error);
+    if(failure){
+      cashRefunds=[];drawCashRefunds();
+      report(cashRefundFeedback,'Impossibile leggere le restituzioni: '+failure.error.message,true);
+      return;
+    }
+    cashRefunds=results.flatMap(result=>Array.isArray(result.data?.items)?result.data.items:[])
+      .filter(obligation=>obligation.status==='pending'&&staffSchools.includes(obligation.school_id));
+    const remaining=results.reduce((n,r)=>n+Math.max(0,Number(r.data?.total||0)-200),0);
+    if(results.some(r=>r.data?.has_more)){
+      report(cashRefundFeedback,'Attenzione: '+remaining+
+        ' restituzioni aggiuntive non sono visualizzate. Contatta l’Admin per la riconciliazione completa.',true);
+    }else cashRefundFeedback.textContent='';
+    drawCashRefunds();
+  }
+  function drawCashRefunds(){
+    cashRefundList.replaceChildren();
+    if(!cashRefunds.length){
+      cashRefundList.append(elem('p','Nessuna restituzione al banco da registrare.'));
+      return;
+    }
+    for(const obligation of cashRefunds){
+      const order=staffOrders.find(x=>x.id===obligation.order_id);
+      const title=order?'Ordine #'+order.display_no:
+        obligation.group_order_id?'Ordine di gruppo':'Ordine concluso non presente negli ultimi 100';
+      const box=elem('article','','order-card');
+      box.append(
+        elem('h4',title+' · '+formatEuro(obligation.amount_cents)),
+        elem('p','Restituzione ancora da effettuare. Il sistema non può accreditare automaticamente contanti o pagamenti del POS esterno.'),
+        elem('p','Motivo: '+(obligation.reason||'non specificato'))
+      );
+      const button=elem('button','Registra restituzione','button button-outline button-small');
+      button.type='button';
+      button.addEventListener('click',()=>{
+        if(!user||!staffSchools.includes(obligation.school_id))return;
+        selectedCashRefund=obligation;
+        cashReturnForm.reset();
+        cashReturnFeedback.textContent='';
+        cashReturnSummary.textContent=title+' · '+formatEuro(obligation.amount_cents)+
+          '. Conferma soltanto dopo aver restituito realmente il denaro e verificato la cassa.';
+        cashReturnDialog.showModal();
+        cashReturnReason.focus();
+      });
+      box.append(button);
+      cashRefundList.append(box);
+    }
   }
   function drawStaff(){
     staffList.replaceChildren();
@@ -457,6 +555,7 @@ export function initializeOrders(client) {
   }
   async function checkStaff(){
     staffSchools=[];staffPanel.hidden=true;
+    cashRefundVersion++;cashRefunds=[];drawCashRefunds();
     if(!user)return;
     const {data,error}=await client.from('school_memberships')
       .select('school_id,role_assignments(role_code)').eq('user_id',user.id).eq('membership_status','active');
@@ -471,6 +570,7 @@ export function initializeOrders(client) {
   window.addEventListener('breakapp:workspace-context',event=>{
     const role=event.detail?.role||'customer';
     if(refundDialog.open)refundDialog.close();
+    if(cashReturnDialog.open)cashReturnDialog.close();
     if(role!=='customer'){
       if(productDialog.open)productDialog.close();
       if(cartDialog.open)cartDialog.close();
@@ -484,7 +584,12 @@ export function initializeOrders(client) {
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
-    if(!user){if(refundDialog.open)refundDialog.close();staffPanel.hidden=true;cart=[];showCartBar();return;}
+    if(!user){
+      if(refundDialog.open)refundDialog.close();
+      if(cashReturnDialog.open)cashReturnDialog.close();
+      cashRefundVersion++;cashRefunds=[];drawCashRefunds();
+      staffPanel.hidden=true;cart=[];showCartBar();return;
+    }
     if(changed){cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();}
   }
   client.auth.onAuthStateChange((_event,session)=>queueMicrotask(()=>setUser(session?.user||null)));

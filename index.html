@@ -223,6 +223,13 @@
         </div>
         <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div id="staff-orders-list" class="orders-list"></div>
+        <article id="staff-cash-refunds-panel" class="pilot-card" aria-labelledby="staff-cash-refunds-title">
+          <h3 id="staff-cash-refunds-title">Restituzioni contanti e POS esterno da completare</h3>
+          <p class="catalog-help">Una richiesta di rimborso non restituisce automaticamente il denaro al cliente. Dopo la restituzione effettiva, registra l'uscita in cassa con un turno aperto.</p>
+          <p id="staff-cash-refunds-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+          <div id="staff-cash-refunds-list" class="orders-list"></div>
+        </article>
+
         <article id="group-staff-panel" class="pilot-card" hidden>
           <h3>Ordini di gruppo · ritiro unico</h3>
           <p>Consegna soltanto al coordinatore, con saldo zero e tutti i prodotti pronti.</p>
@@ -683,6 +690,24 @@
         <div id="staff-scan-result"></div>
       </dialog>
 
+      <dialog id="staff-cash-return-dialog" class="ba-dialog" aria-labelledby="staff-cash-return-title">
+        <form id="staff-cash-return-form">
+          <h2 id="staff-cash-return-title">Conferma restituzione al banco</h2>
+          <p id="staff-cash-return-summary" class="catalog-help"></p>
+          <p class="catalog-help">Questa operazione registra un'uscita nel turno di cassa. Non esegue uno storno sul terminale POS esterno: effettualo prima, quando applicabile.</p>
+          <label for="staff-cash-return-reason">Motivazione / riferimento della restituzione</label>
+          <textarea id="staff-cash-return-reason" rows="3" required minlength="8" maxlength="300" placeholder="Es. Rimborso consegnato al cliente al banco"></textarea>
+          <label class="pilot-inline-check" for="staff-cash-return-confirm">
+            <input type="checkbox" id="staff-cash-return-confirm" required />
+            Confermo di aver già restituito realmente l'intero importo indicato.
+          </label>
+          <p id="staff-cash-return-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+          <div class="order-actions">
+            <button id="staff-cash-return-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-cash-return-submit" type="submit" class="button button-primary">Registra restituzione</button>
+          </div>
+        </form>
+      </dialog>
       <dialog id="staff-refund-dialog" class="ba-dialog" aria-labelledby="staff-refund-title">
         <form id="staff-refund-form">
           <h2 id="staff-refund-title">Rimborsa ordine</h2>
