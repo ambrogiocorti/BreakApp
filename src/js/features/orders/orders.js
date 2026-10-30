@@ -451,7 +451,7 @@ export function initializeOrders(client) {
     const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
       ?[staffContextSchool]:staffSchools;
     const results=await Promise.all(schools.map(schoolId=>
-      client.rpc('list_cash_refund_obligations',{p_school:schoolId})
+      client.rpc('list_staff_pending_cash_refunds',{p_school:schoolId})
     ));
     if(version!==cashRefundVersion||user?.id!==actor)return;
     const failure=results.find(result=>result.error);
@@ -460,9 +460,13 @@ export function initializeOrders(client) {
       report(cashRefundFeedback,'Impossibile leggere le restituzioni: '+failure.error.message,true);
       return;
     }
-    cashRefunds=results.flatMap(result=>Array.isArray(result.data)?result.data:[])
-      .filter(obligation=>obligation.status!=='returned'&&staffSchools.includes(obligation.school_id));
-    cashRefundFeedback.textContent='';
+    cashRefunds=results.flatMap(result=>Array.isArray(result.data?.items)?result.data.items:[])
+      .filter(obligation=>obligation.status==='pending'&&staffSchools.includes(obligation.school_id));
+    const remaining=results.reduce((n,r)=>n+Math.max(0,Number(r.data?.total||0)-200),0);
+    if(results.some(r=>r.data?.has_more)){
+      report(cashRefundFeedback,'Attenzione: '+remaining+
+        ' restituzioni aggiuntive non sono visualizzate. Contatta l’Admin per la riconciliazione completa.',true);
+    }else cashRefundFeedback.textContent='';
     drawCashRefunds();
   }
   function drawCashRefunds(){
