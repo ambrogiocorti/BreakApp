@@ -5,11 +5,11 @@ import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
 const origin='https://ambrogiocorti.github.io';
 const site=origin+'/BreakApp/';
 const uid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const response=(data:unknown,status=200)=>new Response(JSON.stringify(data),{
+const response=(data:unknown,status=200)=>new Response(status===204?null:JSON.stringify(data),{
  status,headers:{'content-type':'application/json','cache-control':'no-store',
   'access-control-allow-origin':origin,'vary':'Origin',
   'access-control-allow-methods':'POST, OPTIONS',
-  'access-control-allow-headers':'authorization, apikey, content-type'}
+  'access-control-allow-headers':'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage'}
 });
 const required=(name:string)=>{const s=Deno.env.get(name);if(!s)throw Error('Config server incompleta: '+name);return s;};
 async function stripe(endpoint:string,account:string,key:string,init?:RequestInit){
