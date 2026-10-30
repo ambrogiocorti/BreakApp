@@ -31,3 +31,23 @@ test('database checks tenant membership, completion state and request reason',()
   assert.match(migration,/app_private.assert_no_pending_checkout/);
   assert.match(migration,/p_key IS NULL/);
 });
+
+test('staff can register actual cash/POS return only after explicit confirmation',()=>{
+  assert.match(html,/id="staff-cash-refunds-list"/);
+  assert.match(html,/id="staff-cash-return-dialog"/);
+  assert.match(html,/id="staff-cash-return-confirm"[^>]*required/);
+  assert.match(html,/id="staff-cash-return-reason"[^>]*required minlength="8"/);
+  assert.match(orders,/client\.rpc\('list_cash_refund_obligations',\{p_school:schoolId\}\)/);
+  assert.match(orders,/client\.rpc\('confirm_cash_refund_return'/);
+  assert.match(orders,/p_refund:obligation\.id,p_reason:cashReturnReason\.value\.trim\(\)/);
+  assert.match(orders,/cashReturnForm\.reportValidity\(\)/);
+  assert.match(orders,/staffSchools\.includes\(obligation\.school_id\)/);
+  assert.match(orders,/Nessuna restituzione al banco da registrare/);
+  assert.doesNotMatch(html,/id="staff-cash-return-refund-id"/);
+});
+
+test('cash refund completion is not falsely described as an automatic POS refund',()=>{
+  assert.match(html,/Non esegue uno storno sul terminale POS esterno/);
+  assert.match(html,/dopo aver restituito/i);
+  assert.match(orders,/Il sistema non può accreditare automaticamente contanti/);
+});
