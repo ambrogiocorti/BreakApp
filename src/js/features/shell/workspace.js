@@ -317,6 +317,8 @@ export function initializeWorkspace(client){
  }
  function setContext(context,{restoreRoute=false}={}){
    active=context;
+   const brandHome=document.querySelector('.site-header .brand');
+   if(brandHome)brandHome.href='#'+fallback();
    remember(context.key);
    saveVerifiedOfflineRole(context);
    select.value=context.key;
@@ -353,6 +355,8 @@ export function initializeWorkspace(client){
  }
  function signOutUI(){
    epoch++;ready=false;user=null;contexts=[];active=null;route='';
+   const brandHome=document.querySelector('.site-header .brand');
+   if(brandHome)brandHome.href='#accesso';
    document.body.dataset.workspace='false';
    document.body.removeAttribute('data-active-role');
    document.body.removeAttribute('data-active-school');
