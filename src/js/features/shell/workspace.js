@@ -168,6 +168,8 @@ export function initializeWorkspace(client){
  moreContainer.id='workspace-more-items';
  moreContainer.setAttribute('aria-label','Altre sezioni');
  document.body.append(moreContainer);
+ const index=document.getElementById('workspace-index');
+ const indexNav=document.getElementById('workspace-index-nav');
  let user=null,contexts=[],active=null,route='',epoch=0,ready=false;
  const storageKey='breakapp:last-workspace-context';
  const offlineRoleCacheKey='breakapp:offline-bartender-context-v1';
@@ -221,25 +223,30 @@ export function initializeWorkspace(client){
  }
  function renderLinks(){
    nav.replaceChildren();mobile.replaceChildren();moreContainer.replaceChildren();
+   indexNav.replaceChildren();index.open=false;
    const available=active?.verified?SCREENS[active?.role]||[]:[['accesso','Profilo e sicurezza','UserRound']];
    function linkOf(screen,compact=false){
      const [id,label,iconName]=screen;
      const a=create('a',compact?'workspace-link mobile-link':'workspace-link');
      a.href='#'+id;a.dataset.route=id;
      const pictogram=create('span','workspace-link-icon');pictogram.append(icon(iconName));
-     a.append(pictogram,
-       create(compact?'small':'span','workspace-link-label',label));
+     a.append(pictogram,create(compact?'small':'span','workspace-link-label',label));
      if(id===route)a.setAttribute('aria-current','page');
      return a;
    }
-   let lastGroup='';
-   for(const screen of available){
-     const group=NAV_GROUPS[active?.role]?.[screen[0]]||
-       (screen[0]==='accesso'?'ACCOUNT':'');
-     if(group&&group!==lastGroup)
-       nav.append(create('span','workspace-nav-caption',group));
-     lastGroup=group;
-     nav.append(linkOf(screen));
+   const primary=available.slice(0,5);
+   if(!primary.some(([id])=>id===route)){
+     const selected=available.find(([id])=>id===route);
+     if(selected)primary[primary.length-1]=selected;
+   }
+   for(const screen of primary)nav.append(linkOf(screen));
+   index.hidden=available.length<=5;
+   if(!index.hidden){
+     for(const screen of available){
+       const link=linkOf(screen);
+       link.addEventListener('click',()=>{index.open=false;});
+       indexNav.append(link);
+     }
    }
    const compact=available.length>4?[...available.slice(0,3)]:available;
    compact.forEach(screen=>mobile.append(linkOf(screen,true)));
@@ -248,8 +255,7 @@ export function initializeWorkspace(client){
      more.type='button';more.setAttribute('aria-controls','workspace-more-items');
      more.setAttribute('aria-expanded','false');
      const moreIcon=create('span','workspace-link-icon');moreIcon.append(icon('More'));
-     more.append(moreIcon,
-       create('small','workspace-link-label','Altro'));
+     more.append(moreIcon,create('small','workspace-link-label','Altro'));
      more.addEventListener('click',()=>{
        moreContainer.hidden=!moreContainer.hidden;
        more.setAttribute('aria-expanded',String(!moreContainer.hidden));
@@ -344,7 +350,7 @@ export function initializeWorkspace(client){
    if(breadcrumb)breadcrumb.hidden=true;
    if(accountLink)accountLink.hidden=true;
    profileSwitcher.hidden=true;
-   moreContainer.hidden=true;
+   moreContainer.hidden=true;index.open=false;index.hidden=true;indexNav.replaceChildren();
    routeSections.forEach(s=>s.classList.remove('is-route-active'));
  }
  async function refreshSession(userNext){
