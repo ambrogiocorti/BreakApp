@@ -34,9 +34,12 @@ jobs:
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 --base /BreakApp/ > /tmp/breakapp-preview.log 2>&1 &
           echo $! > /tmp/breakapp-preview.pid
+      - name: Prepare visual review capture
+        run: mkdir -p "$RUNNER_TEMP/breakapp-ui-review"
       - name: Smoke test desktop and mobile on three browsers
         env:
           SMOKE_URL: http://127.0.0.1:4173/BreakApp/
+          WORKSPACE_SCREENSHOTS: ${{ runner.temp }}/breakapp-ui-review
         run: node tests/e2e/multibrowser.mjs
       - name: Test actual notification controls with an isolated API fixture on three browsers
         run: node tests/e2e/notifications.mjs
@@ -47,9 +50,19 @@ jobs:
       - name: Test guest creation, verified email binding and recovery controls on three browsers
         run: node tests/e2e/guest.mjs
       - name: Test workspace navigation, school directory and configuration on three browsers
+        env:
+          WORKSPACE_SCREENSHOTS: ${{ runner.temp }}/breakapp-ui-review
         run: node tests/e2e/workspace.mjs
       - name: Test OAuth, domain-specific registration and primary Authenticator controls on three browsers
         run: node tests/e2e/auth.mjs
+      - name: Export visual-review images (fixture data only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: breakapp-edition03-visual-review
+          path: ${{ runner.temp }}/breakapp-ui-review/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Stop preview
         if: always()
         run: kill "$(cat /tmp/breakapp-preview.pid)" || true
