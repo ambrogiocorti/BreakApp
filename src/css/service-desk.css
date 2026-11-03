@@ -868,3 +868,98 @@ body[data-authenticated=true] .login-art{display:none!important;}
  .inventory-ledger .warehouse-row{grid-template-columns:1fr;}
  .inventory-ledger .warehouse-row-controls{justify-content:flex-start;}
 }
+
+
+/* Real admin forms: a calm editorial configuration sheet instead of a stack
+ * of miniature dashboard cards. The existing tab/tabpanel relationship stays. */
+#platform-configuration .platform-pilot-tools{
+ background:transparent;border:0;padding:0;box-shadow:none;
+}
+#platform-configuration .platform-pilot-heading{
+ display:flex;align-items:end;justify-content:space-between;
+ gap:1.5rem;padding-bottom:1.35rem;border-bottom:2px solid var(--text);
+}
+#platform-configuration .platform-pilot-heading h3{
+ font-size:clamp(1.5rem,2.2vw,2.35rem);font-weight:800;letter-spacing:-.06em;
+}
+#platform-configuration .pilot-context{
+ background:var(--surface);padding:1.15rem;
+ border:1px solid var(--border);border-radius:2px;gap:1rem;
+ margin-top:1rem;
+}
+#platform-configuration .pilot-context label{font-size:.77rem;font-weight:740;}
+#platform-configuration .pilot-context :is(input,select){border-radius:2px;min-height:45px;}
+#platform-configuration .readiness-details{
+ margin:1rem 0;background:transparent;border-color:var(--border);border-radius:2px;
+}
+#platform-configuration .pilot-grid{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.2rem;
+ align-items:start;
+}
+#platform-configuration .pilot-card{
+ background:var(--surface);border:1px solid var(--border);border-radius:2px;
+ padding:clamp(1.15rem,2vw,1.8rem);box-shadow:none;
+}
+#platform-configuration .pilot-card h4{
+ margin:.2rem 0 .8rem;font-size:1.1rem;font-weight:780;letter-spacing:-.04em;
+}
+#platform-configuration .pilot-card label{font-size:.79rem;font-weight:740;}
+#platform-configuration .pilot-card :is(input,select,textarea){border-radius:2px;}
+#platform-configuration .pilot-card form{gap:.75rem;}
+#platform-configuration .workspace-tabs{
+ background:transparent;border-bottom:2px solid var(--text);
+ gap:clamp(.7rem,2vw,2rem);padding:0;margin:1.4rem 0;
+}
+#platform-configuration .workspace-tabs [role=tab]{
+ font-size:.84rem;font-weight:740;min-height:48px;
+ border-radius:0;padding-inline:.2rem;
+}
+#platform-configuration .workspace-tabs [role=tab][aria-selected=true]{
+ background:transparent;color:var(--text);border-bottom-color:var(--accent);
+}
+#admin-catalog .catalog-columns{align-items:start;gap:1.4rem;}
+#admin-catalog .catalog-card{
+ border:1px solid var(--border);border-top:3px solid var(--text);
+ border-radius:2px;box-shadow:none;
+}
+#admin-catalog .catalog-card h3{letter-spacing:-.045em;}
+#admin-catalog .catalog-list{padding-top:1.2rem;border-color:var(--border);}
+#admin-catalog .catalog-item{border:0;border-bottom:1px solid var(--border);padding:1rem .25rem;}
+#admin-catalog .catalog-item-actions{gap:.3rem;}
+#cash-workspace .catalog-card,#school-reports .catalog-card,
+#support-center .catalog-card{
+ border:1px solid var(--border);border-radius:2px;
+ padding:clamp(1.2rem,2vw,1.9rem);
+}
+#cash-workspace .service-admin-grid,#support-center .support-grid{gap:1.1rem;}
+#support-center .support-ticket-card{
+ border:0;border-bottom:1px solid var(--border);
+ padding:1.15rem .2rem;border-radius:0;
+}
+#support-center .support-message{
+ background:var(--surface-soft);border:1px solid var(--border);border-radius:2px;
+}
+#groups .group-panel,#groups .group-detail{
+ border-radius:2px;box-shadow:none;
+}
+#groups .group-panel-heading{border-bottom:2px solid var(--text);}
+#groups .group-step{font-size:.66rem;letter-spacing:.13em;font-weight:800;}
+#groups .group-panel-heading h3{font-size:1.5rem;letter-spacing:-.06em;font-weight:800;}
+#groups .group-draft-row,#groups .group-invite,
+#groups .group-detail > :is(#group-personal,#group-coordinator-panel,#group-manage,#group-payments-panel,#group-confirm-panel,#group-confirmed-panel){
+ border-radius:2px;
+}
+#groups .group-panel:first-child{background:var(--surface);border-top:3px solid var(--accent);}
+#groups .group-detail{border-top:3px solid var(--text);}
+
+@media(max-width:850px){
+ #platform-configuration .pilot-grid{grid-template-columns:1fr;}
+ #platform-configuration .pilot-context{grid-template-columns:1fr 1fr;}
+ #admin-catalog .catalog-columns{grid-template-columns:1fr;}
+}
+@media(max-width:560px){
+ #platform-configuration .pilot-context{grid-template-columns:1fr;}
+ #platform-configuration .platform-pilot-heading{align-items:start;}
+ #platform-configuration .workspace-tabs{gap:.9rem;}
+ #platform-configuration .pilot-card{padding:1.05rem;}
+}
