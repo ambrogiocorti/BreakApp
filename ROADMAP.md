@@ -1,6 +1,6 @@
 # Stato della piattaforma
 
-Aggiornato il 30 ottobre 2026. La specifica privata resta la fonte dei requisiti. Le verifiche automatiche usano database e pagamenti sintetici isolati; il servizio collegato è l'ambiente di sviluppo. La pagina Gruppi ha un'interfaccia responsive dedicata; nessun ruolo amministrativo è stato assegnato agli account social usati per il test.
+Aggiornato il 3 novembre 2026. La specifica privata resta la fonte dei requisiti. Le verifiche automatiche usano database e pagamenti sintetici isolati; il servizio collegato è l'ambiente di sviluppo. La pagina Gruppi ha un'interfaccia responsive dedicata; nessun ruolo amministrativo è stato assegnato agli account social usati per il test.
 
 | Area | Implementazione | Verifica |
 | --- | --- | --- |
@@ -16,6 +16,22 @@ Aggiornato il 30 ottobre 2026. La specifica privata resta la fonte dei requisiti
 | Assistenza | Ticket personali e condivisi di gruppo, commenti dei membri, riapertura soggetta ad Admin, immagini private JPG/PNG/WebP | Coordinatore escluso dai ticket/ricevute personali altrui; RLS anche per messaggi e allegati |
 | Comunicazioni e report | Push/in-app, preferenze, cron ogni minuto, promemoria ritiro/chiusura, annunci, rendiconti e CSV/XLSX/PDF | Destinatari, backoff, rimborsi elaborati/pendenti e contanti da restituire distinti; ricevute interne separate dai documenti fiscali |
 | Backup | Job giornaliero, export PostgreSQL 17, AES-256, archivio esterno al database, verifica e restore su target vuoto | CI esegue cifratura, decifratura, restore e controlli RLS/grant; il job reale richiede due segreti del titolare |
+
+## Implementazione del dossier UX — 3 novembre 2026
+
+L'analisi esterna del 30 ottobre individua debiti di design, operatività e conformità. Questo incremento realizza interventi senza modificare le 171 decisioni funzionali confermate:
+
+| Area | Intervento | Stato e verifica |
+| --- | --- | --- |
+| Banco Barista | Ordini individuali in colonne per stato, filtro per fascia, ricerca anche per prodotto, elenco aggregato dei pezzi da preparare, archivio degli ordini conclusi con rimborso | Codice in PR #60; integrazione reale e test di flusso ancora da completare sul dispositivo del bar |
+| Aggiornamento ordini | Tabella `orders` aggiunta alla publication Supabase Realtime con RLS esistenti, sottoscrizioni per scuola e aggiornamento di riserva ogni 15 secondi | Migrazione applicata e verificata su progetto di test; verificare riconnessioni su reti scolastiche reali |
+| Menu cliente | Card mobile compatte, pulsante rapido + su carrello reale, foto/fallback, etichette allergeni, filtro dei prodotti con allergene dichiarato e avvertenza | L'assenza di un allergene dichiarato **non** implica sicurezza per allergici; serve responsabilità e validazione del gestore |
+| Prenotazioni | Due passaggi effettivi (fascia di ritiro, riepilogo), coupon etichettato e trasparenza sulla richiesta GPS | Resta obbligatoria la stessa verifica lato server; nessuna modifica alle regole di prossimità |
+| Design e navigazione | Eliminato il reset globale della classe `.pilot-card`, tokens tema chiaro/scuro, icona intestazione, stati italiani, navigazione Admin raggruppata e conferme staff in dialog | Nessun brand o logo definitivo approvato; mantenuto nome temporaneo per compatibilità |
+
+**Non ancora implementato / richiede decisione o consulenza:** verifica UIBM/EUIPO ed eventuale rebranding; trattamento fiscale dei corrispettivi e integrazione registratore telematico; informativa privacy minori, geolocalizzazione e DPIA se necessaria; gestione genitori; borsellino prepagato e relativi obblighi PSD2; consegna in classe; pacchetto sugli store; report sprechi; test su iPhone/Android e prova Stripe completa pagamento-webhook-rimborso.
+
+Il dossier è una revisione esterna, **non** una modifica automatica dei requisiti già confermati.
 
 ## Attivazioni e collaudi esterni
 
