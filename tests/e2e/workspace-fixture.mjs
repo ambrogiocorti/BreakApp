@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 // This module is used by tests; it is never imported by the application build.
 const app=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const script=`
-import '/src/css/base.css';import '/src/css/workspace.css';
+import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';
 import {initializeTheme} from '/src/js/core/theme.js';
 import {initializeWorkspace} from '/src/js/features/shell/workspace.js';
 import {initializeWorkspaceDashboards} from '/src/js/features/shell/dashboards.js';
