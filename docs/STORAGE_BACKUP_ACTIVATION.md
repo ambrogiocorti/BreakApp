@@ -1,6 +1,6 @@
 # BreakApp — Backup cifrati dei file Supabase Storage
 
-Stato aggiornato al 3 novembre 2026: backup cifrato S3 **attivato e verificato con 1 file reale**. Il job manuale #41695358724 ha letto 2 bucket e recuperato 1 oggetto da 5.661 byte; l'archivio AES-256 è stato verificato e caricato su GitHub Actions (artifact #13261050306, scadenza 3 dicembre 2026). Il ripristino integrale degli oggetti su un progetto Supabase separato non è ancora stato provato. Il restore PostgreSQL separato del 3/11 include solo i metadati Storage.
+Stato aggiornato al 3 novembre 2026: backup cifrato S3 **attivato e verificato con 1 file reale**, compresa la lettura integrale dei byte dall'archivio cifrato. Il job manuale #41709597575 ha letto 2 bucket, recuperato 1 oggetto da 5.661 byte e convalidato il suo SHA-256 contro il manifest interno. L'archivio AES-256 è stato caricato su GitHub Actions (artifact #13266617186, scadenza 3 dicembre 2026). Il ripristino tramite API S3 su un progetto Supabase separato non è ancora stato provato. Il restore PostgreSQL separato del 3/11 include solo i metadati Storage.
 
 ## Architettura
 
