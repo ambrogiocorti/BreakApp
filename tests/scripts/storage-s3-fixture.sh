@@ -8,6 +8,13 @@ printf 'synthetic school product image\n' > "$temp/object.bin"
 cat > "$temp/mockbin/aws" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
+if [ "${1-}" = configure ] && [ "${2-}" = get ] && [ "${3-}" = s3.preferred_transfer_client ]; then
+  [ -f "${AWS_CONFIG_FILE:-}" ] || exit 19
+  grep -Fq 'preferred_transfer_client = classic' "$AWS_CONFIG_FILE" || exit 20
+  grep -Fq 'addressing_style = path' "$AWS_CONFIG_FILE" || exit 21
+  printf 'classic\n'
+  exit 0
+fi
 case "${3-} ${4-}" in
   's3api list-buckets')
     printf '%s\n' '{"Buckets":[{"Name":"breakapp-product-images"},{"Name":"breakapp-ticket-images"}]}'
@@ -21,7 +28,7 @@ case "${3-} ${4-}" in
     case "$bucket" in
       breakapp-product-images)
         size="$(wc -c < "$TEST_AWS_OBJECT" | tr -d ' ')"
-        printf '{"Contents":[{"Key":"products/test.bin","Size":%s}]}\n' "$size"
+        printf '{"Contents":[{"Key":"products/Screenshot 2026-10-27 155847.png","Size":%s}]}\n' "$size"
         ;;
       breakapp-ticket-images) printf '%s\n' '{"Contents":[]}' ;;
       *) exit 16 ;;
@@ -31,7 +38,7 @@ case "${3-} ${4-}" in
     case "${5-}" in
       s3://breakapp-product-images/)
         mkdir -p "$6/products"
-        cp "$TEST_AWS_OBJECT" "$6/products/test.bin"
+        cp "$TEST_AWS_OBJECT" "$6/products/Screenshot 2026-10-27 155847.png"
         ;;
       s3://breakapp-ticket-images/) mkdir -p "$6" ;;
       *) exit 17 ;;
@@ -62,6 +69,6 @@ assert m["format"]=="breakapp-storage-snapshot-v1"
 assert len(m["buckets"])==2
 assert m["total_objects"]==1
 assert len(m["buckets"][0]["objects"])==1
-assert m["buckets"][0]["objects"][0]["key"]=="products/test.bin"
+assert m["buckets"][0]["objects"][0]["key"]=="products/Screenshot 2026-10-27 155847.png"
 print("Complete multi-bucket fake S3 snapshot and encrypted manifest verified")
 '

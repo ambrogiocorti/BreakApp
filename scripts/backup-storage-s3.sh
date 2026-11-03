@@ -26,6 +26,23 @@ trap 'rm -rf "$workspace"' EXIT
 mkdir -p "$workspace/buckets" "$workspace/listings" "$destination"
 export AWS_DEFAULT_REGION="$SUPABASE_STORAGE_S3_REGION"
 export AWS_EC2_METADATA_DISABLED=true AWS_CLI_AUTO_PROMPT=off
+# AWS CLI >= 2.37 can select its CRT native transfer client automatically.
+# On this Supabase S3 gateway, the observed 2026-11-03 GetObject of a key
+# containing spaces was rejected with HTTP 403 SignatureDoesNotMatch, even
+# though ListBuckets and ListObjectsV2 succeeded. Use the classic botocore
+# transfer client for s3 sync: it performs SigV4 path canonicalization using
+# the same stack as s3api. Isolate this configuration to this job only.
+# A temporary AWS config does not contain credentials and is deleted by trap.
+aws_config="$workspace/aws-config"
+printf '[default]\nregion = %s\ns3 =\n    preferred_transfer_client = classic\n    addressing_style = path\n' "$SUPABASE_STORAGE_S3_REGION" > "$aws_config"
+chmod 600 "$aws_config"
+export AWS_CONFIG_FILE="$aws_config"
+actual_client="$(aws configure get s3.preferred_transfer_client || true)"
+if [ "$actual_client" != classic ]; then
+  echo 'AWS CLI did not select the classic S3 transfer client; aborting unsafe backup.' >&2
+  exit 1
+fi
+echo 'Supabase S3 download client: classic (SigV4 path-style).'
 endpoint="$SUPABASE_STORAGE_S3_ENDPOINT"
 
 aws --endpoint-url "$endpoint" s3api list-buckets --output json > "$workspace/bucket-list.json"
