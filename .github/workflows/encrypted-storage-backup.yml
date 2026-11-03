@@ -26,6 +26,16 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/encrypted-storage"
           bash scripts/backup-storage-s3.sh "$RUNNER_TEMP/encrypted-storage"
+      - name: Recover each file from encrypted archive and verify SHA-256 manifest
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          shopt -s nullglob
+          archives=("$RUNNER_TEMP/encrypted-storage/"*.tar.gpg)
+          test "${#archives[@]}" -eq 1 || { echo 'Expected exactly one encrypted archive'; exit 1; }
+          for archive in "${archives[@]}"; do
+            python3 scripts/verify-storage-snapshot.py "$archive"
+          done
       - name: Upload only encrypted Storage archives
         uses: actions/upload-artifact@v4
         with:
