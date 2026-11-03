@@ -46,6 +46,49 @@ export function initializeOrders(client) {
   let step=1,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
   let staffOrders=[];
   let staffContextSchool=null;
+  let staffFetchSequence=0;
+  let staffChannels=[],staffFallbackTimer=null,staffDebounceTimer=null;
+  function stopStaffFeed(){
+    clearInterval(staffFallbackTimer);
+    clearTimeout(staffDebounceTimer);
+    staffFallbackTimer=null;staffDebounceTimer=null;
+    for(const channel of staffChannels)void client.removeChannel(channel);
+    staffChannels=[];
+  }
+  function queueStaffRefresh(){
+    if(!user||!staffSchools.length||document.hidden||!navigator.onLine)return;
+    clearTimeout(staffDebounceTimer);
+    staffDebounceTimer=setTimeout(()=>{void fetchStaffOrders();},350);
+  }
+  function startStaffFeed(){
+    stopStaffFeed();
+    if(!user||!staffSchools.length)return;
+    const identity=user.id;
+    const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
+      ?[staffContextSchool]:staffSchools;
+    for(const school of [...new Set(schools)]){
+      const channel=client.channel('banco-'+identity+'-'+school);
+      const config={schema:'public',table:'orders',filter:'school_id=eq.'+school};
+      channel.on('postgres_changes',{...config,event:'INSERT'},queueStaffRefresh)
+        .on('postgres_changes',{...config,event:'UPDATE'},queueStaffRefresh)
+        .subscribe(status=>{
+          if(user?.id!==identity)return;
+          if(status==='SUBSCRIBED')staffLiveStatus.textContent='Aggiornamento in tempo reale attivo';
+          else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status))
+            staffLiveStatus.textContent='Connessione in tempo reale non disponibile · aggiornamento periodico attivo';
+        });
+      staffChannels.push(channel);
+    }
+    // Realtime alone is not an availability guarantee: recover lost events.
+    staffFallbackTimer=setInterval(()=>{
+      if(user?.id===identity)queueStaffRefresh();
+    },15000);
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)queueStaffRefresh();
+  });
+  window.addEventListener('online',queueStaffRefresh);
+
   const stripeAttemptKeys=new Map();
   const stripeRefundKeys=new Map();
   const refundDialog=document.querySelector('#staff-refund-dialog');
@@ -447,12 +490,19 @@ export function initializeOrders(client) {
   }
   async function fetchStaffOrders(){
     if(!user||!staffSchools.length)return;
+    const generation=++staffFetchSequence, actor=user.id;
+    const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
+      ?[staffContextSchool]:[...staffSchools];
     const {data,error}=await client.from('orders')
       .select('id,school_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
-      .in('school_id',staffContextSchool&&staffSchools.includes(staffContextSchool)
-      ?[staffContextSchool]:staffSchools).order('created_at',{ascending:false}).limit(100);
-    if(error){report(staffFeedback,error.message,true);return;}
-    staffOrders=data||[];updateSlotFilter();drawStaff();
+      .in('school_id',schools).order('created_at',{ascending:false}).limit(500);
+    if(generation!==staffFetchSequence||user?.id!==actor)return;
+    if(error){report(staffFeedback,'Impossibile aggiornare il banco: '+error.message,true);return;}
+    staffOrders=data||[];
+    updateSlotFilter();drawStaff();
+    if(staffOrders.length===500)
+      report(staffFeedback,'Sono visibili gli ultimi 500 ordini. Filtra per fascia per lavorare sulla giornata; lo storico completo è nei report.');
+    else report(staffFeedback,'Banco aggiornato alle '+new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())+'.');
     await loadCashRefunds();
   }
   async function loadCashRefunds(){
@@ -614,6 +664,8 @@ export function initializeOrders(client) {
       staffList.append(elem('p','Nessun ordine corrisponde ai filtri.','staff-empty'));
   }
   async function checkStaff(){
+    stopStaffFeed();
+    staffFetchSequence++;
     staffSchools=[];staffPanel.hidden=true;
     cashRefundVersion++;cashRefunds=[];drawCashRefunds();
     if(!user)return;
@@ -625,7 +677,10 @@ export function initializeOrders(client) {
     staffSchools=(data||[]).filter(m=>(m.role_assignments||[]).some(r=>r.role_code==='bartender'||(r.role_code==='school_admin'&&adminVerified)))
       .map(m=>m.school_id);
     staffPanel.hidden=!staffSchools.length;
-    if(staffSchools.length)await fetchStaffOrders();
+    if(staffSchools.length){
+      await fetchStaffOrders();
+      if(user)startStaffFeed();
+    }else staffLiveStatus.textContent='Accesso staff non disponibile';
   }
   window.addEventListener('breakapp:workspace-context',event=>{
     const role=event.detail?.role||'customer';
@@ -637,7 +692,11 @@ export function initializeOrders(client) {
       if(stepper.open)stepper.close();
     }
     staffContextSchool=event.detail?.schoolId||null;
-    if(user && staffSchools.includes(staffContextSchool))void fetchStaffOrders();
+    if(user&&staffSchools.length){
+      updateSlotFilter();drawStaff();
+      startStaffFeed();
+      queueStaffRefresh();
+    }
   });
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
@@ -647,12 +706,17 @@ export function initializeOrders(client) {
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
+      stopStaffFeed();staffFetchSequence++;
+      staffOrders=[];updateSlotFilter();drawStaff();
       if(refundDialog.open)refundDialog.close();
       if(cashReturnDialog.open)cashReturnDialog.close();
       cashRefundVersion++;cashRefunds=[];drawCashRefunds();
       staffPanel.hidden=true;cart=[];showCartBar();return;
     }
-    if(changed){cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();}
+    if(changed){
+      stopStaffFeed();staffFetchSequence++;
+      cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();
+    }
   }
   client.auth.onAuthStateChange((_event,session)=>queueMicrotask(()=>setUser(session?.user||null)));
   client.auth.getUser().then(({data,error})=>{if(!error)setUser(data?.user||null);});
