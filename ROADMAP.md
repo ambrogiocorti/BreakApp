@@ -15,7 +15,7 @@ Aggiornato il 3 novembre 2026. La specifica privata resta la fonte dei requisiti
 | Cassa e chiusure | Turni, conta motivata, chiusura immutabile, rettifiche Admin, chiusure straordinarie e rimborsi, no-show a chiusura senza riciclo delle scorte | Riattivare il bar non resuscita ordini; eventuale penalità riguarda cliente registrato/coordinatore, mai ospite o altri membri |
 | Assistenza | Ticket personali e condivisi di gruppo, commenti dei membri, riapertura soggetta ad Admin, immagini private JPG/PNG/WebP | Coordinatore escluso dai ticket/ricevute personali altrui; RLS anche per messaggi e allegati |
 | Comunicazioni e report | Push/in-app, preferenze, cron ogni minuto, promemoria ritiro/chiusura, annunci, rendiconti e CSV/XLSX/PDF | Destinatari, backoff, rimborsi elaborati/pendenti e contanti da restituire distinti; ricevute interne separate dai documenti fiscali |
-| Backup | Job giornaliero, export PostgreSQL 17, AES-256, archivio esterno al database, verifica e restore su target vuoto | CI esegue cifratura, decifratura, restore e controlli RLS/grant; il job reale richiede due segreti del titolare |
+| Backup | Job giornaliero, export PostgreSQL 17, AES-256, archivio esterno al database, verifica e restore su target vuoto | **Primo backup reale riuscito** su GitHub il 03/11 (run #41654538860); **restore SQL manuale riuscito** in Docker con PostgreSQL Supabase 17 e conteggi/RLS verificati. Mancano copia dei byte Storage, prova di ripristino completa dei servizi e conferma del job schedulato successivo |
 
 ## Implementazione del dossier UX — 3 novembre 2026
 

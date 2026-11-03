@@ -1,6 +1,6 @@
 # BreakApp — Decisione di rilascio per venerdì 6 novembre 2026
 
-**Destinazione:** primo cliente / scuola pilota. **Ambiente attuale:** GitHub Pages + Supabase di sviluppo, Stripe TEST. **Stato al 3 novembre:** **NO-GO per transazioni reali e uso commerciale senza limitazioni**.
+**Destinazione:** primo cliente / scuola pilota. **Ambiente attuale:** GitHub Pages + Supabase di sviluppo, Stripe TEST. **Stato aggiornato al 3 novembre:** **NO-GO per transazioni reali e uso commerciale senza limitazioni**.
 
 Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il rilascio, non riduce né modifica tacitamente i requisiti. Il via libera è distinto per **demo**, **pilota controllato senza incassi reali** e **esercizio commerciale con pagamenti**. Non basta una build verde.
 
@@ -9,12 +9,12 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 | Controllo | Evidenza | Stato |
 |---|---|---|
 | Frontend e backend | PR #60 integrata, test JavaScript/build, database PostgreSQL e multibrowser CI superati il 3/11 | Verde per test automatici |
-| Banco | Coda per stato/fascia; P0 paginazione separata degli ordini aperti nel branch di rilascio | Richiede merge CI e collaudo reale |
+| Banco | Paginazione separata degli ordini attivi, controlli anti-race delle sessioni: PR #61 integrata in `main`, JS e multibrowser verdi | Collaudo reale al bar ancora necessario |
 | Host pubblico | GitHub Pages disponibile; workflow uptime positivo il 3/11 | Verde per disponibilità **statica** |
 | Autorizzazioni | RLS ordini attiva, cron autorizzato; test SQL isolati | Verifica intertenant con utenti reali ancora pendente |
 | Cron | `breakapp-push-and-refunds` attivo ogni minuto, ultimi audit dei due endpoint HTTP 200 | Endpoint raggiungibili; consegna push non verificata su telefono |
 | Stripe TEST | Merchant collegato alla scuola e marcato attivo; zero `payment_attempts` e zero `payment_refunds` al 3/11 | **NO-GO:** mancano prova Checkout → webhook firmato → ledger → rimborso |
-| Backup giornaliero | Primo backup reale cifrato **riuscito il 03/11/2026**, run #41654538860, archivio `breakapp-20261103T143157Z.dump.gpg` autenticato e leggibile; artifact GitHub conservato fino al 03/12/2026. Le esecuzioni precedenti erano fallite per credenziali errate/mancanti | **Parziale:** ripristino su database isolato, byte Storage, conservazione esterna e successiva esecuzione schedulata ancora da verificare |
+| Backup giornaliero | Primo backup reale cifrato **riuscito il 03/11/2026**, run #41654538860, archivio `breakapp-20261103T143157Z.dump.gpg` valido; utente ha eseguito in Docker Desktop il ripristino **SQL transazionale** su immagine `supabase/postgres:17.6.1.136`, senza errori; conteggi post-restore 4 `auth.users`, 1 scuola, 1 bar, 1 ordine, 2 bucket; 0 tabelle pubbliche prive di RLS; server disponibile dopo restore; container e volumi temporanei cancellati | **Superato per il database PostgreSQL in un container isolato**; ancora pendenti byte Storage, ripristino integrale Supabase/servizi, copia esterna e prima esecuzione schedulata automatica |
 | Privacy e fiscale | Documentazione ancora da finalizzare con il cliente e professionisti competenti | **NO-GO** per esercizio commerciale non delimitato |
 | Prove fisiche | Android, iPhone, terminale bar, Wi-Fi degradato, offline e revoche non certificate | **NO-GO** per operatività non supervisionata |
 | Hosting definitivo | Stack confermato Cloudflare Pages; attualmente GitHub Pages per test e anteprime Vercel | Da configurare, collaudare e promuovere manualmente |
@@ -27,7 +27,7 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 2. Configurare **`SUPABASE_BACKUP_DB_URL`**: URL PostgreSQL di connessione server/session pooler ottenuto dal progetto Supabase corretto, senza pubblicarlo né copiarlo nel codice.
 3. Configurare **`BACKUP_PASSPHRASE`**: frase casuale custodita in password manager, lunghezza almeno 32 caratteri e separata dalla copia cifrata.
 4. **Eseguito il 03/11/2026:** `Encrypted daily database backup` ha prodotto un artifact `.dump.gpg` cifrato, decifrato e validato con `pg_restore --list`, con esito GitHub `success`. Conservare la prova e verificare anche la prossima esecuzione automatica.
-5. Eseguire **restore su progetto/database separato e vuoto**, controllando dati, RLS, privilegi, ordini e ledger. Effettuare copia separata dei **byte Storage** e documentare come ripristinare Auth/OAuth, DNS, Edge, Vault, Stripe e variabili.
+5. **Eseguito dal titolare il 03/11/2026:** restore PostgreSQL 17 su container Docker isolato, transazionale e senza errori, seguiti da query di controllo sui conteggi e RLS (vedere la riga Backup). La prova non include login, isolamento intertenant applicativo, file Storage né servizi Supabase completi. Effettuare copia separata dei **byte Storage** e documentare come ripristinare Auth/OAuth, DNS, Edge, Vault, Stripe e variabili.
 6. Registrare responsabile, data, dimensione, RPO/RTO e risultato del ripristino; senza queste evidenze il gate resta rosso.
 
 Non inserire URL, password o passphrase in chat, issue, commit o screenshot.

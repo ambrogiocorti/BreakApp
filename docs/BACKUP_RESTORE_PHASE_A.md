@@ -17,3 +17,13 @@ Per la prova di ripristino, creare un database usa e getta con ruoli Supabase ed
 I metadati Storage sono nel dump, i byte dei file nei bucket no: predisporre una copia separata cifrata. Conservare versione del repository, Edge Functions, configurazione Auth/OAuth, DNS, webhook, dipendenze e procedura di riattivazione del cron. Vault e segreti di provider non sono inclusi; rifornirli dal secret manager e ruotarli prima della riapertura. Non copiare chiavi in Git.
 
 Prima della vendita: configurare i segreti, eseguire il primo backup reale, misurarne dimensioni/quote e tempi, completare un restore in un progetto separato e registrare responsabile, RPO/RTO e conservazione dei dati autorizzati. Gli artifact GitHub e i piani gratuiti hanno quote: verificarle sul volume reale del pilota.
+
+## Prima prova di ripristino reale — 3 novembre 2026
+
+Il titolare ha scaricato l'artifact della run GitHub Actions #41654538860 e verificato sul proprio PC Windows il checksum SHA-256 del file `breakapp-20261103T143157Z.dump.gpg`.
+
+Nel test finale (script PowerShell `BreakApp-Test-Ripristino-v8.ps1`, esterno al repository), il dump e stato decifrato correttamente nel volume temporaneo Docker con GPG, riconosciuto da `pg_restore` di PostgreSQL 17 e ripristinato con transazione su `supabase/postgres:17.6.1.136`, container senza porte esposte e senza rete. `pg_restore` ha terminato senza errori; PostgreSQL rispondeva ai comandi successivi. Risultati delle interrogazioni aggregate: 4 righe in `auth.users`, 1 in `schools`, 1 in `bars`, 1 in `orders`, 2 in `storage.buckets`, e 0 tabelle pubbliche prive di RLS. Il controllo SQL aggiuntivo e terminato con `DO`. Container e volume dati temporanei eliminati.
+
+**Ambito della prova:** restore PostgreSQL effettivamente riuscito e struttura base verificata. **Fuori ambito:** file binari Storage, autenticazione completa Auth/OAuth, servizio Edge Functions, webhooks Stripe, cron/secret manager, transazioni dal frontend contro il database ripristinato, ripristino su infrastruttura completamente vergine e accessi cross-tenant con utenti reali. La presenza di RLS non dimostra da sola la correttezza di tutte le policy. Non dichiarare il servizio interamente ripristinabile o pronto alla vendita sulla sola base di questo test.
+
+Conservare l'archivio cifrato al di fuori di GitHub con copia separata della passphrase, e ripetere la verifica su backup periodici. Gli script di test v1-v8 non fanno parte del codice distribuito e la prova manuale non costituisce una suite automatica di restore per l'infrastruttura reale.
