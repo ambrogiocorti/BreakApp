@@ -157,7 +157,7 @@ export function initializePublicMenu(client) {
       showEmpty('Il menu non è disponibile per questa scuola.');
       return;
     }
-    feedback('Caricamento del menu aggiornato da Supabase…');
+    feedback('Caricamento dei prodotti…');
     const barId = barInput.value;
     const schoolId = schoolInput.value;
     try {
