@@ -230,13 +230,17 @@
           <h2 id="staff-orders-title">Ordini del bar</h2>
           <p>Ordini per fascia e stato, lista di produzione e ritiro con QR. Il registratore fiscale esterno resta separato.</p>
         </div>
+
+        <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
+        <div class="service-floor">
+          <aside class="service-console" aria-label="Filtri e produzione">
+            <div class="service-console-heading"><span>POSTAZIONE / BANCO</span><strong>Controlli del servizio</strong></div>
         <div class="staff-toolbar">
           <label for="staff-search">Trova ordine o prodotto</label>
           <input id="staff-search" type="search" placeholder="Numero o prodotto…" />
           <button type="button" class="button button-outline button-small" id="staff-refresh">Aggiorna</button>
           <button type="button" class="button button-primary button-small" id="staff-scan-open">Scansiona QR / Cerca ordine</button>
         </div>
-        <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div class="staff-board-filters" aria-label="Filtri operativi del banco">
           <label for="staff-slot-filter">Fascia di ritiro
             <select id="staff-slot-filter"><option value="all">Tutte le fasce</option></select>
@@ -258,7 +262,13 @@
           <p class="catalog-help">Quantità sommate dagli ordini ancora da preparare nella fascia selezionata; i prodotti già pronti non sono conteggiati.</p>
           <div id="staff-production-list" class="staff-production-list"></div>
         </section>
+
+          </aside>
+          <div class="service-queue">
+            <div class="service-queue-heading"><span>CODA OPERATIVA</span><strong>Le comande</strong></div>
         <div id="staff-orders-list" class="staff-board" aria-label="Ordini organizzati per stato"></div>
+          </div>
+        </div>
         <article id="staff-cash-refunds-panel" class="pilot-card" aria-labelledby="staff-cash-refunds-title">
           <h3 id="staff-cash-refunds-title">Restituzioni contanti e POS esterno da completare</h3>
           <p class="catalog-help">Una richiesta di rimborso non restituisce automaticamente il denaro al cliente. Dopo la restituzione effettiva, registra l'uscita in cassa con un turno aperto.</p>
@@ -980,13 +990,22 @@
           <h2 id="warehouse-heading">Disponibilità per giornata</h2>
           <p>Modifica le quantità autorizzate. Le scorte prenotate restano riservate; il server impedisce disponibilità negative.</p>
         </div>
+
+        <div class="inventory-workbench">
+          <aside class="inventory-console" aria-label="Filtri inventario">
+            <p class="inventory-console-label">SELEZIONE / DISPONIBILITÀ</p>
         <div class="warehouse-toolbar">
           <label for="warehouse-bar">Bar<select id="warehouse-bar"></select></label>
           <label for="warehouse-date">Data<input id="warehouse-date" type="date" required /></label>
           <button type="button" class="button button-outline" id="warehouse-refresh">Aggiorna</button>
         </div>
         <p id="warehouse-feedback" role="status" aria-live="polite"></p>
-        <div id="warehouse-items" class="warehouse-items"></div>
+          </aside>
+          <div class="inventory-ledger">
+            <div class="inventory-ledger-heading"><strong>Disponibilità effettiva</strong><span>Le quantità prenotate restano riservate</span></div>
+            <div id="warehouse-items" class="warehouse-items"></div>
+          </div>
+        </div>
       </section>
       <section id="platform-overview" class="container orders-section workspace-page" hidden aria-labelledby="platform-heading">
         <h2 id="platform-heading" class="sr-only">Panoramica della piattaforma</h2>
