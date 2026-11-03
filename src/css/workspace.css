@@ -393,3 +393,14 @@ body[data-workspace="true"] .app-main :is(input,select,textarea){max-width:100%;
   .staff-order-card .order-actions .button{min-height:44px;}
 }
 @media(max-width:370px){.staff-production-list{grid-template-columns:1fr;}}
+
+/* Minimum 12 px on the compact mobile navigation; touch targets remain >=44 px. */
+@media(max-width:900px){
+ body[data-workspace="true"] .app-mobile-nav .workspace-link-label{
+  font-size:.75rem;line-height:1.15;letter-spacing:0;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+ }
+ body[data-workspace="true"] .app-mobile-nav .workspace-link{
+  min-height:54px;min-width:0;padding:.35rem .2rem;
+ }
+}
