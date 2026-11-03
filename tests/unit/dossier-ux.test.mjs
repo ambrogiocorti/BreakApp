@@ -72,3 +72,16 @@ test('dossier: component isolation and theme tokens restore operative cards',()=
   assert.match(base,/\.menu-product-add\{/);
   assert.match(html,/ordini per fascia/i);
 });
+
+test('dossier: navigation is grouped for school administrators without changing route entitlements',async()=>{
+  const workspaceJs=await readFile('src/js/features/shell/workspace.js','utf8');
+  const icons=await readFile('src/js/core/icons.js','utf8');
+  assert.match(workspaceJs,/const NAV_GROUPS=Object\.freeze/);
+  for(const name of ['OGGI','OFFERTA','FINANZE','BANCO','OPERAZIONI'])
+    assert.ok(workspaceJs.includes("'"+name+"'"),'Missing nav group '+name);
+  assert.match(workspaceJs,/nav\.append\(create\('span','workspace-nav-caption',group\)\)/);
+  assert.match(workspaceJs,/\['cash-workspace','Cassa','Receipt'\]/);
+  assert.match(icons,/Receipt:/);
+  assert.match(icons,/CloudOff:/);
+  assert.match(workspaceJs,/export function allowedRoute/);
+});
