@@ -17,6 +17,13 @@ Aggiornato il 3 novembre 2026. La specifica privata resta la fonte dei requisiti
 | Comunicazioni e report | Push/in-app, preferenze, cron ogni minuto, promemoria ritiro/chiusura, annunci, rendiconti e CSV/XLSX/PDF | Destinatari, backoff, rimborsi elaborati/pendenti e contanti da restituire distinti; ricevute interne separate dai documenti fiscali |
 | Backup | Job giornaliero, export PostgreSQL 17, AES-256, archivio esterno al database, verifica e restore su target vuoto | **Primo backup reale riuscito** su GitHub il 03/11 (run #41654538860); **restore SQL manuale riuscito** in Docker con PostgreSQL Supabase 17 e conteggi/RLS verificati. Mancano copia dei byte Storage, prova di ripristino completa dei servizi e conferma del job schedulato successivo |
 
+## Gate di rilascio Stripe e Storage — 3 novembre 2026
+
+- Il progetto BreakApp ha attualmente **0 payment_attempts, 0 payment_refunds e 0 eventi** nella inbox del webhook: il test Stripe Checkout → webhook → rimborso rimane obbligatorio.
+- L'account Stripe accessibile al connettore durante l'audit è `acct_1UMbXXCs978fOWHz`, con **zero merchant Connect**; non coincide con l'account merchant scolastico configurato in BreakApp (`acct_1UVx5F2RLtxMJCNo`). Non operare sull'account sbagliato.
+- Aggiunti `scripts/check-stripe-readiness.mjs`, workflow manuale `Stripe TEST Connect readiness` e prove automatiche di riconoscimento di account Connect e webhook specifici: il workflow richiede una **chiave TEST di sola lettura** della piattaforma Stripe proprietaria del merchant. Vedere `docs/STRIPE_SANDBOX_RELEASE_GATE.md`.
+- `storage.objects` conta **0 oggetti** nei due bucket attuali (`breakapp-product-images`, `breakapp-ticket-images`). Non ci sono file binari caricati da salvare oggi; prima del caricamento di allegati reali occorre automatizzare il backup cifrato dei byte Storage e provarne il recupero.
+
 ## Implementazione del dossier UX — 3 novembre 2026
 
 L'analisi esterna del 30 ottobre individua debiti di design, operatività e conformità. Questo incremento realizza interventi senza modificare le 171 decisioni funzionali confermate:
