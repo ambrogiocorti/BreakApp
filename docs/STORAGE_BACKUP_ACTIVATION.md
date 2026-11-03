@@ -35,6 +35,14 @@ Stato al 3 novembre 2026: **due bucket presenti, zero oggetti in `storage.object
 - Supabase Storage non offre versioning S3; per garantire recuperabilità da cancellazioni accidentali servono snapshot periodici e conservazione di più versioni indipendenti.
 - I backup S3 e PostgreSQL sono acquisiti in momenti diversi: non costituiscono uno snapshot transazionale coordinato tra database e Storage. Per recupero dopo guasti importanti servono procedure di riconciliazione e prova con il cliente.
 
+## Incidente S3 GetObject del 3 novembre 2026
+
+La prima esecuzione del backup con un file di prova denominato `Screenshot 2026-10-27 155847.png` è fallita nella fase di download, mentre `ListBuckets` e `ListObjectsV2` restavano autorizzati. I log del server Supabase confermano **HTTP 403 `SignatureDoesNotMatch`** sulla richiesta GET firmata dal client AWS CLI 2.39.3 con runtime CRT. L'archivio non è stato creato né caricato, per evitare backup incompleti.
+
+La correzione imposta in modo isolato per quel singolo runner AWS CLI `preferred_transfer_client = classic` e `addressing_style = path`. La modalità classic è documentata ufficialmente da AWS per trasferimenti S3 compatibili. I test CI verificano che la configurazione sia presente e che il manifest includa anche un nome oggetto con spazi. **Il successo con il servizio Supabase reale richiede una nuova esecuzione manuale con l'oggetto ancora presente**: non interpretare la CI verde come prova del download reale.
+
+Se anche la seconda prova presenta un errore GET, consultare i `storage_logs` su Supabase, verificare il codice server ed evitare rotazioni inutili dei secret, visto che l'elenco dei bucket aveva già funzionato.
+
 ## Limitazioni operative
 
 Il workflow rifiuta un inventario incompleto, oggetti con path non sicuri, file mancanti o snapshot oltre 1 GiB. Per dimensioni superiori o maggiore retention usare storage cifrato esterno con piano e quote adeguati, non disabilitare silenziosamente i controlli. Un backup completo di studenti deve rispettare nomine GDPR, requisiti di conservazione e accessi del gestore.
