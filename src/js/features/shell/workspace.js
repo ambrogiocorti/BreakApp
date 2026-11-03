@@ -170,6 +170,16 @@ export function initializeWorkspace(client){
  document.body.append(moreContainer);
  const index=document.getElementById('workspace-index');
  const indexNav=document.getElementById('workspace-index-nav');
+ index.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&index.open){
+   index.open=false;
+   index.querySelector('summary')?.focus();
+   event.preventDefault();
+  }
+ });
+ document.addEventListener('pointerdown',event=>{
+  if(index.open&&!index.contains(event.target))index.open=false;
+ });
  let user=null,contexts=[],active=null,route='',epoch=0,ready=false;
  const storageKey='breakapp:last-workspace-context';
  const offlineRoleCacheKey='breakapp:offline-bartender-context-v1';
