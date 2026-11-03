@@ -744,3 +744,127 @@ body[data-authenticated=true] .login-art{display:none!important;}
  .market-sidebar .menu-allergen-filter{display:grid;max-width:460px;}
  .market-sidebar .menu-allergen-note{margin:0 0 .7rem;}
 }
+
+
+/* Working floor: filters, scan and aggregated ingredients form a persistent
+ * production station. Live order cards are a separate actual queue column. */
+.service-floor{
+ display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);
+ gap:clamp(1.25rem,2.8vw,2.5rem);align-items:start;margin:1.3rem 0 2rem;
+}
+.service-console{
+ min-width:0;align-self:start;
+ border:1px solid var(--border);background:var(--surface);
+ padding:1.25rem;position:sticky;top:0;
+}
+.service-console-heading,.service-queue-heading,.inventory-ledger-heading{
+ display:flex;flex-direction:column;gap:.3rem;
+ border-bottom:2px solid var(--text);padding-bottom:1.05rem;margin:0 0 1.2rem;
+}
+.service-console-heading>span,.service-queue-heading>span,.inventory-console-label{
+ font-size:.65rem;letter-spacing:.14em;font-weight:800;color:var(--accent);margin:0;
+}
+.service-console-heading>strong,.service-queue-heading>strong,.inventory-ledger-heading>strong{
+ font-size:1.25rem;letter-spacing:-.045em;font-weight:800;
+}
+.service-console .staff-toolbar{
+ display:grid;grid-template-columns:1fr;gap:.55rem;padding:0;border:0;border-radius:0;background:transparent;
+}
+.service-console .staff-toolbar label{font-size:.8rem;font-weight:720;}
+.service-console #staff-search{width:100%;min-width:0;}
+.service-console .staff-toolbar .button{width:100%;justify-content:center;}
+.service-console .staff-board-filters{
+ display:flex;flex-direction:column;align-items:stretch;gap:.7rem;
+ border-top:1px solid var(--border);padding:1.2rem 0;
+}
+.service-console .staff-board-filters label{flex:none;}
+.service-console .staff-board-filters select{border-radius:2px;}
+.service-console #staff-live-status{flex:none;max-width:100%;font-size:.75rem;margin:.3rem 0 0;}
+.service-console #staff-production-panel{
+ background:var(--bg);border:1px solid var(--border);border-radius:2px;
+ margin:.25rem 0 0;padding:1rem;box-shadow:none;
+}
+.service-console .staff-production-heading{align-items:center;}
+.service-console .staff-production-heading h3{font-size:1.05rem;}
+.service-console .staff-production-total{border-radius:2px;font-size:.75rem;}
+.service-console .staff-production-list{grid-template-columns:1fr;gap:.4rem;}
+.service-console .staff-production-item{border-radius:2px;padding:.7rem .6rem;}
+.service-console .staff-production-item strong{font-size:.8rem;}
+.service-queue{min-width:0;}
+.service-queue-heading {flex-direction:row;justify-content:space-between;align-items:end;padding:0 0 1rem;}
+.service-queue-heading>span{order:2;white-space:nowrap;}
+.service-queue-heading>strong{font-size:1.7rem;order:1;}
+.service-queue .staff-board,.service-queue .staff-board[data-view=all]{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;
+ align-items:start;margin:0 0 1.5rem;
+}
+.service-queue .staff-board[data-view=closed]{grid-template-columns:1fr;}
+.service-queue .staff-board-lane{
+ min-width:0;background:transparent;border:1px solid var(--border);
+ padding:.75rem;border-radius:2px;
+}
+.service-queue .staff-lane-header{border-color:var(--text);}
+.service-queue .staff-lane-orders{gap:.45rem;}
+.service-queue .staff-order-card{border:1px solid var(--border);background:var(--surface);border-radius:2px;}
+.service-queue .staff-order-card h4{font-size:1.13rem;letter-spacing:-.045em;}
+.service-queue .staff-order-card ul{margin:.6rem 0;font-size:.8rem;}
+.service-queue .staff-order-card .order-actions{gap:.35rem;}
+.service-queue .staff-order-card .order-actions button{font-size:.76rem;min-height:44px;}
+/* Warehouse: choosing the operating date and editing stock are separate jobs. */
+.inventory-workbench{
+ display:grid;grid-template-columns:minmax(210px,280px) minmax(0,1fr);
+ gap:clamp(1.2rem,3vw,2.6rem);align-items:start;
+}
+.inventory-console{
+ border:1px solid var(--border);background:var(--surface);
+ padding:1.25rem;position:sticky;top:0;
+}
+.inventory-console .warehouse-toolbar{
+ display:grid;grid-template-columns:1fr;gap:1rem;
+ padding:0;margin:1rem 0;border:0;background:transparent;
+}
+.inventory-console .warehouse-toolbar label{flex:none;}
+.inventory-console .warehouse-toolbar input,.inventory-console .warehouse-toolbar select{border-radius:2px;}
+.inventory-console .warehouse-toolbar button{width:100%;}
+.inventory-console #warehouse-feedback{font-size:.78rem;line-height:1.5;}
+.inventory-ledger{min-width:0;}
+.inventory-ledger-heading{flex-direction:row;justify-content:space-between;align-items:end;}
+.inventory-ledger-heading span{font-size:.76rem;color:var(--muted);text-align:right;}
+.inventory-ledger .warehouse-items{display:grid;gap:.55rem;}
+.inventory-ledger .warehouse-row{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;
+ border:0;border-bottom:1px solid var(--border);background:transparent;
+ padding:1rem .3rem;border-radius:0;box-shadow:none;
+}
+.inventory-ledger .warehouse-product strong{font-size:1rem;}
+.inventory-ledger .warehouse-row-controls{flex-wrap:wrap;gap:.55rem;}
+.inventory-ledger .warehouse-quantity input{border-radius:2px;}
+@media(max-width:1200px){
+ .service-floor{grid-template-columns:minmax(250px,300px) minmax(0,1fr);gap:1rem;}
+ .service-queue .staff-board,.service-queue .staff-board[data-view=all]{grid-template-columns:1fr;}
+}
+@media(max-width:850px){
+ .service-floor,.inventory-workbench{grid-template-columns:1fr;}
+ .service-console,.inventory-console{position:static;}
+ .service-console .staff-toolbar{grid-template-columns:1fr 1fr;}
+ .service-console .staff-toolbar label,.service-console #staff-search{grid-column:1/-1;}
+ .service-console .staff-board-filters{flex-direction:row;flex-wrap:wrap;}
+ .service-console .staff-board-filters label{flex:1 1 160px;}
+ .service-console #staff-live-status{flex-basis:100%;}
+ .service-console #staff-production-panel{margin-top:.5rem;}
+ .service-console .staff-production-list{grid-template-columns:repeat(2,minmax(0,1fr));}
+ .inventory-console .warehouse-toolbar{grid-template-columns:repeat(2,minmax(0,1fr));}
+ .inventory-console .warehouse-toolbar button{grid-column:1/-1;}
+ .service-queue .staff-board,.service-queue .staff-board[data-view=all]{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:620px){
+ .service-queue .staff-board,.service-queue .staff-board[data-view=all]{grid-template-columns:1fr;}
+ .service-console .staff-production-list{grid-template-columns:1fr;}
+ .service-console .staff-toolbar{grid-template-columns:1fr;}
+ .service-console .staff-toolbar .button{grid-column:1;}
+ .inventory-console .warehouse-toolbar{grid-template-columns:1fr;}
+ .inventory-console .warehouse-toolbar button{grid-column:1;}
+ .inventory-ledger-heading{flex-direction:column;align-items:flex-start;gap:.3rem;}
+ .inventory-ledger .warehouse-row{grid-template-columns:1fr;}
+ .inventory-ledger .warehouse-row-controls{justify-content:flex-start;}
+}
