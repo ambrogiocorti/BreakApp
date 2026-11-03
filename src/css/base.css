@@ -598,3 +598,12 @@ gap:.55rem;padding:.35rem 0;font-size:.78rem!important;font-weight:650;}
   .menu-product-add{grid-column:3;grid-row:1;min-width:44px;width:44px;height:44px;min-height:44px;padding:0;font-size:1.3rem;border-radius:12px;}
   .menu-product-tag{font-size:.67rem;}
 }
+
+/* Product detail is a secondary disclosure; keep quick-add clearly primary. */
+.menu-product-detail{display:inline-flex;justify-self:start;padding:.15rem 0;background:transparent;border:0;color:var(--accent);font:inherit;font-size:.78rem;font-weight:650;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:32px;align-items:center;}
+.menu-product-detail:hover{color:var(--accent-dark);}
+.menu-product-detail:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+@media(max-width:650px){
+ .menu-product-detail{font-size:.72rem;min-height:22px;}
+ body[data-workspace="true"][data-active-role="customer"] #menu{padding-bottom:max(5.5rem,env(safe-area-inset-bottom));}
+}
