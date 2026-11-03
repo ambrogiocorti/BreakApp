@@ -1,5 +1,6 @@
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
+import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals } from './staff-board.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -22,6 +23,34 @@ export function initializeOrders(client) {
   const history=document.querySelector('#orders-list');
   const staffFeedback=document.querySelector('#staff-orders-feedback');
   const staffList=document.querySelector('#staff-orders-list');
+  const staffSlotFilter=document.querySelector('#staff-slot-filter');
+  const staffVisibilityFilter=document.querySelector('#staff-visibility-filter');
+  const staffLiveStatus=document.querySelector('#staff-live-status');
+  const staffProduction=document.querySelector('#staff-production-list');
+  const staffProductionTotal=document.querySelector('#staff-production-total');
+  const actionDialog=document.querySelector('#staff-action-confirm');
+  const actionSummary=document.querySelector('#staff-action-summary');
+  let activeDecision=null;
+  function decideStaffAction(message){
+    if(actionDialog.open)return Promise.resolve(false);
+    actionSummary.textContent=message;
+    actionDialog.showModal();
+    return new Promise(resolve=>{activeDecision=resolve;});
+  }
+  function finishStaffDecision(result){
+    const resolve=activeDecision;
+    activeDecision=null;
+    if(actionDialog.open)actionDialog.close();
+    if(resolve)resolve(result);
+  }
+  document.querySelector('#staff-action-cancel').addEventListener('click',()=>finishStaffDecision(false));
+  document.querySelector('#staff-action-form').addEventListener('submit',event=>{
+    event.preventDefault();finishStaffDecision(true);
+  });
+  actionDialog.addEventListener('close',()=>{
+    if(activeDecision)finishStaffDecision(false);
+  });
+
   const productDialog=document.querySelector('#product-dialog');
   const cartDialog=document.querySelector('#cart-dialog');
   const cartBar=document.querySelector('#cart-strip');
@@ -36,9 +65,52 @@ export function initializeOrders(client) {
   const orderBack=document.querySelector('#order-back');
   const orderSubmit=document.querySelector('#order-submit');
   let user=null, context={schoolId:'',barId:'',products:[]}, cart=[], product=null;
-  let step=1,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
+  let step=2,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
   let staffOrders=[];
   let staffContextSchool=null;
+  let staffFetchSequence=0;
+  let staffChannels=[],staffFallbackTimer=null,staffDebounceTimer=null;
+  function stopStaffFeed(){
+    clearInterval(staffFallbackTimer);
+    clearTimeout(staffDebounceTimer);
+    staffFallbackTimer=null;staffDebounceTimer=null;
+    for(const channel of staffChannels)void client.removeChannel(channel);
+    staffChannels=[];
+  }
+  function queueStaffRefresh(){
+    if(!user||!staffSchools.length||document.hidden||!navigator.onLine)return;
+    clearTimeout(staffDebounceTimer);
+    staffDebounceTimer=setTimeout(()=>{void fetchStaffOrders();},350);
+  }
+  function startStaffFeed(){
+    stopStaffFeed();
+    if(!user||!staffSchools.length)return;
+    const identity=user.id;
+    const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
+      ?[staffContextSchool]:staffSchools;
+    for(const school of [...new Set(schools)]){
+      const channel=client.channel('banco-'+identity+'-'+school);
+      const config={schema:'public',table:'orders',filter:'school_id=eq.'+school};
+      channel.on('postgres_changes',{...config,event:'INSERT'},queueStaffRefresh)
+        .on('postgres_changes',{...config,event:'UPDATE'},queueStaffRefresh)
+        .subscribe(status=>{
+          if(user?.id!==identity)return;
+          if(status==='SUBSCRIBED')staffLiveStatus.textContent='Aggiornamento in tempo reale attivo';
+          else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status))
+            staffLiveStatus.textContent='Connessione in tempo reale non disponibile · aggiornamento periodico attivo';
+        });
+      staffChannels.push(channel);
+    }
+    // Realtime alone is not an availability guarantee: recover lost events.
+    staffFallbackTimer=setInterval(()=>{
+      if(user?.id===identity)queueStaffRefresh();
+    },15000);
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)queueStaffRefresh();
+  });
+  window.addEventListener('online',queueStaffRefresh);
+
   const stripeAttemptKeys=new Map();
   const stripeRefundKeys=new Map();
   const refundDialog=document.querySelector('#staff-refund-dialog');
@@ -119,8 +191,12 @@ export function initializeOrders(client) {
       report(refundFeedback,'Rimborso non registrato o esito incerto: '+(e?.message||'riprovare verificando prima lo stato ordine')+'. In caso di errore di rete, riprova dalla stessa finestra.',true);
     }finally{refundSubmit.disabled=false;}
   });
-  const coupon=document.createElement('input');coupon.maxLength=32;coupon.placeholder='Codice coupon (facoltativo)';coupon.setAttribute('aria-label','Codice coupon facoltativo');
-  checkoutReview.parentElement.insertBefore(coupon,checkoutReview);
+  const couponLabel=elem('label','Codice sconto (facoltativo)');
+  couponLabel.htmlFor='order-coupon';
+  const coupon=document.createElement('input');
+  coupon.id='order-coupon';coupon.maxLength=32;coupon.placeholder='Inserisci un codice sconto';
+  couponLabel.append(coupon);
+  checkoutReview.parentElement.insertBefore(couponLabel,checkoutReview);
   const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
   const favoriteStatus=elem('p');favoriteStatus.setAttribute('role','status');productDialog.append(favoriteStatus);
   const favoritesBox=elem('article','','order-card');section.append(favoritesBox);
@@ -190,6 +266,23 @@ export function initializeOrders(client) {
     context=next;requestKey=null;showCartBar();
     if(cartDialog.open)renderCart();
     if(user)void fetchWindows();
+  });
+  window.addEventListener('breakapp:quick-add',event=>{
+    const id=event.detail?.id,barId=event.detail?.barId;
+    if(!id||barId!==context.barId)return;
+    if(!user){
+      window.dispatchEvent(new CustomEvent('breakapp:product-open',{detail:{id}}));
+      return;
+    }
+    const product=context.products.find(p=>p.id===id && p.is_active);
+    const status=document.querySelector('#menu-status');
+    if(!product)return report(status,'Questo prodotto non è più disponibile. Aggiorna il menu.',true);
+    try{
+      if(!cart.some(x=>x.product_id===id)&&cart.length>=100)
+        throw new Error('Il carrello contiene già il numero massimo di prodotti.');
+      changeCart(cartAdd(cart,id,1));
+      report(status,product.name+' aggiunto al carrello. Il totale definitivo sarà confermato alla prenotazione.');
+    }catch(error){report(status,error?.message||'Impossibile aggiungere il prodotto.',true);}
   });
   window.addEventListener('breakapp:product-open',event=>{
     if(!user)return;
@@ -279,9 +372,9 @@ export function initializeOrders(client) {
     if(event.detail?.barId===context.barId && user)void fetchWindows();
   });
   function drawStep(){
-    stepLabel.textContent=`Passaggio ${step} di 4`;
+    stepLabel.textContent=step===2?'Passaggio 1 di 2':'Passaggio 2 di 2';
     [...stepper.querySelectorAll('[data-step]')].forEach(x=>x.hidden=Number(x.dataset.step)!==step);
-    orderBack.hidden=step===1;orderNext.hidden=step===4;orderSubmit.hidden=step!==4;
+    orderBack.hidden=step===2;orderNext.hidden=step===4;orderSubmit.hidden=step!==4;
     if(step===4){
       const selected=windows.find(w=>w.id===slotSelect.value);
       const s=total();
@@ -289,19 +382,19 @@ export function initializeOrders(client) {
         elem('p',`Prodotti: ${s.count} · ${formatEuro(s.totalCents)} (indicativo)`),
         elem('p',`Ritiro: ${selected?selected.service_date+' '+selected.starts_at.slice(0,5):'Non selezionato'}`),
         elem('p','Pagamento al ritiro: contanti o POS esterno presso il bar.'),
-        elem('p','Per confermare, autorizza la verifica GPS. La disponibilità è verificata dal server.')
+        elem('p','La posizione serve per verificare la vicinanza alla scuola; prezzi e disponibilità sono controllati dal bar.')
       );
     }
   }
   document.querySelector('#cart-checkout').addEventListener('click',()=>{
     if(!enabled||!windows.length)return;
-    cartDialog.close();step=1;drawStep();stepper.showModal();
+    cartDialog.close();step=2;drawStep();stepper.showModal();
   });
   orderNext.addEventListener('click',()=>{
     if(step===2&&!slotSelect.value){report(checkoutFeedback,'Scegli una fascia.',true);return;}
-    if(step<4){step++;drawStep();}
+    if(step===2){step=4;drawStep();}
   });
-  orderBack.addEventListener('click',()=>{if(step>1){step--;drawStep();}});
+  orderBack.addEventListener('click',()=>{if(step===4){step=2;drawStep();}});
   orderSubmit.addEventListener('click',async()=>{
     if(!user||!cart.length||!slotSelect.value||!enabled)return;
     orderSubmit.disabled=true;report(checkoutFeedback,'Verifica posizione GPS…');
@@ -333,8 +426,8 @@ export function initializeOrders(client) {
     history.replaceChildren();
     for(const o of data||[]){
       const box=elem('article','','order-card');
-      box.append(elem('h3',`Ordine #${o.display_no} · ${o.status}`),
-        elem('p',`Ritiro ${o.pickup_windows?.service_date||'—'} ${o.pickup_windows?.starts_at?.slice(0,5)||''}`),
+      box.append(elem('h3',`Ordine #${o.display_no} · ${orderStatusLabel(o.status)}`),
+        elem('p',`Ritiro: ${slotLabel(o)}`),
         elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da pagare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const reorder=elem('button','Riordina','button button-outline button-small');reorder.type='button';
@@ -355,7 +448,7 @@ export function initializeOrders(client) {
       }
       if(!['cancelled','delivered','no_show'].includes(o.status)&&
         o.payment_status==='due'&&o.total_cents>0){
-        const stripe=elem('button','Paga online con Stripe (test)','button button-primary button-small');
+        const stripe=elem('button','Paga online (ambiente di prova)','button button-primary button-small');
         stripe.type='button';
         stripe.addEventListener('click',async()=>{
           if(!confirm('Aprire Stripe Checkout in modalità test per '+formatEuro(o.total_cents)+'?')){
@@ -399,7 +492,13 @@ export function initializeOrders(client) {
           detail:{schoolId:o.school_id,orderId:o.id}
         }));
       });
-      box.append(help);
+      const controls=elem('div','','order-actions');
+      // QR is the primary action at the counter; secondary actions stay together.
+      for(const button of [...box.querySelectorAll('button')]){
+        if(button.textContent.includes('QR di ritiro'))button.classList.add('button-primary');
+        controls.append(button);
+      }
+      box.append(controls);
       history.append(box);
     }
     if(!history.childElementCount)history.append(elem('p','Nessun ordine effettuato.'));
@@ -434,12 +533,19 @@ export function initializeOrders(client) {
   }
   async function fetchStaffOrders(){
     if(!user||!staffSchools.length)return;
+    const generation=++staffFetchSequence, actor=user.id;
+    const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
+      ?[staffContextSchool]:[...staffSchools];
     const {data,error}=await client.from('orders')
       .select('id,school_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
-      .in('school_id',staffContextSchool&&staffSchools.includes(staffContextSchool)
-      ?[staffContextSchool]:staffSchools).order('created_at',{ascending:false}).limit(100);
-    if(error){report(staffFeedback,error.message,true);return;}
-    staffOrders=data||[];drawStaff();
+      .in('school_id',schools).order('created_at',{ascending:false}).limit(500);
+    if(generation!==staffFetchSequence||user?.id!==actor)return;
+    if(error){report(staffFeedback,'Impossibile aggiornare il banco: '+error.message,true);return;}
+    staffOrders=data||[];
+    updateSlotFilter();drawStaff();
+    if(staffOrders.length===500)
+      report(staffFeedback,'Sono visibili gli ultimi 500 ordini. Filtra per fascia per lavorare sulla giornata; lo storico completo è nei report.');
+    else report(staffFeedback,'Banco aggiornato alle '+new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())+'.');
     await loadCashRefunds();
   }
   async function loadCashRefunds(){
@@ -501,14 +607,57 @@ export function initializeOrders(client) {
       cashRefundList.append(box);
     }
   }
+  function updateSlotFilter(){
+    const previous=staffSlotFilter.value;
+    const slots=availableSlots(staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool));
+    staffSlotFilter.replaceChildren(new Option('Tutte le fasce','all'),
+      ...slots.map(s=>new Option(s.label,s.key)));
+    staffSlotFilter.value=slots.some(s=>s.key===previous)?previous:'all';
+  }
+  function drawProduction(){
+    staffProduction.replaceChildren();
+    const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
+    const totals=productionTotals(scoped,{slot:staffSlotFilter.value});
+    const count=totals.reduce((sum,p)=>sum+p.quantity,0);
+    staffProductionTotal.textContent=count+' '+(count===1?'pezzo':'pezzi');
+    if(!totals.length){
+      staffProduction.append(elem('p','Nessun prodotto in attesa di preparazione.','staff-empty'));
+      return;
+    }
+    for(const item of totals){
+      const row=elem('div','','staff-production-item');
+      row.append(elem('strong',item.name),elem('span',String(item.quantity),'staff-production-count'));
+      staffProduction.append(row);
+    }
+  }
   function drawStaff(){
     staffList.replaceChildren();
-    const q=document.querySelector('#staff-search').value.trim();
-    staffOrders.filter(o=>(!staffContextSchool||o.school_id===staffContextSchool) &&
-      (!q||String(o.display_no).includes(q))).forEach(o=>{
-      const box=elem('article','','order-card');
-      box.append(elem('h3',`#${o.display_no} · ${o.status}`),
-        elem('p',`Ritiro ${o.pickup_windows?.service_date} ${o.pickup_windows?.starts_at?.slice(0,5)}`),
+    staffList.dataset.view=staffVisibilityFilter.value;
+    drawProduction();
+    const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
+    const stages=boardOrders(scoped,{
+      slot:staffSlotFilter.value,
+      visibility:staffVisibilityFilter.value,
+      search:document.querySelector('#staff-search').value.trim()
+    });
+    let shown=0;
+    for(const stage of stages){
+      if(staffVisibilityFilter.value==='active'&&stage.key==='closed')continue;
+      if(staffVisibilityFilter.value==='closed'&&stage.key!=='closed')continue;
+      const lane=elem('section','','staff-board-lane');
+      lane.dataset.stage=stage.key;
+      lane.setAttribute('aria-label',stage.label);
+      const head=elem('div','','staff-lane-header');
+      head.append(elem('h3',stage.label),elem('span',String(stage.orders.length),'staff-count'));
+      lane.append(head);
+      const list=elem('div','','staff-lane-orders');
+      for(const o of stage.orders){
+        shown++;
+        const box=elem('article','','order-card staff-order-card');
+        box.dataset.status=o.status;
+      box.append(elem('h4',`Ordine #${o.display_no}`),
+        elem('span',orderStatusLabel(o.status),'staff-status staff-status--'+o.status),
+        elem('p',`Ritiro: ${slotLabel(o)}`),
         elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da incassare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const actions=elem('div','','order-actions');
@@ -521,14 +670,14 @@ export function initializeOrders(client) {
         for(const [label,method] of [['Incassa contanti','cash'],['POS esterno','external_pos']]){
           action(actions,label,async()=>{
             const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});if(balance.error)return balance;
-            if(!confirm(`Confermi di aver effettivamente ricevuto il residuo di ${formatEuro(balance.data.due_cents)} tramite ${label}?`))return {error:new Error('Operazione annullata')};
+            if(!await decideStaffAction(`Hai incassato realmente ${formatEuro(balance.data.due_cents)} tramite ${label}? Conferma soltanto dopo aver verificato l'incasso.`))return null;
             return client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
           });
         }
       }
       if(o.status==='ready'&&o.payment_status==='paid'){
         action(actions,'Consegna',async()=>{
-          if(!confirm('Confermi che tutti i prodotti sono stati consegnati?'))return {error:new Error('Operazione annullata')};
+          if(!await decideStaffAction('Confermi di avere consegnato tutti i prodotti di questo ordine?'))return null;
           return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
         });
       }
@@ -549,11 +698,18 @@ export function initializeOrders(client) {
         });
         actions.append(refund);
       }
-      box.append(actions);staffList.append(box);
-    });
-    if(!staffList.childElementCount)staffList.append(elem('p','Nessun ordine trovato.'));
+        box.append(actions);
+        list.append(box);
+      }
+      if(!stage.orders.length)list.append(elem('p','Nessun ordine in questo stato.','staff-empty'));
+      lane.append(list);staffList.append(lane);
+    }
+    if(!shown && !staffList.childElementCount)
+      staffList.append(elem('p','Nessun ordine corrisponde ai filtri.','staff-empty'));
   }
   async function checkStaff(){
+    stopStaffFeed();
+    staffFetchSequence++;
     staffSchools=[];staffPanel.hidden=true;
     cashRefundVersion++;cashRefunds=[];drawCashRefunds();
     if(!user)return;
@@ -565,32 +721,48 @@ export function initializeOrders(client) {
     staffSchools=(data||[]).filter(m=>(m.role_assignments||[]).some(r=>r.role_code==='bartender'||(r.role_code==='school_admin'&&adminVerified)))
       .map(m=>m.school_id);
     staffPanel.hidden=!staffSchools.length;
-    if(staffSchools.length)await fetchStaffOrders();
+    if(staffSchools.length){
+      await fetchStaffOrders();
+      if(user)startStaffFeed();
+    }else staffLiveStatus.textContent='Accesso staff non disponibile';
   }
   window.addEventListener('breakapp:workspace-context',event=>{
     const role=event.detail?.role||'customer';
     if(refundDialog.open)refundDialog.close();
     if(cashReturnDialog.open)cashReturnDialog.close();
+    if(actionDialog.open)finishStaffDecision(false);
     if(role!=='customer'){
       if(productDialog.open)productDialog.close();
       if(cartDialog.open)cartDialog.close();
       if(stepper.open)stepper.close();
     }
     staffContextSchool=event.detail?.schoolId||null;
-    if(user && staffSchools.includes(staffContextSchool))void fetchStaffOrders();
+    if(user&&staffSchools.length){
+      updateSlotFilter();drawStaff();
+      startStaffFeed();
+      queueStaffRefresh();
+    }
   });
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
+  staffSlotFilter.addEventListener('change',drawStaff);
+  staffVisibilityFilter.addEventListener('change',drawStaff);
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
+      if(actionDialog.open)finishStaffDecision(false);
+      stopStaffFeed();staffFetchSequence++;
+      staffOrders=[];updateSlotFilter();drawStaff();
       if(refundDialog.open)refundDialog.close();
       if(cashReturnDialog.open)cashReturnDialog.close();
       cashRefundVersion++;cashRefunds=[];drawCashRefunds();
       staffPanel.hidden=true;cart=[];showCartBar();return;
     }
-    if(changed){cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();}
+    if(changed){
+      stopStaffFeed();staffFetchSequence++;
+      cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();
+    }
   }
   client.auth.onAuthStateChange((_event,session)=>queueMicrotask(()=>setUser(session?.user||null)));
   client.auth.getUser().then(({data,error})=>{if(!error)setUser(data?.user||null);});

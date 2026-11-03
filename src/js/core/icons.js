@@ -3,6 +3,8 @@ const paths = Object.freeze({
  LayoutDashboard:'M3 3h7v7H3z M14 3h7v4h-7z M14 11h7v10h-7z M3 14h7v7H3z',
  Building2:'M4 21V5l8-3 8 3v16 M2 21h20 M9 21v-4h6v4 M8 7h1 M15 7h1 M8 11h1 M15 11h1',
  ClipboardList:'M9 4H5v17h14V4h-4 M9 2h6v5H9z M8 11h8 M8 15h8',
+ Receipt:'M4 3h16v18l-4-2-4 2-4-2-4 2V3z M8 7h8 M8 11h8 M8 15h5',
+ CloudOff:'M3 3l18 18 M7.1 7.1a5.5 5.5 0 0 0-2.6 9.9H12 M10 4a7 7 0 0 1 8 5.2 5 5 0 0 1 2.1 7.2h-1.5',
  UsersRound:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M16 4a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
  UserRound:'M20 21v-2a6 6 0 0 0-6-6h-4a6 6 0 0 0-6 6v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8',
  CalendarDays:'M4 5h16v16H4z M16 3v4 M8 3v4 M4 11h16 M8 15h1 M15 15h1',

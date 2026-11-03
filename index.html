@@ -115,7 +115,7 @@
                 <select id="workspace-profile-context-select" aria-label="Cambia scuola e ruolo dal Profilo"></select>
                 <p class="catalog-help">Il cambio contesto aggiorna l'interfaccia, ma non modifica i tuoi permessi nel database.</p>
               </div>
-              <p class="auth-subtitle">Le tue scuole e i ruoli sono verificati da Supabase. Puoi consultare il menu e, se autorizzato, gestire il catalogo.</p><p><a class="text-link" href="#menu">Vai al catalogo →</a> · <a class="text-link" href="#support-center">Centro assistenza e ticket</a></p>
+              <p class="auth-subtitle">Scegli la scuola e il ruolo con cui vuoi entrare. Le funzioni disponibili dipendono dalle tue autorizzazioni.</p><p><a class="text-link" href="#menu">Vai al catalogo →</a> · <a class="text-link" href="#support-center">Centro assistenza e ticket</a></p>
               <div class="school-access-overview">
                 <div class="school-access-header">
                   <h4>Le tue scuole</h4>
@@ -167,8 +167,8 @@
         <div class="container">
           <div class="section-heading">
             <span class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> CATALOGO SCOLASTICO</span>
-            <h2 id="menu-heading">Il menu del tuo bar.</h2>
-            <p>Consulta prodotti e prezzi effettivi. La prenotazione dipende dagli orari, dalle fasce e dalle scorte configurate dal bar.</p>
+            <h2 id="menu-heading">Cosa ti va oggi?</h2>
+            <p>Scegli i prodotti, poi prenota il ritiro durante l'intervallo.</p>
           </div>
           <div class="menu-interface">
             <div class="menu-toolbar">
@@ -185,14 +185,14 @@
             </div>
             <div class="menu-info-line">
               <p id="menu-status" role="status" aria-live="polite">Caricamento del menu…</p>
-              <span class="menu-preview-label">Prenotazioni verificate dal server</span>
+              <span class="menu-preview-label">Prezzi e allergeni sempre visibili</span>
             </div>
             <div id="menu-service-alert" class="service-customer-alert" role="status" aria-live="polite" hidden></div>
             <div id="menu-categories" class="menu-categories" role="group" aria-label="Filtra per categoria"></div>
             <div id="menu-grid" class="menu-grid" aria-live="polite">
               <p class="menu-empty">I prodotti pubblicati dal bar appariranno qui.</p>
             </div>
-            <p class="catalog-help menu-disclaimer">Prezzi e disponibilità vengono verificati dal server alla conferma. Se il bar sospende le prenotazioni, il menu rimane consultabile.</p>
+            <p class="catalog-help menu-disclaimer">Il prezzo definitivo e la disponibilità saranno confermati quando prenoti. Puoi consultare il menu anche mentre gli ordini sono sospesi.</p>
           </div>
         </div>
       </section>
@@ -202,9 +202,9 @@
         <div class="section-heading">
           <span class="eyebrow">LE TUE PRENOTAZIONI</span>
           <h2 id="orders-title">I miei ordini</h2>
-          <p>Ordini confermati e registrati nel database. Lo stato viene aggiornato dal personale autorizzato.</p>
+          <p>Controlla quando il tuo ordine è pronto e mostra il QR al banco.</p>
         </div>
-        <button type="button" class="button button-outline button-small" id="orders-refresh">Aggiorna ordini</button>
+        <button type="button" class="button button-outline button-small" id="orders-refresh">Aggiorna</button>
         <p id="orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div id="customer-service-notices" class="service-list"></div>
         <div id="orders-list" class="orders-list"></div>
@@ -213,16 +213,37 @@
         <div class="section-heading">
           <span class="eyebrow">AREA OPERATIVA · ACCESSO CONTROLLATO</span>
           <h2 id="staff-orders-title">Ordini del bar</h2>
-          <p>Stati di preparazione, incassi al banco e consegne verificati dal server. Il sistema di cassa fiscale esterna e la scansione QR saranno integrati in un incremento successivo.</p>
+          <p>Ordini per fascia e stato, lista di produzione e ritiro con QR. Il registratore fiscale esterno resta separato.</p>
         </div>
         <div class="staff-toolbar">
-          <label for="staff-search">Numero ordine</label>
-          <input id="staff-search" type="search" inputmode="numeric" placeholder="Cerca numero..." />
-          <button type="button" class="button button-outline button-small" id="staff-refresh">Aggiorna e verifica ruolo</button>
+          <label for="staff-search">Trova ordine o prodotto</label>
+          <input id="staff-search" type="search" placeholder="Numero o prodotto…" />
+          <button type="button" class="button button-outline button-small" id="staff-refresh">Aggiorna</button>
           <button type="button" class="button button-primary button-small" id="staff-scan-open">Scansiona QR / Cerca ordine</button>
         </div>
         <p id="staff-orders-feedback" class="catalog-status" role="status" aria-live="polite"></p>
-        <div id="staff-orders-list" class="orders-list"></div>
+        <div class="staff-board-filters" aria-label="Filtri operativi del banco">
+          <label for="staff-slot-filter">Fascia di ritiro
+            <select id="staff-slot-filter"><option value="all">Tutte le fasce</option></select>
+          </label>
+          <label for="staff-visibility-filter">Ordini
+            <select id="staff-visibility-filter">
+              <option value="active">Da gestire</option>
+              <option value="closed">Conclusi / rimborsi</option>
+              <option value="all">Tutti</option>
+            </select>
+          </label>
+          <p id="staff-live-status" role="status" aria-live="polite">Inizializzazione aggiornamento…</p>
+        </div>
+        <section id="staff-production-panel" class="staff-production-panel" aria-labelledby="staff-production-title">
+          <div class="staff-production-heading">
+            <div><span class="staff-kicker">PRODUZIONE</span><h3 id="staff-production-title">Da preparare</h3></div>
+            <strong id="staff-production-total" class="staff-production-total">0 pezzi</strong>
+          </div>
+          <p class="catalog-help">Quantità sommate dagli ordini ancora da preparare nella fascia selezionata; i prodotti già pronti non sono conteggiati.</p>
+          <div id="staff-production-list" class="staff-production-list"></div>
+        </section>
+        <div id="staff-orders-list" class="staff-board" aria-label="Ordini organizzati per stato"></div>
         <article id="staff-cash-refunds-panel" class="pilot-card" aria-labelledby="staff-cash-refunds-title">
           <h3 id="staff-cash-refunds-title">Restituzioni contanti e POS esterno da completare</h3>
           <p class="catalog-help">Una richiesta di rimborso non restituisce automaticamente il denaro al cliente. Dopo la restituzione effettiva, registra l'uscita in cassa con un turno aperto.</p>
@@ -235,7 +256,7 @@
           <p>Consegna soltanto al coordinatore, con saldo zero e tutti i prodotti pronti.</p>
           <form id="group-staff-scan-form">
             <label for="group-staff-token">Codice QR del coordinatore</label>
-            <input id="group-staff-token" placeholder="Token UUID o breakapp:group:..." required />
+            <input id="group-staff-token" placeholder="Incolla il codice del gruppo o scansiona il QR" required />
             <button class="button button-primary button-small" type="submit">Avvia ritiro (10 minuti)</button>
           </form>
           <button class="button button-outline button-small" type="button" id="group-staff-refresh">Aggiorna gruppi</button>
@@ -252,7 +273,7 @@
         <div class="section-heading">
           <span class="eyebrow">CLIENTE · GRUPPI</span>
           <h2 id="groups-heading">I miei gruppi</h2>
-          <p>Organizza un ordine con i compagni. Una bozza non riserva scorte; la conferma e i pagamenti saranno disponibili solo dopo le verifiche finanziarie.</p>
+          <p>Organizza la merenda insieme: invita i partecipanti, conferma l'ordine e gestisci i pagamenti delle singole righe. Il carrello non blocca le scorte prima della conferma.</p>
         </div>
         <p id="groups-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div class="pilot-grid group-entry-grid">
@@ -690,6 +711,16 @@
         <div id="staff-scan-result"></div>
       </dialog>
 
+      <dialog id="staff-action-confirm" class="ba-dialog" aria-labelledby="staff-action-title">
+        <form id="staff-action-form">
+          <h2 id="staff-action-title">Conferma operazione</h2>
+          <p id="staff-action-summary"></p>
+          <div class="order-actions">
+            <button id="staff-action-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-action-approve" type="submit" class="button button-primary">Conferma</button>
+          </div>
+        </form>
+      </dialog>
       <dialog id="staff-cash-return-dialog" class="ba-dialog" aria-labelledby="staff-cash-return-title">
         <form id="staff-cash-return-form">
           <h2 id="staff-cash-return-title">Conferma restituzione al banco</h2>
@@ -747,25 +778,18 @@
       </dialog>
       <dialog id="order-stepper" class="ba-dialog" aria-labelledby="stepper-title">
         <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
-        <span id="order-step-label" class="auth-tag">Passaggio 1 di 4</span>
+        <span id="order-step-label" class="auth-tag">Passaggio 1 di 2</span>
         <h2 id="stepper-title">Conferma prenotazione</h2>
-        <section data-step="1" aria-label="Carrello">
-          <h3>1. Carrello</h3>
-          <p>Hai scelto i prodotti nel catalogo. Il server ne verificherà prezzi e disponibilità al momento della conferma.</p>
-        </section>
         <section data-step="2" aria-label="Ritiro" hidden>
           <h3>2. Data e fascia di ritiro</h3>
           <label for="order-window">Scegli una fascia tra quelle effettivamente configurate</label>
           <select id="order-window" required></select>
-        </section>
-        <section data-step="3" aria-label="Pagamento" hidden>
-          <h3>3. Metodo di pagamento</h3>
-          <p><strong>Al ritiro</strong> — contanti o POS esterno, come consentito dal bar.</p>
-          <p class="catalog-help">Dopo la prenotazione puoi scegliere Stripe dal tuo ordine, se il merchant della scuola è abilitato. Lo stato del pagamento viene confermato dal server.</p>
+          <p class="catalog-help">Ti chiederemo il permesso di verificare la posizione solo quando confermi: serve a controllare che tu sia vicino alla scuola, come previsto dalle regole del bar. Se neghi il permesso, l'ordine non viene inviato.</p>
         </section>
         <section data-step="4" aria-label="Riepilogo" hidden>
           <h3>4. Verifica finale</h3>
           <div id="order-review"></div>
+          <p class="catalog-help">Pagamento al banco (contanti o POS esterno). Dopo la prenotazione puoi scegliere Stripe dall'elenco dei tuoi ordini, se disponibile.</p>
         </section>
         <p id="order-checkout-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div class="order-actions">
