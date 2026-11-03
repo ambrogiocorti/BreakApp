@@ -25,5 +25,6 @@ jobs:
         run: npm run verify
       - name: Validate Storage backup shell syntax and encrypted artifact fixture
         run: |
-          bash -n scripts/backup-storage-s3.sh scripts/create-encrypted-storage-archive.sh tests/scripts/storage-archive-smoke.sh
+          bash -n scripts/backup-storage-s3.sh scripts/create-encrypted-storage-archive.sh tests/scripts/storage-archive-smoke.sh tests/scripts/storage-s3-fixture.sh
           bash tests/scripts/storage-archive-smoke.sh
+          bash tests/scripts/storage-s3-fixture.sh
