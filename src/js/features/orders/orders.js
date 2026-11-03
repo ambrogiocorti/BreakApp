@@ -632,6 +632,7 @@ export function initializeOrders(client) {
   }
   function drawStaff(){
     staffList.replaceChildren();
+    staffList.dataset.view=staffVisibilityFilter.value;
     drawProduction();
     const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
     const stages=boardOrders(scoped,{
