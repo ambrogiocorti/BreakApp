@@ -28,6 +28,28 @@ export function initializeOrders(client) {
   const staffLiveStatus=document.querySelector('#staff-live-status');
   const staffProduction=document.querySelector('#staff-production-list');
   const staffProductionTotal=document.querySelector('#staff-production-total');
+  const actionDialog=document.querySelector('#staff-action-confirm');
+  const actionSummary=document.querySelector('#staff-action-summary');
+  let activeDecision=null;
+  function decideStaffAction(message){
+    if(actionDialog.open)return Promise.resolve(false);
+    actionSummary.textContent=message;
+    actionDialog.showModal();
+    return new Promise(resolve=>{activeDecision=resolve;});
+  }
+  function finishStaffDecision(result){
+    const resolve=activeDecision;
+    activeDecision=null;
+    if(actionDialog.open)actionDialog.close();
+    if(resolve)resolve(result);
+  }
+  document.querySelector('#staff-action-cancel').addEventListener('click',()=>finishStaffDecision(false));
+  document.querySelector('#staff-action-form').addEventListener('submit',event=>{
+    event.preventDefault();finishStaffDecision(true);
+  });
+  actionDialog.addEventListener('close',()=>{
+    if(activeDecision)finishStaffDecision(false);
+  });
 
   const productDialog=document.querySelector('#product-dialog');
   const cartDialog=document.querySelector('#cart-dialog');
@@ -626,14 +648,14 @@ export function initializeOrders(client) {
         for(const [label,method] of [['Incassa contanti','cash'],['POS esterno','external_pos']]){
           action(actions,label,async()=>{
             const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});if(balance.error)return balance;
-            if(!confirm(`Confermi di aver effettivamente ricevuto il residuo di ${formatEuro(balance.data.due_cents)} tramite ${label}?`))return {error:new Error('Operazione annullata')};
+            if(!await decideStaffAction(`Hai incassato realmente ${formatEuro(balance.data.due_cents)} tramite ${label}? Conferma soltanto dopo aver verificato l'incasso.`))return null;
             return client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
           });
         }
       }
       if(o.status==='ready'&&o.payment_status==='paid'){
         action(actions,'Consegna',async()=>{
-          if(!confirm('Confermi che tutti i prodotti sono stati consegnati?'))return {error:new Error('Operazione annullata')};
+          if(!await decideStaffAction('Confermi di avere consegnato tutti i prodotti di questo ordine?'))return null;
           return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
         });
       }
@@ -686,6 +708,7 @@ export function initializeOrders(client) {
     const role=event.detail?.role||'customer';
     if(refundDialog.open)refundDialog.close();
     if(cashReturnDialog.open)cashReturnDialog.close();
+    if(actionDialog.open)finishStaffDecision(false);
     if(role!=='customer'){
       if(productDialog.open)productDialog.close();
       if(cartDialog.open)cartDialog.close();
@@ -706,6 +729,7 @@ export function initializeOrders(client) {
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
+      if(actionDialog.open)finishStaffDecision(false);
       stopStaffFeed();staffFetchSequence++;
       staffOrders=[];updateSlotFilter();drawStaff();
       if(refundDialog.open)refundDialog.close();
