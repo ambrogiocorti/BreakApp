@@ -72,23 +72,32 @@ export async function checkStripeReadiness({
       throw Error('Elenco webhook incompleto: impossibile verificare la configurazione.');
     next=list.data.at(-1).id;
   }
-  const matching=endpoints.filter(w=>w.url===endpoint);
-  assertion(matching.length>0,'Webhook BreakApp presente sulla piattaforma',checks);
-  const readyWebhook=matching.find(w=>w.status==='enabled'&&w.connect===true&&
+  // Stripe GET /v1/webhook_endpoints returns id, url, status, livemode,
+  // enabled_events, etc., but NOT the connect flag supplied on creation.
+  // A test requiring w.connect === true is therefore always a false negative.
+  // Check only observable fields and require a real signed Connect delivery
+  // (event.account present) for confirmation of the event scope.
+  const matching=endpoints.filter(w=>w.url===endpoint&&w.livemode!==true);
+  assertion(matching.length>0,'Webhook TEST BreakApp presente sulla piattaforma',checks);
+  const readyWebhook=matching.find(w=>w.status==='enabled'&&
     (w.enabled_events?.includes('*')||
       requiredEvents.every(event=>w.enabled_events?.includes(event))));
-  assertion(matching.some(w=>w.status==='enabled'),'Webhook BreakApp attivo',checks);
-  assertion(matching.some(w=>w.connect===true),'Webhook impostato per eventi Connect',checks);
+  assertion(matching.some(w=>w.status==='enabled'),'Webhook TEST BreakApp attivo',checks);
   for(const event of requiredEvents)
-    assertion(matching.some(w=>w.status==='enabled'&&w.connect===true&&
+    assertion(matching.some(w=>w.status==='enabled'&&
       (w.enabled_events?.includes('*')||w.enabled_events?.includes(event))),
-      'Evento Connect '+event+' abilitato',checks);
-  assertion(Boolean(readyWebhook),'Un singolo endpoint Connect copre tutti gli eventi richiesti',checks);
+      'Evento webhook '+event+' abilitato (ambito Connect non leggibile)',checks);
+  assertion(Boolean(readyWebhook),'Un solo webhook TEST attivo copre tutti gli eventi richiesti',checks);
   return {
+    // "ready" means observable REST configuration only, not Connect scope
+    // or a completed payment. It must never be presented as go-live approval.
     ready:checks.every(c=>c.ok),
+    connectScopeVerified:false,
     endpoint,
     checks,
+    matchingEndpoints:matching.length,
     limitations:[
+      'DA VERIFICARE: Stripe /v1/webhook_endpoints non restituisce il campo connect. Il test non puo stabilire se la destinazione ascolta Connected accounts. Verificarlo in Workbench e con un evento firmato che contenga event.account.',
       'Non verifica che STRIPE_WEBHOOK_SECRET in Supabase corrisponda al signing secret dell’endpoint.',
       'Non verifica Checkout → firma webhook → ledger → rimborso; servono transazioni Stripe TEST reali.',
       'Non abilita pagamenti LIVE o autorizza la vendita commerciale.'
@@ -105,7 +114,12 @@ async function main(){
     for(const check of result.checks)
       console.log((check.ok?'[OK] ':'[NO] ')+check.name+(check.reason?' — '+check.reason:''));
     console.log('Webhook atteso:',result.endpoint);
+    if(typeof result.matchingEndpoints==='number')
+      console.log('Endpoint TEST con questo URL trovati:',result.matchingEndpoints);
+    if(result.connectScopeVerified===false)
+      console.log('[DA VERIFICARE] Ambito Connected accounts: impossibile determinarlo tramite GET /v1/webhook_endpoints.');
     for(const caveat of result.limitations)console.log('NOTA:',caveat);
+    console.log(result.ready?'[OK] Verifiche di configurazione REST superate (NON e un test Connect E2E).':'[NO] Alcune verifiche osservabili della configurazione Stripe sono fallite.');
     if(!result.ready)process.exitCode=1;
   }catch(err){
     console.error('BLOCCO STRIPE:',err.message);
