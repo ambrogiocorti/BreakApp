@@ -94,7 +94,7 @@ def verify_archive(archive):
                     if item.size > MAX_MANIFEST_BYTES:
                         fail("Storage manifest too large")
                     manifest_bytes = stream.extractfile(item).read()
-                elif path in ("bucket-list.json", "bucket-names.txt") or path.startswith("listings/"):
+                elif path in ("bucket-list.json", "bucket-names.txt", "aws-config") or path.startswith("listings/"):
                     if item.size > MAX_MANIFEST_BYTES:
                         fail("Storage metadata file too large")
                     # Read the content to prove that every tar entry is readable.
