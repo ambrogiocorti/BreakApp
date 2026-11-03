@@ -14,7 +14,7 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 | Autorizzazioni | RLS ordini attiva, cron autorizzato; test SQL isolati | Verifica intertenant con utenti reali ancora pendente |
 | Cron | `breakapp-push-and-refunds` attivo ogni minuto, ultimi audit dei due endpoint HTTP 200 | Endpoint raggiungibili; consegna push non verificata su telefono |
 | Stripe TEST | Merchant collegato alla scuola e marcato attivo; zero `payment_attempts` e zero `payment_refunds` al 3/11 | **NO-GO:** mancano prova Checkout → webhook firmato → ledger → rimborso |
-| Backup giornaliero | Workflow `encrypted-backup.yml`; esecuzioni 29/10–03/11 con esito **failure**; log 03/11: `SUPABASE_DB_URL` e `BACKUP_PASSPHRASE` vuoti | **NO-GO:** nessun archivio operativo verificato |
+| Backup giornaliero | Primo backup reale cifrato **riuscito il 03/11/2026**, run #41654538860, archivio `breakapp-20261103T143157Z.dump.gpg` autenticato e leggibile; artifact GitHub conservato fino al 03/12/2026. Le esecuzioni precedenti erano fallite per credenziali errate/mancanti | **Parziale:** ripristino su database isolato, byte Storage, conservazione esterna e successiva esecuzione schedulata ancora da verificare |
 | Privacy e fiscale | Documentazione ancora da finalizzare con il cliente e professionisti competenti | **NO-GO** per esercizio commerciale non delimitato |
 | Prove fisiche | Android, iPhone, terminale bar, Wi-Fi degradato, offline e revoche non certificate | **NO-GO** per operatività non supervisionata |
 | Hosting definitivo | Stack confermato Cloudflare Pages; attualmente GitHub Pages per test e anteprime Vercel | Da configurare, collaudare e promuovere manualmente |
@@ -26,7 +26,7 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 1. Aprire GitHub `ambrogiocorti/BreakApp` → **Settings → Secrets and variables → Actions**.
 2. Configurare **`SUPABASE_BACKUP_DB_URL`**: URL PostgreSQL di connessione server/session pooler ottenuto dal progetto Supabase corretto, senza pubblicarlo né copiarlo nel codice.
 3. Configurare **`BACKUP_PASSPHRASE`**: frase casuale custodita in password manager, lunghezza almeno 32 caratteri e separata dalla copia cifrata.
-4. Eseguire manualmente **Encrypted daily database backup**, ottenere un artifact `.dump.gpg` e verificarlo con gli script di repository.
+4. **Eseguito il 03/11/2026:** `Encrypted daily database backup` ha prodotto un artifact `.dump.gpg` cifrato, decifrato e validato con `pg_restore --list`, con esito GitHub `success`. Conservare la prova e verificare anche la prossima esecuzione automatica.
 5. Eseguire **restore su progetto/database separato e vuoto**, controllando dati, RLS, privilegi, ordini e ledger. Effettuare copia separata dei **byte Storage** e documentare come ripristinare Auth/OAuth, DNS, Edge, Vault, Stripe e variabili.
 6. Registrare responsabile, data, dimensione, RPO/RTO e risultato del ripristino; senza queste evidenze il gate resta rosso.
 
@@ -60,7 +60,7 @@ Mai abilitare Stripe LIVE o accettare denaro reale sulla sola prova di una card 
 
 ## Link operativi
 
-- Backup fallito: https://github.com/ambrogiocorti/BreakApp/actions/runs/41612882281
+- Primo backup reale riuscito: https://github.com/ambrogiocorti/BreakApp/actions/runs/41654538860 (artifact https://github.com/ambrogiocorti/BreakApp/actions/runs/41654538860/artifacts/13238692432)
 - Stato e roadmap: `ROADMAP.md`
 - Prove di avvio: `docs/PILOT_START_CHECKLIST.md`
 - Backup/restore: `docs/BACKUP_RESTORE_PHASE_A.md`
