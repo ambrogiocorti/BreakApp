@@ -1,6 +1,6 @@
 # BreakApp — Backup cifrati dei file Supabase Storage
 
-Stato al 3 novembre 2026: **due bucket presenti, zero oggetti in `storage.objects`**. È stato provato il restore PostgreSQL del 3/11; quel dump contiene **solo metadati** Storage, non i byte delle immagini/allegati. Il sistema di backup S3 qui descritto è implementato nel repository ma richiede credenziali e una prima esecuzione reale per essere considerato attivo.
+Stato aggiornato al 3 novembre 2026: backup cifrato S3 **attivato e verificato con 1 file reale**. Il job manuale #41695358724 ha letto 2 bucket e recuperato 1 oggetto da 5.661 byte; l'archivio AES-256 è stato verificato e caricato su GitHub Actions (artifact #13261050306, scadenza 3 dicembre 2026). Il ripristino integrale degli oggetti su un progetto Supabase separato non è ancora stato provato. Il restore PostgreSQL separato del 3/11 include solo i metadati Storage.
 
 ## Architettura
 
@@ -8,6 +8,7 @@ Stato al 3 novembre 2026: **due bucket presenti, zero oggetti in `storage.object
 - Con **credenziali S3 generate in Supabase Storage**, legge tutti i bucket, elenca tutti gli oggetti, scarica i byte e verifica che ogni file corrisponda all'elenco e alle dimensioni attese.
 - Un manifest JSON, dentro l'archivio cifrato, include bucket, nomi logici degli oggetti, dimensioni e SHA-256. Il job **fallisce** se manca un oggetto, se il nome non è sicuro o se i byte superano il limite di 1 GiB previsto per GitHub Artifacts.
 - L'intero snapshot viene cifrato con GnuPG AES-256 mediante `BACKUP_PASSPHRASE`. Il file tar in chiaro non viene mai scritto su disco; i file scaricati temporaneamente sono cancellati tramite trap nel runner effimero. La verifica decifra verso `tar -tf -` senza conservare un archivio in chiaro.
+- Prima di pubblicare l'artifact, il nuovo verificatore `scripts/verify-storage-snapshot.py` legge l'archivio cifrato attraverso GPG, ricostruisce i byte di ogni oggetto **in streaming**, calcola SHA-256 e confronta nomi, bucket, dimensioni e conteggi con il manifest interno. Il job fallisce se manca un file o se l'hash non coincide. Nessun file in chiaro viene scritto dal verificatore su disco.
 - GitHub conserva solo `.tar.gpg` e relativo `.sha256` per 30 giorni. **Nessun dato deve essere trattato come ripristinabile finché non si prova realmente il recupero.**
 
 ## Attivazione — dati da copiare solo nei secret manager
@@ -39,7 +40,7 @@ Stato al 3 novembre 2026: **due bucket presenti, zero oggetti in `storage.object
 
 La prima esecuzione del backup con un file di prova denominato `Screenshot 2026-10-27 155847.png` è fallita nella fase di download, mentre `ListBuckets` e `ListObjectsV2` restavano autorizzati. I log del server Supabase confermano **HTTP 403 `SignatureDoesNotMatch`** sulla richiesta GET firmata dal client AWS CLI 2.39.3 con runtime CRT. L'archivio non è stato creato né caricato, per evitare backup incompleti.
 
-La correzione imposta in modo isolato per quel singolo runner AWS CLI `preferred_transfer_client = classic` e `addressing_style = path`. La modalità classic è documentata ufficialmente da AWS per trasferimenti S3 compatibili. I test CI verificano che la configurazione sia presente e che il manifest includa anche un nome oggetto con spazi. **Il successo con il servizio Supabase reale richiede una nuova esecuzione manuale con l'oggetto ancora presente**: non interpretare la CI verde come prova del download reale.
+La correzione imposta in modo isolato per quel singolo runner AWS CLI `preferred_transfer_client = classic` e `addressing_style = path`. La modalità classic è documentata ufficialmente da AWS per trasferimenti S3 compatibili. I test CI verificano che la configurazione sia presente e che il manifest includa anche un nome oggetto con spazi. **Confermato il 03/11/2026:** la nuova esecuzione manuale #41695358724 con 1 file reale (nome contenente spazi) è riuscita, scaricando e cifrando 5.661 byte. Questa prova non sostituisce il ripristino su un secondo progetto.
 
 Se anche la seconda prova presenta un errore GET, consultare i `storage_logs` su Supabase, verificare il codice server ed evitare rotazioni inutili dei secret, visto che l'elenco dei bucket aveva già funzionato.
 
