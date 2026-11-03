@@ -1,5 +1,6 @@
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
+import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals } from './staff-board.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -333,8 +334,8 @@ export function initializeOrders(client) {
     history.replaceChildren();
     for(const o of data||[]){
       const box=elem('article','','order-card');
-      box.append(elem('h3',`Ordine #${o.display_no} · ${o.status}`),
-        elem('p',`Ritiro ${o.pickup_windows?.service_date||'—'} ${o.pickup_windows?.starts_at?.slice(0,5)||''}`),
+      box.append(elem('h3',`Ordine #${o.display_no} · ${orderStatusLabel(o.status)}`),
+        elem('p',`Ritiro: ${slotLabel(o)}`),
         elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da pagare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const reorder=elem('button','Riordina','button button-outline button-small');reorder.type='button';
@@ -355,7 +356,7 @@ export function initializeOrders(client) {
       }
       if(!['cancelled','delivered','no_show'].includes(o.status)&&
         o.payment_status==='due'&&o.total_cents>0){
-        const stripe=elem('button','Paga online con Stripe (test)','button button-primary button-small');
+        const stripe=elem('button','Paga online (ambiente di prova)','button button-primary button-small');
         stripe.type='button';
         stripe.addEventListener('click',async()=>{
           if(!confirm('Aprire Stripe Checkout in modalità test per '+formatEuro(o.total_cents)+'?')){
@@ -399,7 +400,13 @@ export function initializeOrders(client) {
           detail:{schoolId:o.school_id,orderId:o.id}
         }));
       });
-      box.append(help);
+      const controls=elem('div','','order-actions');
+      // QR is the primary action at the counter; secondary actions stay together.
+      for(const button of [...box.querySelectorAll('button')]){
+        if(button.textContent.includes('QR di ritiro'))button.classList.add('button-primary');
+        controls.append(button);
+      }
+      box.append(controls);
       history.append(box);
     }
     if(!history.childElementCount)history.append(elem('p','Nessun ordine effettuato.'));
