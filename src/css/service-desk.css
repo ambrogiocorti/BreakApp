@@ -726,3 +726,21 @@ body[data-authenticated=true] .login-art{display:none!important;}
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}
 }
+
+/* Closed disclosure must not expose the route index even if author CSS wins
+ * over the browser's native details user-agent stylesheet. */
+#workspace-index:not([open]) #workspace-index-nav{display:none;}
+:root[data-theme="dark"] .control-side{background:#2c352f;color:#f7f5ef;}
+:root[data-theme="dark"] .control-side .control-panel-title h3{color:#f7f5ef;}
+:root[data-theme="dark"] .control-side .metric-card strong{color:#f7f5ef;}
+:root[data-theme="dark"] .control-side .metric-card p{color:#dbe4da;}
+:root[data-theme="dark"] .control-side .metric-card>span{color:#bfcbbf;}
+:root[data-theme="dark"] .control-side-actions a{color:#f7f5ef;}
+:root[data-theme="dark"] .control-side .control-panel-title{border-bottom-color:#58645b;}
+:root[data-theme="dark"] .control-side .metric-card{border-bottom-color:#58645b;}
+:root[data-theme="dark"] .control-side-actions{border-top-color:#58645b;}
+@media(max-width:760px){
+ /* Keep dynamically inserted allergen controls in their actual filter rail. */
+ .market-sidebar .menu-allergen-filter{display:grid;max-width:460px;}
+ .market-sidebar .menu-allergen-note{margin:0 0 .7rem;}
+}
