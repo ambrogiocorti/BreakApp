@@ -23,3 +23,5 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Verify source, tests and build
         run: npm run verify
+      - name: Test encrypted Storage archive, integrity and wrong-passphrase rejection
+        run: bash tests/scripts/storage-archive-smoke.sh
