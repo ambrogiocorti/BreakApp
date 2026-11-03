@@ -568,3 +568,134 @@ body[data-workspace="true"] .app-main .auth-card { padding: clamp(1.2rem,2.2vw,2
 @media(prefers-reduced-motion:reduce) {
   .menu-product-card,.button { transition: none!important; transform: none!important; }
 }
+
+
+/* Purposeful component patterns beyond the overview dashboards.
+ * Customer product cards retain compact quick-add on phones but expand to
+ * food-first editorial cards on wide screens. No product data is synthesized. */
+.menu-product-media {
+  background: #e8ede4; color: #486351;
+  border-radius: 10px; overflow: hidden;
+  display: grid; place-items: center; font-family: var(--display-font);
+  font-weight: 650; font-style: italic; font-size: 2.3rem;
+}
+:root[data-theme="dark"] .menu-product-media { background: #2a4939; color: #d8e1ce; }
+.menu-product-media img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.menu-product-content { display: grid; gap: .46rem; align-content: start; min-width: 0; }
+.menu-product-content .menu-product-category { font-size: .67rem; letter-spacing: .12em; color: var(--accent); }
+.menu-product-content .menu-product-title { font-size: 1.19rem; font-weight: 735; line-height: 1.22; letter-spacing: -.045em; }
+.menu-product-content .menu-product-price { font-size: 1.45rem; letter-spacing: -.055em; margin: .15rem 0; }
+.menu-product-content .menu-product-description {
+  font-size: .8rem; color: var(--muted); line-height: 1.5;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.menu-product-tags { gap: .35rem; margin-top: .2rem; }
+.menu-product-tag { background: var(--surface-soft); border: 0; border-radius: 7px; color: var(--muted); padding: .25rem .46rem; font-size: .68rem; }
+.menu-product-tag--warning { background: var(--warning-bg); color: var(--warning-text); }
+.menu-product-detail { font-size: .76rem; font-weight: 710; color: var(--accent); margin-top: .15rem; }
+.menu-product-add {
+  min-height: 45px; width: 45px; height: 45px; min-width: 45px;
+  border-radius: 11px!important; padding: 0!important;
+  font-size: 1.5rem!important; line-height: 1; box-shadow: none;
+}
+@media(min-width:761px) {
+  .menu-product-card {
+    display: grid; grid-template-columns: minmax(0,1fr) 47px;
+    grid-template-rows: auto 1fr;
+    gap: 1.1rem .6rem; align-items: start;
+  }
+  .menu-product-media {
+    grid-column: 1/-1; grid-row: 1;
+    width: 100%; height: auto; aspect-ratio: 1.55;
+    font-size: 4.2rem;
+  }
+  .menu-product-content { grid-column: 1; grid-row: 2; }
+  .menu-product-add { grid-column: 2; grid-row: 2; justify-self: end; align-self: end; }
+}
+@media(max-width:760px) {
+  .menu-product-card {
+    display: grid; grid-template-columns: 80px minmax(0,1fr) 46px;
+    grid-template-rows: auto; gap: .72rem;
+    align-items: center;
+  }
+  .menu-product-media { grid-column: 1; grid-row: 1; width: 80px; height: 80px; aspect-ratio: 1; font-size: 2rem; }
+  .menu-product-content { grid-column: 2; grid-row: 1; gap: .2rem; }
+  .menu-product-add { grid-column: 3; grid-row: 1; width: 46px; height: 46px; }
+  .menu-product-content .menu-product-title { font-size: 1rem; }
+  .menu-product-content .menu-product-price { font-size: 1.08rem; margin: 0; }
+  .menu-product-content .menu-product-description { display: none; }
+}
+@media(max-width:550px) {
+  .menu-product-card { grid-template-columns: 64px minmax(0,1fr) 44px; gap: .65rem; align-items: center; }
+  .menu-product-media { width: 64px; height: 64px; font-size: 1.6rem; }
+  .menu-product-add { width: 44px; min-width: 44px; height: 44px; }
+  .menu-product-content .menu-product-title { font-size: .96rem; }
+  .menu-product-content .menu-product-category { display: none; }
+  .menu-product-content .menu-product-price { font-size: 1rem; }
+  .menu-product-tags { gap: .25rem; margin: 0; }
+  .menu-product-tag { font-size: .62rem; padding: .18rem .32rem; }
+}
+
+/* Group ordering: softer customer context with clear ownership and invitation. */
+#groups .group-entry-grid { gap: 1.05rem; grid-template-columns: minmax(0,1.15fr) minmax(280px,.85fr); }
+#groups .group-panel,#groups .group-detail {
+  border-radius: 15px; border-color: var(--border);
+  background: var(--surface); box-shadow: none;
+  padding: clamp(1.15rem,2vw,1.85rem);
+}
+#groups .group-panel:first-child { background: var(--accent-soft); border-color: color-mix(in srgb,var(--accent) 17%,var(--border)); }
+#groups .group-panel-heading { border-bottom-color: var(--border); padding-bottom: 1.1rem; }
+#groups .group-step { color: var(--accent); font-size: .68rem; letter-spacing: .14em; }
+#groups .group-panel-heading h3 { font-size: 1.32rem; letter-spacing: -.045em; font-weight: 730; }
+#groups .group-panel-heading p { line-height: 1.6; }
+#groups .group-field :is(input,select),#groups .group-detail :is(input,select) {
+  border-radius: 10px; background: var(--surface); border-color: var(--border);
+}
+#groups .group-form-actions { padding-top: 1.2rem; }
+#groups .group-location-note { border-radius: 10px; background: var(--surface); }
+#groups .group-draft-row {
+  background: var(--surface); border-radius: 11px; padding: 1.1rem;
+}
+#groups .group-invite {
+  border-radius: 11px; background: var(--surface-soft);
+  border-color: var(--border);
+}
+#groups .group-detail > :is(#group-personal,#group-coordinator-panel,#group-manage,#group-payments-panel,#group-confirm-panel,#group-confirmed-panel) {
+  background: var(--surface-soft); border-radius: 11px; border-color: var(--border);
+}
+#groups .group-detail h4 { font-size: 1.02rem; }
+@media(max-width:950px) { #groups .group-entry-grid { grid-template-columns: 1fr; } }
+
+/* Support and service pages: readable conversations and explicit form separation. */
+.support-grid { gap: 1.05rem; }
+.support-ticket-card {
+  background: var(--surface); border-color: var(--border);
+  border-radius: 11px; padding: 1.15rem;
+}
+.support-ticket-card strong { font-size: .98rem; font-weight: 730; }
+.support-ticket-card span,.support-ticket-card small { line-height: 1.55; }
+.support-message { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem; }
+.support-message strong { font-weight: 750; }
+.support-thread { gap: .75rem; }
+.service-summary { background: var(--accent-soft); border-color: var(--border); border-radius: 11px; }
+.service-list-item { border-bottom-color: var(--border); }
+.workflow-center .order-card,.order-card { border-color: var(--border); background: var(--surface); padding: 1.3rem; border-radius: 13px; }
+.orders-list { gap: .9rem; }
+.order-card h3 { font-size: 1.08rem; font-weight: 750; letter-spacing: -.03em; }
+.order-card p { line-height: 1.55; }
+.order-actions { gap: .55rem; }
+.order-actions .button { min-height: 44px; }
+.notice-count { background: var(--accent); color: var(--on-accent); border: 2px solid var(--surface); }
+.notice-row { background: var(--surface); border-color: var(--border); }
+.notice-row.notice-unread { border-left-color: var(--accent); }
+#notification-preferences-form input[type=checkbox] { accent-color: var(--green); }
+.admin-security { border-color: var(--border); background: var(--accent-soft); }
+.cart-strip {
+  border: 1px solid var(--border); background: var(--surface);
+  box-shadow: 0 14px 38px rgba(22,40,30,.18);
+  border-radius: 14px;
+}
+.ba-dialog h2 { font-size: 1.7rem; font-weight: 740; }
+.ba-dialog .ba-price { color: var(--text); font-size: 1.5rem; }
+#offline-status { border-radius: 11px; background: var(--surface); }
+:root[data-theme="dark"] #groups .group-panel:first-child { background: #362d25; }
