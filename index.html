@@ -778,25 +778,18 @@
       </dialog>
       <dialog id="order-stepper" class="ba-dialog" aria-labelledby="stepper-title">
         <form method="dialog" class="ba-dialog-close"><button class="button button-outline button-small" type="submit">Chiudi</button></form>
-        <span id="order-step-label" class="auth-tag">Passaggio 1 di 4</span>
+        <span id="order-step-label" class="auth-tag">Passaggio 1 di 2</span>
         <h2 id="stepper-title">Conferma prenotazione</h2>
-        <section data-step="1" aria-label="Carrello">
-          <h3>1. Carrello</h3>
-          <p>Hai scelto i prodotti nel catalogo. Il server ne verificherà prezzi e disponibilità al momento della conferma.</p>
-        </section>
         <section data-step="2" aria-label="Ritiro" hidden>
           <h3>2. Data e fascia di ritiro</h3>
           <label for="order-window">Scegli una fascia tra quelle effettivamente configurate</label>
           <select id="order-window" required></select>
-        </section>
-        <section data-step="3" aria-label="Pagamento" hidden>
-          <h3>3. Metodo di pagamento</h3>
-          <p><strong>Al ritiro</strong> — contanti o POS esterno, come consentito dal bar.</p>
-          <p class="catalog-help">Dopo la prenotazione puoi scegliere Stripe dal tuo ordine, se il merchant della scuola è abilitato. Lo stato del pagamento viene confermato dal server.</p>
+          <p class="catalog-help">Ti chiederemo il permesso di verificare la posizione solo quando confermi: serve a controllare che tu sia vicino alla scuola, come previsto dalle regole del bar. Se neghi il permesso, l'ordine non viene inviato.</p>
         </section>
         <section data-step="4" aria-label="Riepilogo" hidden>
           <h3>4. Verifica finale</h3>
           <div id="order-review"></div>
+          <p class="catalog-help">Pagamento al banco (contanti o POS esterno). Dopo la prenotazione puoi scegliere Stripe dall'elenco dei tuoi ordini, se disponibile.</p>
         </section>
         <p id="order-checkout-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div class="order-actions">
