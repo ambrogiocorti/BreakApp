@@ -38,6 +38,22 @@ export function initializePlatformDashboard(client,metric){
   }
   result.append(caption,head,body);return result;
  }
+ function roster(rows){
+  const list=make('div','','school-roster');
+  rows.forEach((school,i)=>{
+   const linked=bars.filter(bar=>bar.school_id===school.id);
+   const item=make('div','','school-roster-row');
+   const serial=make('span',String(i+1).padStart(2,'0'),'school-roster-index');
+   serial.setAttribute('aria-hidden','true');
+   const detail=make('div','','school-roster-detail');
+   detail.append(make('strong',school.name),make('small',linked.length+(linked.length===1?' bar collegato':' bar collegati')));
+   const state=make('span',school.is_active?'Attiva':'Sospesa','status-badge'+(school.is_active?'':' is-paused'));
+   item.append(serial,detail,state);
+   if(school.is_active)item.append(manageLink(school));
+   list.append(item);
+  });
+  return list;
+ }
  function renderDirectory(){
   if(!authorized())return;
   const query=search.value.trim().toLocaleLowerCase('it'),state=filter.value;
@@ -50,14 +66,26 @@ export function initializePlatformDashboard(client,metric){
   const active=schools.filter(s=>s.is_active),paused=schools.length-active.length,activeIds=new Set(active.map(s=>s.id)),activeBars=bars.filter(b=>b.is_active&&activeIds.has(b.school_id));
   metrics.replaceChildren(metric('Scuole collegate',schools.length,'Nella tua piattaforma','Building2'),metric('Scuole attive',active.length,'Con accesso abilitato','Check'),metric('Bar attivi',activeBars.length,'Nelle scuole attive','UtensilsCrossed'),metric('Scuole sospese',paused,'Con accesso sospeso','Pause'));
   $('platform-school-count').textContent=String(schools.length);
-  if(schools.length)preview.replaceChildren(table(schools.slice(0,5)));
-  else empty(preview,'Benvenuto nella tua piattaforma','Crea la prima scuola e inizia a organizzare il servizio.',true);
-  const summary=make('div','','network-summary'),ring=make('div','','network-ring'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('viewBox','0 0 136 136');svg.setAttribute('aria-hidden','true');
-  const proportion=schools.length?active.length/schools.length:0,circumference=2*Math.PI*55;
-  for(const cls of ['ring-track','ring-value']){const c=document.createElementNS(svg.namespaceURI,'circle');for(const[k,v]of Object.entries({cx:'68',cy:'68',r:'55',class:cls}))c.setAttribute(k,v);if(cls==='ring-value')c.setAttribute('stroke-dasharray',(circumference*proportion)+' '+circumference);svg.append(c);}
-  const label=make('div','','network-ring-label');label.append(make('strong',schools.length?Math.round(100*proportion)+'%':'—'),make('span','scuole attive'));ring.append(svg,label);
-  const legend=make('div','','network-legend');for(const[text,value]of [['Scuole attive',active.length],['Scuole sospese',paused],['Bar collegati',bars.length]]){const row=make('div');row.append(make('span',text),make('strong',String(value)));legend.append(row);}summary.append(ring,legend);network.replaceChildren(summary);renderDirectory();
+  if(schools.length)preview.replaceChildren(roster(schools.slice(0,5)));
+  else empty(preview,'La rete è pronta a partire','Aggiungi la prima scuola per iniziare a gestire il servizio.',true);
+  const summary=make('div','','network-brief');
+  const percentage=schools.length?Math.round(100*active.length/schools.length):0;
+  const headline=make('div','','network-brief-head');
+  headline.append(make('strong',schools.length?percentage+'%':'—'),
+   make('span','delle scuole della rete sono attive'));
+  const meter=make('div','','network-meter');
+  meter.setAttribute('role','progressbar');
+  meter.setAttribute('aria-label','Scuole attive nella rete');
+  meter.setAttribute('aria-valuemin','0');meter.setAttribute('aria-valuemax','100');
+  meter.setAttribute('aria-valuenow',String(percentage));
+  const fill=make('span','','network-meter-fill');fill.style.width=percentage+'%';
+  meter.append(fill);
+  const legend=make('div','','network-breakdown');
+  for(const [label,value] of [['Attive',active.length],['Sospese',paused],['Bar collegati',bars.length]]){
+   const item=make('div','','network-breakdown-item');
+   item.append(make('span',label),make('strong',String(value)));legend.append(item);
+  }
+  summary.append(headline,meter,legend);network.replaceChildren(summary);renderDirectory();
  }
  async function readAll(name,columns){
   const all=[];

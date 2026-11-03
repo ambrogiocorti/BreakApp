@@ -30,6 +30,10 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit})) {
     if(!main)failures.push('missing main landmark');
     const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
     if(width.scroll>width.viewport+4)failures.push('horizontal overflow '+JSON.stringify(width));
+    if(process.env.WORKSPACE_SCREENSHOTS){
+      const screenshotFile=process.env.WORKSPACE_SCREENSHOTS+'/login-'+name+'-'+viewport.width+'.png';
+      await page.screenshot({path:screenshotFile,animations:'disabled',fullPage:false});
+    }
     if(failures.length)errors.push({name,viewport,failures});
     console.log(JSON.stringify({browser:name,viewport,result:failures.length?'FAIL':'PASS',failures}));
     await page.close();
