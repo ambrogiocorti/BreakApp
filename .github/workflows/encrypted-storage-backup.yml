@@ -1,0 +1,35 @@
+name: Encrypted daily Supabase Storage backup
+on:
+  schedule:
+    - cron: '37 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup-storage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Validate backup prerequisites
+        run: |
+          for tool in aws jq gpg tar python3 sha256sum; do command -v "$tool"; done
+      - name: Download full S3 snapshot, validate and encrypt before upload
+        env:
+          SUPABASE_STORAGE_S3_ENDPOINT: ${{ vars.BREAKAPP_STORAGE_S3_ENDPOINT }}
+          SUPABASE_STORAGE_S3_REGION: ${{ vars.BREAKAPP_STORAGE_S3_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.BREAKAPP_STORAGE_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BREAKAPP_STORAGE_S3_SECRET_ACCESS_KEY }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/encrypted-storage"
+          bash scripts/backup-storage-s3.sh "$RUNNER_TEMP/encrypted-storage"
+      - name: Upload only encrypted Storage archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-breakapp-storage-${{ github.run_id }}
+          path: ${{ runner.temp }}/encrypted-storage/
+          retention-days: 30
+          if-no-files-found: error
