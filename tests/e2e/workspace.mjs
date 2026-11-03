@@ -15,6 +15,32 @@ try{
    await page.getByRole('heading',{name:'Panoramica',exact:true}).waitFor();
    await page.locator('#platform-metrics .metric-card').first().waitFor();
    assert.deepEqual(await page.locator('#platform-metrics .metric-card>strong').allTextContents(),['3','2','3','1']);
+   // Structural QA: this must be an actually new working layout, not Studio 02
+   // behind updated colors. Use computed geometry in each rendering engine.
+   const geometry=await page.evaluate(()=>{
+    const box=id=>{const r=document.querySelector(id)?.getBoundingClientRect();return r?{x:r.x,y:r.y,w:r.width,h:r.height}:null;};
+    return {header:box('.site-header'),strip:box('#workspace-sidebar'),
+     navigation:box('#app-desktop-nav'),main:box('.app-main'),
+     stage:box('#platform-overview .control-layout'),
+     activity:box('#platform-overview .control-activity'),
+     ledger:box('#platform-overview .control-side'),
+     mobile:box('#app-mobile-nav'),roster:document.querySelectorAll('#platform-school-list .school-roster-row').length,
+     ring:document.querySelectorAll('#platform-network svg').length,
+     overflow:document.documentElement.scrollWidth-innerWidth};
+   });
+   assert.equal(geometry.roster,3,'overview must use the school roster with actual data');
+   assert.equal(geometry.ring,0,'legacy decorative network ring still present');
+   assert.ok(geometry.overflow<=3,'horizontal overflow '+JSON.stringify(geometry));
+   if(viewport.width>1023){
+    assert.ok(Math.abs(geometry.strip.y-72)<=2,'top workspace strip not installed');
+    assert.ok(geometry.strip.w>viewport.width-4,'sidebar still consuming a side column');
+    assert.ok(geometry.main.x<5,'main workspace not full width');
+    assert.ok(geometry.activity.x<geometry.ledger.x,'control room has lost asymmetric columns');
+   }else{
+    assert.ok(geometry.main.x<5,'mobile workspace not full width');
+    assert.ok(geometry.mobile.y>viewport.height-105,'mobile service dock is missing');
+   }
+
    assert.equal(await page.locator('#platform-pilot-tools').isVisible(),false);
    assert.equal(await page.locator('#platform-overview').isVisible(),true);
    assert.equal(await page.getByRole('heading',{level:1}).count(),1);
