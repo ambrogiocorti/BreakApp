@@ -14,10 +14,10 @@ const SCREENS = Object.freeze({
  ],
  bartender:[
   ['staff-orders-section','Ordini da preparare','ClipboardList'],
-  ['workflow-center','Approvazioni ed eccezioni','ClipboardList'],
+  ['workflow-center','Richieste','ShieldCheck'],
   ['bar-operations','Servizio e orari','CalendarDays'],
-  ['cash-workspace','Cassa e turni','ClipboardList'],
-  ['offline-terminal','Operazioni offline','Boxes'],
+  ['cash-workspace','Cassa e turni','Receipt'],
+  ['offline-terminal','Terminale offline','CloudOff'],
   ['support-center','Assistenza','MessageSquareText'],
   ['accesso','Profilo','UserRound']
  ],
@@ -26,19 +26,19 @@ const SCREENS = Object.freeze({
   ['accesso','Profilo','UserRound']
  ],
  school_admin:[
-  ['admin-overview','Panoramica','LayoutDashboard'],
-  ['school-reports','Report e annunci','LayoutDashboard'],
-  ['staff-orders-section','Gestione ordini','ClipboardList'],
-  ['workflow-center','Approvazioni ed eccezioni','ClipboardList'],
-  ['admin-catalog','Catalogo','ShoppingBag'],
-  ['warehouse-inventory','Magazzino','Boxes'],
-  ['cash-workspace','Cassa e chiusure','ClipboardList'],
-  ['offline-review','Revisione offline','ClipboardList'],
-  ['admin-order-setup','Impostazioni bar','SlidersHorizontal'],
-  ['bar-operations','Calendario','CalendarDays'],
-  ['support-center','Centro ticket','MessageSquareText'],
-  ['accesso','Profilo e sicurezza','UserRound']
- ],
+   ['admin-overview','Panoramica','LayoutDashboard'],
+   ['staff-orders-section','Ordini','ClipboardList'],
+   ['workflow-center','Richieste','ShieldCheck'],
+   ['support-center','Assistenza','MessageSquareText'],
+   ['admin-catalog','Catalogo','ShoppingBag'],
+   ['warehouse-inventory','Magazzino','Boxes'],
+   ['bar-operations','Orari e servizio','CalendarDays'],
+   ['admin-order-setup','Impostazioni bar','SlidersHorizontal'],
+   ['cash-workspace','Cassa','Receipt'],
+   ['school-reports','Report','LayoutDashboard'],
+   ['offline-review','Revisione offline','CloudOff'],
+   ['accesso','Profilo e sicurezza','UserRound']
+  ],
  platform_admin:[
   ['platform-overview','Panoramica','LayoutDashboard'],
   ['platform-schools','Scuole','Building2'],
@@ -46,6 +46,20 @@ const SCREENS = Object.freeze({
   ['workflow-center','Nuova scuola','Plus'],
   ['accesso','Profilo e sicurezza','UserRound']
  ]
+});
+const NAV_GROUPS=Object.freeze({
+ school_admin:{
+  'admin-overview':'OGGI','staff-orders-section':'OGGI','workflow-center':'OGGI',
+  'support-center':'OGGI','admin-catalog':'OFFERTA','warehouse-inventory':'OFFERTA',
+  'bar-operations':'OFFERTA','admin-order-setup':'OFFERTA','cash-workspace':'FINANZE',
+  'school-reports':'FINANZE','offline-review':'FINANZE','accesso':'ACCOUNT'
+ },
+ bartender:{
+  'staff-orders-section':'BANCO','workflow-center':'BANCO',
+  'bar-operations':'BANCO','cash-workspace':'OPERAZIONI',
+  'offline-terminal':'OPERAZIONI','support-center':'OPERAZIONI',
+  'accesso':'ACCOUNT'
+ }
 });
 const PAGE_NOTES=Object.freeze({
  'platform-overview':'Uno sguardo alla rete delle tue scuole.',
@@ -195,8 +209,13 @@ export function initializeWorkspace(client){
      if(id===route)a.setAttribute('aria-current','page');
      return a;
    }
+   let lastGroup='';
    for(const screen of available){
-     if(screen[0]==='accesso')nav.append(create('span','workspace-nav-caption','Account'));
+     const group=NAV_GROUPS[active?.role]?.[screen[0]]||
+       (screen[0]==='accesso'?'ACCOUNT':'');
+     if(group&&group!==lastGroup)
+       nav.append(create('span','workspace-nav-caption',group));
+     lastGroup=group;
      nav.append(linkOf(screen));
    }
    const compact=available.length>4?[...available.slice(0,3)]:available;
