@@ -19,7 +19,7 @@ restored="$(gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
   echo 'Encrypted Storage payload could not be restored' >&2; exit 1;
 }
 if gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
-   --decrypt "${files[0]}" 3< <(printf 'deliberately-incorrect-backup-passphrase')) \
+   --decrypt "${files[0]}" 3< <(printf 'deliberately-incorrect-backup-passphrase') \
    >/dev/null 2>&1; then
   echo 'Wrong backup passphrase unexpectedly succeeded' >&2
   exit 1
