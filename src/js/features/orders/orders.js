@@ -263,6 +263,23 @@ export function initializeOrders(client) {
     if(cartDialog.open)renderCart();
     if(user)void fetchWindows();
   });
+  window.addEventListener('breakapp:quick-add',event=>{
+    const id=event.detail?.id,barId=event.detail?.barId;
+    if(!id||barId!==context.barId)return;
+    if(!user){
+      window.dispatchEvent(new CustomEvent('breakapp:product-open',{detail:{id}}));
+      return;
+    }
+    const product=context.products.find(p=>p.id===id && p.is_active);
+    const status=document.querySelector('#menu-status');
+    if(!product)return report(status,'Questo prodotto non è più disponibile. Aggiorna il menu.',true);
+    try{
+      if(!cart.some(x=>x.product_id===id)&&cart.length>=100)
+        throw new Error('Il carrello contiene già il numero massimo di prodotti.');
+      changeCart(cartAdd(cart,id,1));
+      report(status,product.name+' aggiunto al carrello. Il totale definitivo sarà confermato alla prenotazione.');
+    }catch(error){report(status,error?.message||'Impossibile aggiungere il prodotto.',true);}
+  });
   window.addEventListener('breakapp:product-open',event=>{
     if(!user)return;
     favoriteStatus.textContent='';
