@@ -1,0 +1,28 @@
+name: Stripe TEST Connect readiness
+on:
+  workflow_dispatch:
+    inputs:
+      connected_account:
+        description: 'Account Connect TEST associato alla scuola (acct_...)'
+        type: string
+        required: true
+        default: 'acct_1UVx5F2RLtxMJCNo'
+permissions:
+  contents: read
+jobs:
+  stripe-test-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+      - name: Inspect connected merchant and Stripe Connect webhook (read-only)
+        env:
+          BREAKAPP_STRIPE_TEST_KEY: ${{ secrets.BREAKAPP_STRIPE_TEST_KEY }}
+          BREAKAPP_STRIPE_CONNECTED_ACCOUNT: ${{ inputs.connected_account }}
+          BREAKAPP_SUPABASE_REF: ynvswdyirngvdpudcikl
+        run: node scripts/check-stripe-readiness.mjs

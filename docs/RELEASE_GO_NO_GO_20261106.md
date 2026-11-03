@@ -13,7 +13,7 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 | Host pubblico | GitHub Pages disponibile; workflow uptime positivo il 3/11 | Verde per disponibilità **statica** |
 | Autorizzazioni | RLS ordini attiva, cron autorizzato; test SQL isolati | Verifica intertenant con utenti reali ancora pendente |
 | Cron | `breakapp-push-and-refunds` attivo ogni minuto, ultimi audit dei due endpoint HTTP 200 | Endpoint raggiungibili; consegna push non verificata su telefono |
-| Stripe TEST | Merchant collegato alla scuola e marcato attivo; zero `payment_attempts` e zero `payment_refunds` al 3/11 | **NO-GO:** mancano prova Checkout → webhook firmato → ledger → rimborso |
+| Stripe TEST | Merchant `acct_1UVx5F2RLtxMJCNo` censito in Supabase, ma zero `payment_attempts`, zero `payment_refunds` e zero webhook in inbox; il connettore Stripe disponibile è associato a un'altra piattaforma test priva di quel merchant | **NO-GO:** collegare/identificare la piattaforma Stripe TEST corretta; eseguire workflow `Stripe TEST Connect readiness` e prova Checkout → webhook firmato → ledger → rimborso |
 | Backup giornaliero | Primo backup reale cifrato **riuscito il 03/11/2026**, run #41654538860, archivio `breakapp-20261103T143157Z.dump.gpg` valido; utente ha eseguito in Docker Desktop il ripristino **SQL transazionale** su immagine `supabase/postgres:17.6.1.136`, senza errori; conteggi post-restore 4 `auth.users`, 1 scuola, 1 bar, 1 ordine, 2 bucket; 0 tabelle pubbliche prive di RLS; server disponibile dopo restore; container e volumi temporanei cancellati | **Superato per il database PostgreSQL in un container isolato**; ancora pendenti byte Storage, ripristino integrale Supabase/servizi, copia esterna e prima esecuzione schedulata automatica |
 | Privacy e fiscale | Documentazione ancora da finalizzare con il cliente e professionisti competenti | **NO-GO** per esercizio commerciale non delimitato |
 | Prove fisiche | Android, iPhone, terminale bar, Wi-Fi degradato, offline e revoche non certificate | **NO-GO** per operatività non supervisionata |
@@ -62,6 +62,7 @@ Mai abilitare Stripe LIVE o accettare denaro reale sulla sola prova di una card 
 
 - Primo backup reale riuscito: https://github.com/ambrogiocorti/BreakApp/actions/runs/41654538860 (artifact https://github.com/ambrogiocorti/BreakApp/actions/runs/41654538860/artifacts/13238692432)
 - Stato e roadmap: `ROADMAP.md`
+- Verifica Stripe TEST: `docs/STRIPE_SANDBOX_RELEASE_GATE.md`
 - Prove di avvio: `docs/PILOT_START_CHECKLIST.md`
 - Backup/restore: `docs/BACKUP_RESTORE_PHASE_A.md`
 - Attivazioni esterne: `docs/EXTERNAL_ACTIVATION_GATES.md`
