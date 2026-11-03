@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5180',app=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const script=`
-import '/src/css/base.css';import '/src/css/workspace.css';
+import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';
 import {initializeAuth} from '/src/js/features/auth/auth.js';
 import {initializeTheme} from '/src/js/core/theme.js';
 import {initializeAdminMfa} from '/src/js/features/auth/mfa.js';
