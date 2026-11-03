@@ -13,7 +13,7 @@
   --surface: #fffefa;
   --surface-soft: #f0eee7;
   --text: #192d27;
-  --muted: #64736e;
+  --muted: #5e6c65;
   --border: #dde0d6;
   --accent: #a6442f;
   --accent-dark: #853523;
@@ -182,7 +182,7 @@ body[data-workspace="true"] {
   --paused: #8b621e;
   --paused-bg: #fff2de;
   background: var(--workspace-bg);
-  font-size: 14px;
+  font-size: 15px;
 }
 :root[data-theme="dark"] body[data-workspace="true"] {
   --workspace-bg: var(--bg);
@@ -269,8 +269,8 @@ body[data-workspace="true"] .icon-button:hover { background: var(--surface-soft)
 .workspace-context select:focus-visible { outline-color: #ffcb9b; }
 .workspace-school-label { color: #aebfb1; font-size: .67rem; margin-top: .38rem; }
 .workspace-nav-caption, .app-desktop-nav>.workspace-nav-caption {
-  padding: 1.4rem 1rem .5rem; font-size: .6rem;
-  letter-spacing: .16em; color: #98b4a3; font-weight: 730;
+  padding: 1.4rem 1rem .5rem; font-size: .72rem;
+  letter-spacing: .14em; color: #b4c9b8; font-weight: 730;
 }
 .workspace-link {
   color: #c5d5c8; font-size: .81rem; font-weight: 590;
@@ -502,7 +502,7 @@ body[data-workspace="true"] .app-main .auth-card { padding: clamp(1.2rem,2.2vw,2
   }
   body[data-workspace="true"] .app-mobile-nav .workspace-link:hover { color: var(--text); background: var(--surface-soft); }
   body[data-workspace="true"] .app-mobile-nav .workspace-link[aria-current=page] { background: var(--accent-soft); color: var(--accent); box-shadow: none; }
-  body[data-workspace="true"] .app-mobile-nav .workspace-link-label { font-weight: 690; font-size: .69rem; }
+  body[data-workspace="true"] .app-mobile-nav .workspace-link-label { font-weight: 690; font-size: .75rem; }
   body[data-workspace="true"] .workspace-more { background: var(--surface); border-color: var(--border); }
   .workspace-more .workspace-link { color: var(--text); }
   .workspace-more .workspace-link[aria-current=page] { background: var(--accent-soft); color: var(--accent); }
