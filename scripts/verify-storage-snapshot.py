@@ -44,7 +44,8 @@ def verify_archive(archive):
         with tarfile.open(fileobj=process.stdout, mode="r|") as stream:
             names = set()
             for item in stream:
-                raw = item.name
+                # GNU tar includes trailing slashes in directory entry names.
+                raw = item.name.rstrip('/') if item.isdir() else item.name
                 if raw in (".", "./"):
                     if not item.isdir():
                         fail("Invalid root tar entry")
