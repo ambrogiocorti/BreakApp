@@ -65,7 +65,7 @@ export function initializeOrders(client) {
   const orderBack=document.querySelector('#order-back');
   const orderSubmit=document.querySelector('#order-submit');
   let user=null, context={schoolId:'',barId:'',products:[]}, cart=[], product=null;
-  let step=1,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
+  let step=2,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
   let staffOrders=[];
   let staffContextSchool=null;
   let staffFetchSequence=0;
@@ -191,8 +191,12 @@ export function initializeOrders(client) {
       report(refundFeedback,'Rimborso non registrato o esito incerto: '+(e?.message||'riprovare verificando prima lo stato ordine')+'. In caso di errore di rete, riprova dalla stessa finestra.',true);
     }finally{refundSubmit.disabled=false;}
   });
-  const coupon=document.createElement('input');coupon.maxLength=32;coupon.placeholder='Codice coupon (facoltativo)';coupon.setAttribute('aria-label','Codice coupon facoltativo');
-  checkoutReview.parentElement.insertBefore(coupon,checkoutReview);
+  const couponLabel=elem('label','Codice sconto (facoltativo)');
+  couponLabel.htmlFor='order-coupon';
+  const coupon=document.createElement('input');
+  coupon.id='order-coupon';coupon.maxLength=32;coupon.placeholder='Inserisci un codice sconto';
+  couponLabel.append(coupon);
+  checkoutReview.parentElement.insertBefore(couponLabel,checkoutReview);
   const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
   const favoriteStatus=elem('p');favoriteStatus.setAttribute('role','status');productDialog.append(favoriteStatus);
   const favoritesBox=elem('article','','order-card');section.append(favoritesBox);
@@ -368,9 +372,9 @@ export function initializeOrders(client) {
     if(event.detail?.barId===context.barId && user)void fetchWindows();
   });
   function drawStep(){
-    stepLabel.textContent=`Passaggio ${step} di 4`;
+    stepLabel.textContent=step===2?'Passaggio 1 di 2':'Passaggio 2 di 2';
     [...stepper.querySelectorAll('[data-step]')].forEach(x=>x.hidden=Number(x.dataset.step)!==step);
-    orderBack.hidden=step===1;orderNext.hidden=step===4;orderSubmit.hidden=step!==4;
+    orderBack.hidden=step===2;orderNext.hidden=step===4;orderSubmit.hidden=step!==4;
     if(step===4){
       const selected=windows.find(w=>w.id===slotSelect.value);
       const s=total();
@@ -378,19 +382,19 @@ export function initializeOrders(client) {
         elem('p',`Prodotti: ${s.count} · ${formatEuro(s.totalCents)} (indicativo)`),
         elem('p',`Ritiro: ${selected?selected.service_date+' '+selected.starts_at.slice(0,5):'Non selezionato'}`),
         elem('p','Pagamento al ritiro: contanti o POS esterno presso il bar.'),
-        elem('p','Per confermare, autorizza la verifica GPS. La disponibilità è verificata dal server.')
+        elem('p','La posizione serve per verificare la vicinanza alla scuola; prezzi e disponibilità sono controllati dal bar.')
       );
     }
   }
   document.querySelector('#cart-checkout').addEventListener('click',()=>{
     if(!enabled||!windows.length)return;
-    cartDialog.close();step=1;drawStep();stepper.showModal();
+    cartDialog.close();step=2;drawStep();stepper.showModal();
   });
   orderNext.addEventListener('click',()=>{
     if(step===2&&!slotSelect.value){report(checkoutFeedback,'Scegli una fascia.',true);return;}
-    if(step<4){step++;drawStep();}
+    if(step===2){step=4;drawStep();}
   });
-  orderBack.addEventListener('click',()=>{if(step>1){step--;drawStep();}});
+  orderBack.addEventListener('click',()=>{if(step===4){step=2;drawStep();}});
   orderSubmit.addEventListener('click',async()=>{
     if(!user||!cart.length||!slotSelect.value||!enabled)return;
     orderSubmit.disabled=true;report(checkoutFeedback,'Verifica posizione GPS…');
