@@ -9,8 +9,9 @@ const LABELS = Object.freeze({
 const SCREENS = Object.freeze({
  customer:[
   ['menu','Menu','UtensilsCrossed'],['orders','I miei ordini','ClipboardList'],
-  ['groups','Gruppi','UsersRound'],['accesso','Profilo','UserRound']
-  ,['workflow-center','Richieste e modifiche','ClipboardList']
+  ['groups','Gruppi','UsersRound'],
+  ['workflow-center','Richieste e modifiche','ClipboardList'],
+  ['accesso','Profilo','UserRound']
  ],
  bartender:[
   ['staff-orders-section','Ordini da preparare','ClipboardList'],
@@ -48,6 +49,18 @@ const SCREENS = Object.freeze({
  ]
 });
 const NAV_GROUPS=Object.freeze({
+ platform_admin:{
+  'platform-overview':'PANORAMICA',
+  'platform-schools':'RETE SCOLASTICA','platform-configuration':'RETE SCOLASTICA',
+  'workflow-center':'RETE SCOLASTICA','accesso':'ACCOUNT'
+ },
+ customer:{
+  'menu':'SCOPRI','orders':'IL TUO INTERVALLO','groups':'IL TUO INTERVALLO',
+  'workflow-center':'IL TUO INTERVALLO','accesso':'ACCOUNT'
+ },
+ warehouse_manager:{
+  'warehouse-inventory':'INVENTARIO','accesso':'ACCOUNT'
+ },
  school_admin:{
   'admin-overview':'OGGI','staff-orders-section':'OGGI','workflow-center':'OGGI',
   'support-center':'OGGI','admin-catalog':'OFFERTA','warehouse-inventory':'OFFERTA',
@@ -66,7 +79,17 @@ const PAGE_NOTES=Object.freeze({
  'platform-schools':'Tutte le scuole, i bar e il loro stato, in un unico posto.',
  'platform-configuration':'Scegli una scuola e organizza il suo servizio.',
  'admin-overview':'Ordini, catalogo e servizio: la giornata a colpo d’occhio.',
- 'workflow-center':'Gestisci le richieste che richiedono la tua attenzione.'
+ 'workflow-center':'Gestisci le richieste che richiedono la tua attenzione.',
+ 'menu':'Il catalogo della tua scuola, organizzato per il tuo intervallo.',
+ 'orders':'Prenotazioni, pagamenti e stato del ritiro.',
+ 'groups':'Ordina con i tuoi compagni, senza perdere il controllo delle quote.',
+ 'staff-orders-section':'La coda di lavoro, le priorità e i ritiri del bar.',
+ 'warehouse-inventory':'Disponibilità e quantità, aggiornate per ciascuna giornata.',
+ 'admin-catalog':'Prodotti, categorie e informazioni per la vendita.',
+ 'cash-workspace':'Incassi, resi e turni del servizio.',
+ 'school-reports':'Dati e riepiloghi della gestione scolastica.',
+ 'offline-terminal':'Continuità operativa anche nelle interruzioni di rete.',
+ 'accesso':'Account, scuole associate e sicurezza.'
 });
 const DOM={
  nav:()=>document.getElementById('app-desktop-nav'),

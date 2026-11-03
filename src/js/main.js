@@ -1,6 +1,7 @@
 import '../css/base.css';
 import '../css/workspace.css';
 import '../css/groups.css';
+import '../css/studio.css';
 import { readSupabaseConfig } from './core/config.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeAuth } from './features/auth/auth.js';

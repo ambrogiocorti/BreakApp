@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#193c32" />
     <meta name="description" content="BreakApp, la piattaforma per i bar scolastici." />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%icon-placeholder.svg" />
@@ -41,7 +41,6 @@
         <strong id="workspace-context-name"></strong>
         <span id="workspace-school-label" class="workspace-school-label"></span>
       </div>
-      <div class="workspace-nav-caption">Principale</div>
       <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Menu del ruolo attivo" hidden></nav>
       <div class="workspace-sidebar-bottom">
         <a href="#accesso" class="workspace-identity-card" aria-label="Il tuo profilo"><span id="workspace-avatar" class="workspace-avatar">B</span><span><strong id="workspace-identity-role"></strong><span id="workspace-identity" class="workspace-identity"></span></span></a>
@@ -151,13 +150,15 @@
             <div id="environment-status" class="status-box" role="status" aria-live="polite" hidden></div>
           </div>
           <aside class="login-art" aria-hidden="true">
+            <div class="login-art-meta"><span>BREAKAPP / SCUOLE &amp; BAR</span><span>LA PAUSA, RIPENSATA</span></div>
             <div class="login-art-graphic">
               <div class="login-graphic-circle"></div>
               <div class="login-graphic-square"></div>
               <span class="login-graphic-mark">B.</span>
             </div>
-            <p class="login-art-title">Il tuo intervallo,<br/>più semplice.</p>
-            <p class="login-art-note">Una piattaforma. Ogni scuola, il suo bar.</p>
+            <p class="login-art-title">Più gusto.<br/>Meno attesa.</p>
+            <p class="login-art-note">Menu, ordini e ritiro: tutto il tuo bar scolastico, in un unico posto.</p>
+            <div class="login-art-foot"><span>01 / Scopri</span><span>02 / Ordina</span><span>03 / Ritira</span></div>
           </aside>
         </div>
       </section>
@@ -931,6 +932,13 @@
 
       <section id="admin-overview" class="container orders-section workspace-page" hidden aria-labelledby="dashboard-title">
         <h2 id="dashboard-title" class="sr-only">Panoramica della scuola</h2>
+        <div class="overview-intro">
+          <div><p class="overview-kicker">IL TUO BAR / OGGI</p>
+            <h3>La giornata, in chiaro.</h3>
+            <p>Un unico punto di partenza per seguire gli ordini, organizzare la preparazione e gestire il servizio.</p>
+          </div>
+          <a class="button button-secondary button-small" href="#staff-orders-section"><span data-icon="ArrowUpRight"></span> Vai agli ordini</a>
+        </div>
         <div class="dashboard-toolbar"><span id="dashboard-subtitle" class="dashboard-period">La giornata nella tua scuola</span><div class="dashboard-toolbar-actions"><button id="dashboard-refresh" class="button button-outline button-small" type="button"><span data-icon="Refresh"></span>Aggiorna</button><span id="dashboard-export"></span></div></div>
         <div id="dashboard-metrics" class="dashboard-metrics"></div>
         <div class="dashboard-columns">
@@ -954,6 +962,13 @@
       </section>
       <section id="platform-overview" class="container orders-section workspace-page" hidden aria-labelledby="platform-heading">
         <h2 id="platform-heading" class="sr-only">Panoramica della piattaforma</h2>
+        <div class="overview-intro">
+          <div><p class="overview-kicker">LA RETE BREAKAPP / CONTROLLO GENERALE</p>
+            <h3>Ogni scuola.<br/>Una sola visione.</h3>
+            <p>Le attività della piattaforma, le scuole e gli strumenti di gestione: ordinati per aiutarti a decidere, non per riempire lo schermo.</p>
+          </div>
+          <a class="button button-secondary button-small" href="#platform-schools"><span data-icon="ArrowUpRight"></span> Esplora le scuole</a>
+        </div>
         <div class="dashboard-toolbar"><span class="dashboard-period" id="platform-date"></span><div class="dashboard-toolbar-actions"><button id="platform-refresh" type="button" class="button button-outline button-small"><span data-icon="Refresh"></span>Aggiorna</button><a href="#workflow-center" class="button button-primary button-small"><span data-icon="Plus"></span>Nuova scuola</a></div></div>
         <div id="platform-metrics" class="dashboard-metrics platform-metrics" aria-busy="true"></div>
         <div class="dashboard-columns">
