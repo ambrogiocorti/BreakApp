@@ -59,6 +59,12 @@ bash scripts/backup-storage-s3.sh "$temp/out"
 shopt -s nullglob
 archives=("$temp/out"/*.tar.gpg)
 [ "${#archives[@]}" -eq 1 ] || { echo 'S3 snapshot was not archived' >&2;exit 1; }
+python3 scripts/verify-storage-snapshot.py "${archives[0]}"
+if env BACKUP_PASSPHRASE='incorrect-archive-passphrase-over-32-characters' \
+  python3 scripts/verify-storage-snapshot.py "${archives[0]}" > /dev/null 2>&1; then
+  echo 'Storage recovery accepted an incorrect passphrase' >&2
+  exit 1
+fi
 manifest="$(gpg --batch --yes --pinentry-mode loopback --passphrase-fd 3 \
   --decrypt "${archives[0]}" 3< <(printf '%s' "$BACKUP_PASSPHRASE") \
   | tar -xOf - './snapshot-manifest.json')"
