@@ -68,7 +68,9 @@ export function initializeOrders(client) {
   let step=2,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
   let staffOrders=[];
   let staffContextSchool=null;
-  let staffFetchSequence=0;
+  let staffFetchSequence=0,staffAuthVersion=0;
+  const STAFF_PAGE_SIZE=250,STAFF_MAX_PAGES=8;
+  const STAFF_FIELDS='id,school_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)';
   let staffChannels=[],staffFallbackTimer=null,staffDebounceTimer=null;
   function stopStaffFeed(){
     clearInterval(staffFallbackTimer);
@@ -533,19 +535,50 @@ export function initializeOrders(client) {
   }
   async function fetchStaffOrders(){
     if(!user||!staffSchools.length)return;
-    const generation=++staffFetchSequence, actor=user.id;
+    const generation=++staffFetchSequence,actor=user.id;
     const schools=staffContextSchool&&staffSchools.includes(staffContextSchool)
       ?[staffContextSchool]:[...staffSchools];
-    const {data,error}=await client.from('orders')
-      .select('id,school_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)')
-      .in('school_id',schools).order('created_at',{ascending:false}).limit(500);
+    // Never let newer closed orders push an older, still-open order out of the
+    // Banco list. Query server-side by status and read multiple RLS-scoped pages.
+    const active=['confirmed','preparing','ready'];
+    const closed=['delivered','no_show','cancelled'];
+    const visibility=staffVisibilityFilter.value;
+    const groups=visibility==='active'?[active]:visibility==='closed'?[closed]:[active,closed];
+    const orders=[],seen=new Set();
+    let omitted=0;
+    for(const statuses of groups){
+      let total=null,loaded=0;
+      for(let page=0;page<STAFF_MAX_PAGES;page++){
+        const offset=page*STAFF_PAGE_SIZE;
+        const {data,error,count}=await client.from('orders')
+          .select(STAFF_FIELDS,{count:'exact'})
+          .in('school_id',schools).in('status',statuses)
+          .order('created_at',{ascending:false}).order('id',{ascending:false})
+          .range(offset,offset+STAFF_PAGE_SIZE-1);
+        if(generation!==staffFetchSequence||user?.id!==actor)return;
+        if(error){
+          report(staffFeedback,'Impossibile aggiornare il banco: '+error.message,true);
+          return;
+        }
+        total=Number.isFinite(count)?count:total;
+        for(const order of data||[]){
+          if(seen.has(order.id))continue;
+          seen.add(order.id);orders.push(order);
+        }
+        loaded+=data?.length||0;
+        if(!data?.length||data.length<STAFF_PAGE_SIZE||total!==null&&loaded>=total)break;
+      }
+      if(total!==null && loaded<total)omitted+=total-loaded;
+    }
     if(generation!==staffFetchSequence||user?.id!==actor)return;
-    if(error){report(staffFeedback,'Impossibile aggiornare il banco: '+error.message,true);return;}
-    staffOrders=data||[];
+    staffOrders=orders;
     updateSlotFilter();drawStaff();
-    if(staffOrders.length===500)
-      report(staffFeedback,'Sono visibili gli ultimi 500 ordini. Filtra per fascia per lavorare sulla giornata; lo storico completo è nei report.');
-    else report(staffFeedback,'Banco aggiornato alle '+new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date())+'.');
+    if(omitted>0)
+      report(staffFeedback,'ATTENZIONE: '+omitted+
+        ' ordini non sono ancora visibili in questo elenco. Non considerare completa la lista: consulta i report e avvisa l’Admin; riduci la fascia e aggiorna.',true);
+    else report(staffFeedback,'Banco aggiornato alle '+
+      new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
+        .format(new Date())+' · '+orders.length+' ordini nel filtro corrente.');
     await loadCashRefunds();
   }
   async function loadCashRefunds(){
@@ -708,22 +741,32 @@ export function initializeOrders(client) {
       staffList.append(elem('p','Nessun ordine corrisponde ai filtri.','staff-empty'));
   }
   async function checkStaff(){
+    const attempt=++staffAuthVersion,actor=user?.id;
     stopStaffFeed();
     staffFetchSequence++;
     staffSchools=[];staffPanel.hidden=true;
     cashRefundVersion++;cashRefunds=[];drawCashRefunds();
-    if(!user)return;
+    if(!actor)return;
     const {data,error}=await client.from('school_memberships')
-      .select('school_id,role_assignments(role_code)').eq('user_id',user.id).eq('membership_status','active');
-    if(error)return;
+      .select('school_id,role_assignments(role_code)')
+      .eq('user_id',actor).eq('membership_status','active');
+    if(attempt!==staffAuthVersion||user?.id!==actor)return;
+    if(error){
+      report(staffFeedback,'Ruoli non verificabili: '+error.message,true);
+      return;
+    }
     const assurance=await client.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(attempt!==staffAuthVersion||user?.id!==actor)return;
     const adminVerified=!assurance.error&&assurance.data.currentLevel==='aal2';
-    staffSchools=(data||[]).filter(m=>(m.role_assignments||[]).some(r=>r.role_code==='bartender'||(r.role_code==='school_admin'&&adminVerified)))
-      .map(m=>m.school_id);
+    staffSchools=[...new Set((data||[]).filter(m=>
+      (m.role_assignments||[]).some(r=>r.role_code==='bartender'||
+        (r.role_code==='school_admin'&&adminVerified))
+    ).map(m=>m.school_id))];
     staffPanel.hidden=!staffSchools.length;
     if(staffSchools.length){
       await fetchStaffOrders();
-      if(user)startStaffFeed();
+      if(attempt===staffAuthVersion&&user?.id===actor&&staffSchools.length)
+        startStaffFeed();
     }else staffLiveStatus.textContent='Accesso staff non disponibile';
   }
   window.addEventListener('breakapp:workspace-context',event=>{
@@ -747,20 +790,21 @@ export function initializeOrders(client) {
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
   staffSlotFilter.addEventListener('change',drawStaff);
-  staffVisibilityFilter.addEventListener('change',drawStaff);
+  staffVisibilityFilter.addEventListener('change',()=>{void fetchStaffOrders();});
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
       if(actionDialog.open)finishStaffDecision(false);
-      stopStaffFeed();staffFetchSequence++;
-      staffOrders=[];updateSlotFilter();drawStaff();
+      stopStaffFeed();staffFetchSequence++;staffAuthVersion++;
+      staffSchools=[];staffOrders=[];updateSlotFilter();drawStaff();
       if(refundDialog.open)refundDialog.close();
       if(cashReturnDialog.open)cashReturnDialog.close();
       cashRefundVersion++;cashRefunds=[];drawCashRefunds();
       staffPanel.hidden=true;cart=[];showCartBar();return;
     }
     if(changed){
-      stopStaffFeed();staffFetchSequence++;
+      stopStaffFeed();staffFetchSequence++;staffAuthVersion++;
+      staffSchools=[];staffPanel.hidden=true;
       cart=[];showCartBar();void fetchWindows();void loadOrders();void checkStaff();
     }
   }
