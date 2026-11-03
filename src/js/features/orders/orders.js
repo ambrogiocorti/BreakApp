@@ -23,6 +23,12 @@ export function initializeOrders(client) {
   const history=document.querySelector('#orders-list');
   const staffFeedback=document.querySelector('#staff-orders-feedback');
   const staffList=document.querySelector('#staff-orders-list');
+  const staffSlotFilter=document.querySelector('#staff-slot-filter');
+  const staffVisibilityFilter=document.querySelector('#staff-visibility-filter');
+  const staffLiveStatus=document.querySelector('#staff-live-status');
+  const staffProduction=document.querySelector('#staff-production-list');
+  const staffProductionTotal=document.querySelector('#staff-production-total');
+
   const productDialog=document.querySelector('#product-dialog');
   const cartDialog=document.querySelector('#cart-dialog');
   const cartBar=document.querySelector('#cart-strip');
@@ -446,7 +452,7 @@ export function initializeOrders(client) {
       .in('school_id',staffContextSchool&&staffSchools.includes(staffContextSchool)
       ?[staffContextSchool]:staffSchools).order('created_at',{ascending:false}).limit(100);
     if(error){report(staffFeedback,error.message,true);return;}
-    staffOrders=data||[];drawStaff();
+    staffOrders=data||[];updateSlotFilter();drawStaff();
     await loadCashRefunds();
   }
   async function loadCashRefunds(){
@@ -508,14 +514,56 @@ export function initializeOrders(client) {
       cashRefundList.append(box);
     }
   }
+  function updateSlotFilter(){
+    const previous=staffSlotFilter.value;
+    const slots=availableSlots(staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool));
+    staffSlotFilter.replaceChildren(new Option('Tutte le fasce','all'),
+      ...slots.map(s=>new Option(s.label,s.key)));
+    staffSlotFilter.value=slots.some(s=>s.key===previous)?previous:'all';
+  }
+  function drawProduction(){
+    staffProduction.replaceChildren();
+    const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
+    const totals=productionTotals(scoped,{slot:staffSlotFilter.value});
+    const count=totals.reduce((sum,p)=>sum+p.quantity,0);
+    staffProductionTotal.textContent=count+' '+(count===1?'pezzo':'pezzi');
+    if(!totals.length){
+      staffProduction.append(elem('p','Nessun prodotto in attesa di preparazione.','staff-empty'));
+      return;
+    }
+    for(const item of totals){
+      const row=elem('div','','staff-production-item');
+      row.append(elem('strong',item.name),elem('span',String(item.quantity),'staff-production-count'));
+      staffProduction.append(row);
+    }
+  }
   function drawStaff(){
     staffList.replaceChildren();
-    const q=document.querySelector('#staff-search').value.trim();
-    staffOrders.filter(o=>(!staffContextSchool||o.school_id===staffContextSchool) &&
-      (!q||String(o.display_no).includes(q))).forEach(o=>{
-      const box=elem('article','','order-card');
-      box.append(elem('h3',`#${o.display_no} · ${o.status}`),
-        elem('p',`Ritiro ${o.pickup_windows?.service_date} ${o.pickup_windows?.starts_at?.slice(0,5)}`),
+    drawProduction();
+    const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
+    const stages=boardOrders(scoped,{
+      slot:staffSlotFilter.value,
+      visibility:staffVisibilityFilter.value,
+      search:document.querySelector('#staff-search').value.trim()
+    });
+    let shown=0;
+    for(const stage of stages){
+      if(staffVisibilityFilter.value==='active'&&stage.key==='closed')continue;
+      if(staffVisibilityFilter.value==='closed'&&stage.key!=='closed')continue;
+      const lane=elem('section','','staff-board-lane');
+      lane.dataset.stage=stage.key;
+      lane.setAttribute('aria-label',stage.label);
+      const head=elem('div','','staff-lane-header');
+      head.append(elem('h3',stage.label),elem('span',String(stage.orders.length),'staff-count'));
+      lane.append(head);
+      const list=elem('div','','staff-lane-orders');
+      for(const o of stage.orders){
+        shown++;
+        const box=elem('article','','order-card staff-order-card');
+        box.dataset.status=o.status;
+      box.append(elem('h4',`Ordine #${o.display_no}`),
+        elem('span',orderStatusLabel(o.status),'staff-status staff-status--'+o.status),
+        elem('p',`Ritiro: ${slotLabel(o)}`),
         elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da incassare'}`));
       const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
       const actions=elem('div','','order-actions');
@@ -556,9 +604,14 @@ export function initializeOrders(client) {
         });
         actions.append(refund);
       }
-      box.append(actions);staffList.append(box);
-    });
-    if(!staffList.childElementCount)staffList.append(elem('p','Nessun ordine trovato.'));
+        box.append(actions);
+        list.append(box);
+      }
+      if(!stage.orders.length)list.append(elem('p','Nessun ordine in questo stato.','staff-empty'));
+      lane.append(list);staffList.append(lane);
+    }
+    if(!shown && !staffList.childElementCount)
+      staffList.append(elem('p','Nessun ordine corrisponde ai filtri.','staff-empty'));
   }
   async function checkStaff(){
     staffSchools=[];staffPanel.hidden=true;
@@ -589,6 +642,8 @@ export function initializeOrders(client) {
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
+  staffSlotFilter.addEventListener('change',drawStaff);
+  staffVisibilityFilter.addEventListener('change',drawStaff);
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
