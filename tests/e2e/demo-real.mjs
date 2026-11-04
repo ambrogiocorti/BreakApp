@@ -40,9 +40,11 @@ finally{
  if(page&&submitted){
   try{
    stage='annullamento ordine demo';
+   // On narrow screens this route lives behind the "Altro" menu.
+   await page.getByRole('button',{name:'Altro',exact:true}).click({timeout:15000});
    await page.getByRole('link',{name:'Richieste e modifiche',exact:true}).click({timeout:15000});
    const cancel=page.locator('#workflow-center').getByRole('button',{name:'Annulla ordine',exact:true});
-   await cancel.waitFor({state:'visible',timeout:30000});
+   await cancel.waitFor({state:'visible',timeout:65000});
    page.once('dialog',async dialog=>{
     if(dialog.type()==='confirm'&&dialog.message()==='Annullare e avviare gli eventuali rimborsi?')await dialog.accept();
     else await dialog.dismiss();
@@ -53,7 +55,7 @@ finally{
    await page.locator('#orders-refresh').click();
    await page.locator('#orders-list article').filter({hasText:'DEMO - Panino'}).getByText(/Annullato/).waitFor({state:'visible',timeout:30000});
    cancelled=true;console.log('Ordine demo annullato dal browser.');
-  }catch{console.error('Pulizia non confermata: controllare gli ordini QA della scuola demo.');}
+  }catch(error){console.error('Pulizia non confermata durante '+stage+' ('+error.name+'): controllare gli ordini QA della scuola demo.');}
  }
  await context?.close();await browser?.close();
 }
