@@ -13,11 +13,11 @@ const requiredEvents=[
   'refund.failed'
 ];
 
-// These blockers refer to the application, not to the Stripe endpoint configuration.
-// Remove each entry only after the corresponding server-side behavior is fixed and verified.
+// These blockers refer to the application and its end-to-end verification,
+// not merely to the Stripe endpoint configuration.
 const implementationBlockers=[
-  'Rimborsi: il webhook ignora refund.failed e il ledger non riapre un refund fallito dopo succeeded.',
-  'Pagamenti asincroni: il webhook non riconcilia checkout.session.async_payment_failed.'
+  'Rimborsi: refund.failed e il recupero dopo esiti tardivi richiedono ancora un collaudo Stripe TEST completo, inclusi gruppi e pagatori distinti.',
+  'Pagamenti asincroni: checkout.session.async_payment_failed richiede ancora un collaudo Stripe TEST con evento firmato e flusso reale.'
 ];
 
 function assertion(ok,message,checks){
