@@ -105,6 +105,8 @@ export function initializePlatformPilot(client){
    if(items.some(x=>x[0]===selected))select.value=selected;
  }
  function updateSchool(){
+   stripeFeedback.textContent='';
+   stripeFeedback.dataset.type='information';
    const b=bars.filter(b=>b.school_id===schoolSelect.value&&b.is_active);
    const old=barSelect.value;
    replaceOptions(barSelect,b.map(x=>[x.id,x.name]),old);

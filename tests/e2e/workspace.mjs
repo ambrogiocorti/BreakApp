@@ -83,6 +83,13 @@ try{
    await page.getByRole('button',{name:'Completa attivazione Stripe TEST',exact:true}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='stripe-connect-onboarding'&&c.args.body.school_id==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'));
    await page.getByText(/Nessun merchant Stripe TEST associato/).waitFor();
+   await page.evaluate(()=>window.fixture.pauseSchool('cccccccc-cccc-4ccc-8ccc-cccccccccccc'));
+   await page.getByRole('option',{name:'Istituto Ada Lovelace · sospesa'}).waitFor({state:'attached'});
+   await page.locator('#pilot-school').selectOption('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+   assert.equal(await page.locator('#pilot-stripe-feedback').textContent(),'');
+   await page.getByRole('button',{name:'Completa attivazione Stripe TEST',exact:true}).click();
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='stripe-connect-onboarding'&&c.args.body.school_id==='cccccccc-cccc-4ccc-8ccc-cccccccccccc'));
+   await page.locator('#pilot-school').selectOption('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
    // Exercise same-document SPA history through the DOM History API. A driver
    // document-navigation lifecycle is not part of this application transition.
    await page.evaluate(()=>history.back());await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();

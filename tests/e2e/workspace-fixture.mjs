@@ -24,6 +24,7 @@ document.body.dataset.authenticated='true';document.getElementById('signed-out-v
 initializeTheme();initializeWorkspaceDashboards(client);initializePlatformPilot(client);initializeCompletionUI(client);initializeOrderWorkflows(client);initializeWorkspace(client);
 window.fixture.logout=()=>{window.fixture.user=null;for(const fn of callbacks)fn('SIGNED_OUT',null)};
 window.fixture.customer=()=>{window.fixture.platform=false;window.dispatchEvent(new CustomEvent('breakapp:access-updated'))};
+window.fixture.pauseSchool=id=>{schools.find(s=>s.id===id).is_active=false;window.dispatchEvent(new CustomEvent('breakapp:platform-school-updated'))};
 window.fixture.ready=true;
 `;
 export const workspaceFixture=app.replaceAll('%BASE_URL%','/').replace('<script type="module" src="/src/js/main.js"></script>','<script type="module">'+script+'</script>');
