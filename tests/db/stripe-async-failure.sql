@@ -11,6 +11,9 @@ insert into public.categories(id,school_id,bar_id,name) values
  ('93000000-0000-4000-8000-000000000003','93000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','Food');
 insert into public.products(id,school_id,bar_id,category_id,name,price_cents) values
  ('93000000-0000-4000-8000-000000000004','93000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002','93000000-0000-4000-8000-000000000003','Bread',300);
+insert into public.bar_opening_hours(school_id,bar_id,weekday,starts_at,ends_at)
+ select '93000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002',day,'00:00','23:59'
+ from generate_series(0,6) as day;
 insert into public.pickup_windows(id,school_id,bar_id,service_date,starts_at,ends_at) values
  ('93000000-0000-4000-8000-000000000005','93000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000002',current_date+1,'12:00','12:15');
 insert into public.orders(id,school_id,bar_id,customer_id,pickup_window_id,request_key,status,payment_status,total_cents) values
