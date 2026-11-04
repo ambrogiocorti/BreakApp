@@ -19,9 +19,15 @@ await writeFile(join(dir,'.nojekyll'),'');
 await copyFile(join(dir,'index.html'),join(dir,'404.html'));
 
 const html=await readFile(join(dir,'index.html'),'utf8');
-if(!html.includes(base+'manifest.webmanifest') || !html.includes(base+'icon-placeholder.svg')) {
+if(!html.includes(base+'manifest.webmanifest') || !html.includes(base+'icon-placeholder.svg') ||
+   !html.includes(base+'apple-touch-icon.png')) {
  throw Error('Asset prefixes do not match configured Pages base');
 }
+for(const icon of manifest.icons??[]){
+  if(!icon.src.startsWith(base))throw Error('Manifest icon outside configured Pages base');
+  await access(join(dir,icon.src.slice(base.length)));
+}
+await access(join(dir,'apple-touch-icon.png'));
 const sw=await readFile(join(dir,'sw.js'),'utf8');
 if(!sw.includes("new URL('./', self.location.href).pathname"))throw Error('Service worker is not scoped to its directory');
 console.log('GitHub Pages prepared for',base);
