@@ -1,9 +1,10 @@
 # BreakApp — preparazione Cloudflare Pages di test
 
-Il sito attualmente verificato è GitHub Pages. Cloudflare Pages è l'hosting
-previsto, ma il progetto Cloudflare e il suo dominio non risultano ancora
-verificati. Usare un sito di **test** separato e dati fittizi; la promozione
-commerciale richiede approvazione manuale e gate di rilascio superati.
+Il sito attualmente verificato è GitHub Pages, che il titolare ha scelto di
+usare per ora. Questa guida resta disponibile per un'eventuale valutazione
+futura: non è necessario configurare Cloudflare per il lavoro attuale. Per
+qualsiasi futura prova usare un sito di **test** separato e dati fittizi; la
+promozione commerciale richiede approvazione manuale e gate superati.
 
 ## Build con Git
 

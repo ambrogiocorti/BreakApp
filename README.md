@@ -2,7 +2,9 @@
 
 PWA multitenant per bar scolastici, con HTML/CSS/JavaScript ES, Supabase e Stripe. Vite è usato per build e sviluppo.
 
-[Sito di test GitHub Pages](https://ambrogiocorti.github.io/BreakApp/). Vercel genera anteprime dei branch; il pacchetto statico rimane compatibile con Cloudflare Pages.
+[Sito di test GitHub Pages](https://ambrogiocorti.github.io/BreakApp/). Per ora il progetto usa GitHub Pages per la pubblicazione; un eventuale dominio personalizzato sarà configurato separatamente.
+
+Per presentare il percorso cliente, nel sito di test scegli la scuola **DEMO BreakApp - solo ordini di prova** e accedi come ospite con dati fittizi. Sono disponibili due prodotti dimostrativi e fasce dal 5 all'11 novembre 2026. Il menu, il carrello e il riepilogo sono stati verificati; la conferma richiede la posizione vicino alle coordinate configurate. La demo non ha un merchant Stripe associato e non va usata per vendite o pagamenti reali.
 
 ## Avvio
 
