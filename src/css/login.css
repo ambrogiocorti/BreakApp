@@ -98,13 +98,19 @@ body:not([data-authenticated="true"]) .auth-signup {
 body:not([data-authenticated="true"]) .auth-card .feedback:empty {display:none;}
 body:not([data-authenticated="true"]) .auth-card .feedback:not(:empty) {margin:.75rem 0 0;}
 @media(max-height:680px) {
+ body:not([data-authenticated="true"]):not([data-workspace="true"]) .site-header {height:56px;}
+ body:not([data-authenticated="true"]):not([data-workspace="true"]) .app-main,
+ body:not([data-authenticated="true"]):not([data-workspace="true"]) .access-section {min-height:calc(100svh - 56px);}
  body:not([data-authenticated="true"]):not([data-workspace="true"]) .access-section {padding:.5rem 0;}
- body:not([data-authenticated="true"]):not([data-workspace="true"]) .auth-card {padding:1rem 1.2rem;}
+ body:not([data-authenticated="true"]):not([data-workspace="true"]) .auth-card {padding:.85rem 1rem;}
+ body:not([data-authenticated="true"]) #login-panel .auth-tag,
+ body:not([data-authenticated="true"]) #login-panel .auth-subtitle {display:none;}
  body:not([data-authenticated="true"]) .auth-card h1,
  body:not([data-authenticated="true"]) .auth-alt-panel h2 {font-size:1.65rem;}
  body:not([data-authenticated="true"]) .auth-card #auth-form {margin-top:.65rem;}
- body:not([data-authenticated="true"]) .auth-card #auth-form input {margin-bottom:.55rem;}
- body:not([data-authenticated="true"]) .auth-divider {margin:.6rem 0;}
+ body:not([data-authenticated="true"]) .auth-card #auth-form label {line-height:1.2;}
+ body:not([data-authenticated="true"]) .auth-card #auth-form input {margin-bottom:.55rem;line-height:1.2;}
+ body:not([data-authenticated="true"]) .auth-divider {margin:.45rem 0;}
  body:not([data-authenticated="true"]) .auth-signup {margin-top:.45rem;}
  .auth-guest-action {margin-top:.35rem;}
 }
