@@ -1,3 +1,5 @@
+import {ticketLabel,reopenLabel,paymentLabel} from '../../core/status-labels.js';
+import {formatEuro} from '../catalog/utils.js';
 const imageTypes=Object.freeze({'image/jpeg':'jpg','image/png':'png','image/webp':'webp'});
 const fileMax=4194304;
 const element=(tag,content='',cls='')=>{const node=document.createElement(tag);node.textContent=content;node.className=cls;return node;};
@@ -28,7 +30,7 @@ export function initializeSupportCenter(client) {
     ordersSelect.disabled=school.disabled=Boolean(g);if(g){ordersSelect.value='';school.value=g.school_id;}
     groupLine.replaceChildren(new Option('Nessuno',''));groupPayment.replaceChildren(new Option('Nessuno',''));
     for(const i of g?.lines||[])groupLine.add(new Option(i.quantity+' × '+i.name,i.id));
-    for(const p of g?.payments||[])groupPayment.add(new Option((p.amount_cents/100).toFixed(2)+' € · '+p.status,p.id));
+    for(const p of g?.payments||[])groupPayment.add(new Option(formatEuro(p.amount_cents)+' · '+paymentLabel(p.status),p.id));
     groupLine.disabled=groupPayment.disabled=groupVisibility.value!=='personal';
   }
   groupSelect.addEventListener('change',groupFields);groupVisibility.addEventListener('change',groupFields);
@@ -85,7 +87,7 @@ export function initializeSupportCenter(client) {
     if(!tickets.length){list.append(element('p','Non ci sono ancora ticket.'));return;}
     for(const t of tickets){
       const card=element('article','','support-ticket-card');
-      card.append(element('strong',t.subject),element('span',schoolName(t.school_id)+' · '+t.status),
+      card.append(element('strong',t.subject),element('span',schoolName(t.school_id)+' · '+ticketLabel(t.status)),
         element('small','Aggiornato '+formatDate(t.updated_at)));
       const open=element('button','Apri conversazione','button button-outline button-small');
       open.type='button';open.addEventListener('click',()=>void openTicket(t.id));
@@ -129,7 +131,7 @@ export function initializeSupportCenter(client) {
     if(error){report(error.message,true);return;}
     current=t;detail.hidden=false;
     title.textContent=t.subject;
-    state.textContent='Stato: '+t.status+' · '+schoolName(t.school_id)+
+    state.textContent='Stato: '+ticketLabel(t.status)+' · '+schoolName(t.school_id)+
       (t.order_id?' · Ticket collegato a un ordine':'');
     const admin=adminSchools.has(t.school_id);
     adminActions.hidden=!admin;
@@ -169,7 +171,7 @@ export function initializeSupportCenter(client) {
     if(admin) {
       for(const request of reopen.data||[]){
         const row=element('div','','service-list-item');
-        row.append(element('strong','Riapertura '+request.status),
+        row.append(element('strong','Riapertura · '+reopenLabel(request.status)),
           element('p',request.reason));
         if(request.status==='pending'){
           for(const [label,approve] of [['Approva',true],['Rifiuta',false]]){

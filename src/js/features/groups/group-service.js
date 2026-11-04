@@ -1,3 +1,4 @@
+import {orderStatusLabel} from '../orders/staff-board.js';
 const $=id=>document.getElementById(id);
 const make=(tag,value='',cls='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=value;return n;};
 const cents=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n||0)/100);
@@ -27,7 +28,7 @@ export function initializeGroupService(client){
    list.append(make('p','Nessun ordine di gruppo per questa scuola.'));
   for(const group of data||[]){
    const card=make('div','','service-list-item');
-   card.append(make('strong',group.title+' · '+group.status),
+   card.append(make('strong',group.title+' · '+orderStatusLabel(group.status)),
     make('span',cents(group.total_cents)));
    const button=make('button','Apri','button button-outline button-small');
    button.type='button';button.addEventListener('click',()=>void openGroup(group.id));
@@ -42,7 +43,7 @@ export function initializeGroupService(client){
   if(error)return say(error.message,true);
   focused=data;
   active.hidden=false;active.replaceChildren();
-  active.append(make('h4','Ordine gruppo · '+data.status),
+  active.append(make('h4','Ordine gruppo · '+orderStatusLabel(data.status)),
    make('p','Totale '+cents(data.total_cents)+' · Saldato '+cents(data.paid_cents)+
     ' · Residuo '+cents(data.due_cents)));
   const ul=make('ul','','scan-item-list');
@@ -102,7 +103,7 @@ export function initializeGroupService(client){
    const {data,error}=await client.rpc('scan_group_pickup',{p_pickup_token:token});
    if(error)throw error;
    scannedId=data.id;await openGroup(data.id);
-   say('Ritiro avviato. Lease valido dieci minuti.');
+   say('Ritiro avviato. La prenotazione del ritiro è valida per dieci minuti.');
   }catch(err){say(err.message||'Scansione non riuscita.',true);}
  }
  $('group-staff-scan-form').addEventListener('submit',event=>{

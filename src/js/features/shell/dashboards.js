@@ -1,6 +1,8 @@
 import {exportSchoolOrdersCsv,downloadCsv} from './order-export.js';
 import {icon} from '../../core/icons.js';
 import {initializePlatformDashboard} from './platform-dashboard.js';
+import {orderStatusLabel} from '../orders/staff-board.js';
+import {paymentLabel} from '../../core/status-labels.js';
 const make=(tag,text,cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
 const money=cents=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(cents/100);
 const ORDER_LABELS={pending_approval:'Da approvare',approval_queued:'In coda',approval_active:'Da approvare',awaiting_reschedule:'Da riprogrammare',confirmed:'Confermato',preparing:'In preparazione',ready:'Pronto al ritiro',delivered:'Consegnato',cancelled:'Annullato',no_show:'Non ritirato'};
@@ -59,7 +61,7 @@ export function initializeWorkspaceDashboards(client) {
    recent.replaceChildren();
    for(const o of os.slice(0,6)){
     const row=make('div','','service-list-item');
-    row.append(make('strong','Ordine #'+o.display_no),make('span',(ORDER_LABELS[o.status]||o.status)+' · '+money(o.total_cents)+' · '+(PAYMENT_LABELS[o.payment_status]||o.payment_status)));
+    row.append(make('strong','Ordine #'+o.display_no),make('span',(ORDER_LABELS[o.status]||orderStatusLabel(o.status))+' · '+money(o.total_cents)+' · '+(PAYMENT_LABELS[o.payment_status]||paymentLabel(o.payment_status))));
     recent.append(row);
    }
    if(!os.length){const empty=make('div','','empty-state');empty.append(icon('ClipboardList'),make('strong','Nessun ordine, per ora'),make('p','I nuovi ordini della scuola compariranno qui.'));recent.append(empty);}

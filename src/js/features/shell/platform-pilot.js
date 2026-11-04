@@ -1,5 +1,6 @@
 import { parseWeeklyPeriods, formatWeeklyPeriods, WEEKDAY_LABELS } from '../operations/calendar-core.js';
 import { parseEuroToCents, formatEuro } from '../catalog/utils.js';
+import {membershipLabel} from '../../core/status-labels.js';
 
 const $=id=>document.getElementById(id);
 const textNode=(tag,text='',cls='')=>{const x=document.createElement(tag);x.textContent=text;x.className=cls;return x;};
@@ -126,7 +127,7 @@ export function initializePlatformPilot(client){
      const info=textNode('div','','pilot-staff-info');
      const roles={school_admin:'Admin scuola',bartender:'Barista',warehouse_manager:'Magazziniere'};
      info.append(textNode('strong',member.email),
-       textNode('span',(roles[member.role]||member.role)+' · '+member.status));
+       textNode('span',(roles[member.role]||'Ruolo da verificare')+' · '+membershipLabel(member.status)));
      const remove=textNode('button','Revoca','button button-outline button-small');
      remove.type='button';
      remove.addEventListener('click',async()=>{

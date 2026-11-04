@@ -39,8 +39,10 @@ try{
    await page.getByText('Entra in un gruppo',{exact:true}).click();
    await page.getByLabel('Link o codice invito').fill('11111111-1111-4111-8111-111111111111');
    await page.getByRole('button',{name:'Verifica posizione e partecipa'}).click();
-   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='join_group_draft'));
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='join_group_draft')||document.getElementById('groups-feedback').dataset.type==='error',null,{timeout:27000});
+   const locationMessage=await page.locator('#groups-feedback').innerText();
    const join=await page.evaluate(()=>window.fixture.calls.find(c=>c.name==='join_group_draft'));
+   assert.ok(join,'Ingresso gruppo non completato in '+name+': '+locationMessage);
    assert.equal(join.args.p_accuracy_m,35);
    await page.getByRole('button',{name:'← Tutti i gruppi'}).click();
    await page.evaluate(()=>window.fixture.setGuest());

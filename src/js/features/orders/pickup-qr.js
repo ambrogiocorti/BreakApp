@@ -1,5 +1,6 @@
 import { formatEuro } from '../catalog/utils.js';
 import { makePickupQrValue, parsePickupQrValue, parseOrderDisplayNumber } from './qr-utils.js';
+import { orderStatusLabel } from './staff-board.js';
 
 const el=(tag,text,cls='')=>{
   const node=document.createElement(tag);
@@ -89,7 +90,7 @@ export function initializePickupQr(client) {
 
   function drawOrder(order) {
     result.replaceChildren();
-    const heading=el('h3','Ordine #'+order.display_no+' · '+order.status);
+    const heading=el('h3','Ordine #'+order.display_no+' · '+orderStatusLabel(order.status));
     const slot=order.pickup_windows;
     const when=el('p',slot?'Ritiro: '+slot.service_date+' · '+slot.starts_at.slice(0,5):'Ritiro da verificare','catalog-help');
     const payment=el('p',
