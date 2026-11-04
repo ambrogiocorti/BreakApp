@@ -65,6 +65,27 @@ test('events must be enabled on a single active endpoint, not scattered across e
  assert.equal(r.ready,false);
  assert.equal(r.checks.at(-1).ok,false);
 });
+test('release gate rejects duplicate active destinations sharing the same signing URL',async()=>{
+ const r=await checkStripeReadiness({...input,fetchImpl:mock({endpoints:[
+   {id:'we_new',url,status:'enabled',livemode:false,enabled_events:events},
+   {id:'we_old',url,status:'enabled',livemode:false,enabled_events:events.slice(0,3)}
+ ]}).fn});
+ assert.equal(r.ready,false);
+ assert.equal(r.matchingEndpoints,2);
+ assert.equal(r.activeMatchingEndpoints,2);
+ assert.equal(r.checks.find(x=>x.name.includes('Esattamente un webhook')).ok,false);
+ assert.equal(r.checks.at(-1).ok,true);
+});
+test('disabled legacy webhook may coexist with the only complete active endpoint',async()=>{
+ const r=await checkStripeReadiness({...input,fetchImpl:mock({endpoints:[
+   {id:'we_new',url,status:'enabled',livemode:false,enabled_events:events},
+   {id:'we_old',url,status:'disabled',livemode:false,enabled_events:events.slice(0,3)}
+ ]}).fn});
+ assert.equal(r.ready,true);
+ assert.equal(r.matchingEndpoints,2);
+ assert.equal(r.activeMatchingEndpoints,1);
+ assert.equal(r.checks.find(x=>x.name.includes('Esattamente un webhook')).ok,true);
+});
 test('release gate refuses live keys and invalid project identifiers',async()=>{
  const unreachable=()=>{throw Error('should not fetch');};
  await assert.rejects(checkStripeReadiness({...input,apiKey:'sk_live_1234567',fetchImpl:unreachable}),/TEST/);
