@@ -66,5 +66,49 @@ Deno.serve(async request=>{
    errors++;
   }
  }
- return response({seen:(jobs||[]).length,dispatched,pending,errors});
+ // Stripe event snapshots can be duplicated or arrive out of order. Each
+ // observation has a database lease and is resolved from the current provider
+ // object, not from the event that happened to arrive last.
+ const {data:observations,error:observationClaimError}=await db.rpc('claim_refund_observations',{p_limit:10});
+ if(observationClaimError)return response({error:'Coda verifica rimborsi non disponibile'},503);
+ let reconciled=0,superseded=0,observationErrors=0;
+ for(const job of observations||[]){
+  try{
+   const result=await fetch('https://api.stripe.com/v1/refunds/'+encodeURIComponent(job.provider_refund),{
+    method:'GET',headers:{'Authorization':'Bearer '+secret,'Stripe-Account':job.account},
+    signal:AbortSignal.timeout(12000)
+   });
+   if(!result.ok){
+    await db.rpc('fail_refund_observation',{p_refund:job.refund_id,p_token:job.lease_token,
+      p_revision:job.claim_revision,p_code:'provider_http_'+result.status});
+    observationErrors++;continue;
+   }
+   const refund=await result.json();
+   // Stripe's Refund object does not expose livemode. The TEST-only API key
+   // above and the signed TEST event scope the lookup to the sandbox.
+   if(refund.object!=='refund'||refund.livemode===true||refund.id!==job.provider_refund||
+      refund.payment_intent!==job.payment_intent||refund.amount!==job.amount_cents||
+      refund.currency!=='eur'||refund.metadata?.breakapp_refund_id!==job.refund_id||
+      !['pending','requires_action','succeeded','failed','canceled'].includes(refund.status)){
+    await db.rpc('fail_refund_observation',{p_refund:job.refund_id,p_token:job.lease_token,
+      p_revision:job.claim_revision,p_code:'invalid_provider_response'});
+    observationErrors++;continue;
+   }
+   const {data:state,error:finishError}=await db.rpc('finish_refund_observation',{
+    p_refund:job.refund_id,p_token:job.lease_token,p_revision:job.claim_revision,
+    p_account:job.account,p_provider_refund:refund.id,p_intent:refund.payment_intent,
+    p_amount:refund.amount,p_currency:refund.currency,p_provider_status:refund.status
+   });
+   if(finishError||!['succeeded','processing','review','failed','superseded'].includes(state)){
+    observationErrors++;continue;
+   }
+   if(state==='superseded')superseded++;else reconciled++;
+  }catch{
+   await db.rpc('fail_refund_observation',{p_refund:job.refund_id,p_token:job.lease_token,
+     p_revision:job.claim_revision,p_code:'provider_network_error'});
+   observationErrors++;
+  }
+ }
+ return response({seen:(jobs||[]).length,dispatched,pending,errors,
+  observations_seen:(observations||[]).length,reconciled,superseded,observation_errors:observationErrors});
 });
