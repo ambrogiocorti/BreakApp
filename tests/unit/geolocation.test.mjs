@@ -42,7 +42,14 @@ test('does not send stale, impossible, or denied location readings',async()=>{
   const reading=accuratePosition({geolocation:geo,timeoutMs:20});
   geo.position(20,{timestamp:Date.now()-120001});
   geo.position(20,{coords:{latitude:200,longitude:9.3,accuracy:20}});
-  await assert.rejects(reading,/non è arrivata in tempo/i);
+  await assert.rejects(reading,/non è recente/i);
+});
+
+test('does not replace an invalid future position timestamp with the current time',async()=>{
+  const geo=locator(),reading=accuratePosition({geolocation:geo,timeoutMs:10});
+  geo.position(20,{timestamp:Date.now()+86400000});
+  await assert.rejects(reading,/orario non valido/i);
+  assert.deepEqual(geo.cleared,[42]);
 });
 
 test('closing the checkout cancels the location watch before any order is submitted',async()=>{

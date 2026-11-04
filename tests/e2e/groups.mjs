@@ -12,15 +12,21 @@ try{
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
    const context=await browser.newContext({viewport,geolocation:{latitude:45.5,longitude:9.3,accuracy:35},permissions:['geolocation']});
    const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
-   await page.addInitScript(()=>{
+   await page.addInitScript(({normalizeFirefoxTestTimestamp})=>{
     const geo=navigator.geolocation;
     if(!geo)return;
     const nativeWatch=geo.watchPosition.bind(geo);
     geo.watchPosition=(success,error,options)=>nativeWatch(position=>{
-     window.geoTestDiagnostic={accuracy:position.coords.accuracy,age:Date.now()-position.timestamp};
-     success(position);
+     const age=Date.now()-position.timestamp;
+     window.geoTestDiagnostic={accuracy:position.coords.accuracy,age};
+     // The Playwright Firefox provider in this runner reports an emulated
+     // timestamp exactly one day ahead. Normalize only this test fixture; the
+     // production client and server continue rejecting future timestamps.
+     if(normalizeFirefoxTestTimestamp&&Math.abs(age+86400000)<5000)
+      success({coords:position.coords,timestamp:Date.now()});
+     else success(position);
     },failure=>{window.geoTestDiagnostic={error:failure.code};error(failure);},options);
-   });
+   },{normalizeFirefoxTestTimestamp:name==='firefox'});
    await page.goto(origin+'/__groups-qa');
    await page.getByRole('button',{name:'Apri gruppo'}).waitFor();
    assert.equal(await page.locator('#groups-create-form').isVisible(),false);

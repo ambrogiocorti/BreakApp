@@ -12,7 +12,7 @@ export function accuratePosition({
       reject(new Error('La posizione non è disponibile su questo dispositivo o browser.'));
       return;
     }
-    let watchId=null,settled=false,bestAccuracy=Infinity,lastError=null;
+    let watchId=null,settled=false,bestAccuracy=Infinity,lastError=null,invalidClock=false,stalePosition=false;
     let timer;
     const abort=()=>finish(new DOMException('Richiesta annullata.','AbortError'));
     const finish=(error,position)=>{
@@ -26,6 +26,10 @@ export function accuratePosition({
     const timeout=()=>{
       if(Number.isFinite(bestAccuracy)){
         finish(new Error('Posizione ancora imprecisa (circa ±'+Math.ceil(bestAccuracy)+' m). Serve una precisione entro 100 m: attiva la posizione precisa e riprova vicino a una finestra o all’aperto.'));
+      }else if(invalidClock){
+        finish(new Error('La posizione riporta un orario non valido. Controlla data e ora automatiche del dispositivo oppure riprova con un altro browser.'));
+      }else if(stalePosition){
+        finish(new Error('La posizione ricevuta non è recente. Attiva la localizzazione e riprova.'));
       }else if(lastError?.code===2){
         finish(new Error('Non riusciamo a rilevare la posizione. Attiva i servizi di localizzazione e riprova vicino a una finestra o all’aperto.'));
       }else{
@@ -43,8 +47,9 @@ export function accuratePosition({
         const age=Date.now()-observed;
         if(!Number.isFinite(latitude)||latitude < -90||latitude > 90||
           !Number.isFinite(longitude)||longitude < -180||longitude > 180||
-          !Number.isFinite(accuracy)||accuracy < 0||!Number.isFinite(observed)||
-          age > 110000||age < -10000)return;
+          !Number.isFinite(accuracy)||accuracy < 0)return;
+        if(!Number.isFinite(observed)||age < -10000){invalidClock=true;return;}
+        if(age > 110000){stalePosition=true;return;}
         bestAccuracy=Math.min(bestAccuracy,accuracy);
         if(accuracy<=maxAccuracy){finish(null,position);return;}
         onProgress(Math.ceil(bestAccuracy));
