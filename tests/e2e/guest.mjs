@@ -20,9 +20,10 @@ from(name){let filters=[];const q={select(){return this},eq(k,v){filters.push([k
 initializeGuestAccess(client);window.fixture.asEmail=()=>emit(proof);window.fixture.ready=true;
 </script></body></html>`;
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5177','--strictPort'],{stdio:'ignore',env:{...process.env,GITHUB_PAGES_BASE:'/'}});let browser;
+const engines=process.env.GUEST_BROWSER==='chromium'?{chromium}:{chromium,firefox,webkit};
 try{
  for(let i=0;i<50;i++){try{if((await fetch(origin)).ok)break;}catch{}await delay(200);}
- for(const[name,engine]of Object.entries({chromium,firefox,webkit})){
+ for(const[name,engine]of Object.entries(engines)){
   browser=await engine.launch({headless:true});
   for(const viewport of[{width:1440,height:900},{width:390,height:844}]){
    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));

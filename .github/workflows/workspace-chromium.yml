@@ -6,6 +6,10 @@ on:
     paths:
       - 'index.html'
       - 'src/js/features/shell/**'
+      - 'src/js/features/auth/**'
+      - 'src/css/login.css'
+      - 'tests/e2e/auth.mjs'
+      - 'tests/e2e/guest.mjs'
       - 'tests/e2e/workspace*.mjs'
       - '.github/workflows/workspace-chromium.yml'
 permissions:
@@ -29,3 +33,10 @@ jobs:
         env:
           WORKSPACE_BROWSER: chromium
         run: node tests/e2e/workspace.mjs
+      - name: Sign-in layout and guest recovery on small screens
+        env:
+          AUTH_BROWSER: chromium
+          GUEST_BROWSER: chromium
+        run: |
+          node tests/e2e/auth.mjs
+          node tests/e2e/guest.mjs
