@@ -1,38 +1,29 @@
 // Stripe Connect: bootstrap di un merchant demo in SOLO ambiente di test.
 // La chiave STRIPE_ONBOARDING_KEY deve restare nei Secrets delle Edge Functions.
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
+import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
 
-const ORIGIN = 'https://ambrogiocorti.github.io';
-const RETURN_URL = ORIGIN + '/BreakApp/#platform-configuration';
 // Account demo creato appositamente per il collaudo; nessun ID dal client.
 const TEST_ACCOUNT = 'acct_1UVx5F2RLtxMJCNo';
-const ALLOWED_HEADERS = {
-  'access-control-allow-origin': ORIGIN,
-  'access-control-allow-methods': 'POST, OPTIONS',
-  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage',
-  'cache-control': 'no-store',
-  'vary': 'Origin'
-};
-
-function respond(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...ALLOWED_HEADERS, 'content-type': 'application/json; charset=utf-8' }
-  });
-}
 
 function secret(name: string) {
   return Deno.env.get(name)?.trim() ?? '';
 }
 
 Deno.serve(async (request: Request) => {
+  const site = resolveAllowedSite(request.headers.get('Origin'), secret('BREAKAPP_ALLOWED_SITE_URLS'));
+  const headers = corsHeaders(site, 'POST, OPTIONS');
+  function respond(body: Record<string, unknown>, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...headers, 'content-type': 'application/json; charset=utf-8' }
+    });
+  }
+  if (!site) return respond({ error: 'Origine non autorizzata' }, 403);
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: ALLOWED_HEADERS });
+    return new Response(null, { status: 204, headers });
   }
   if (request.method !== 'POST') return respond({ error: 'Metodo non consentito' }, 405);
-  if (request.headers.get('Origin') !== ORIGIN) {
-    return respond({ error: 'Origine non autorizzata' }, 403);
-  }
 
   const token = request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '').trim();
   if (!token) return respond({ error: 'Devi accedere prima di continuare' }, 401);
@@ -68,8 +59,8 @@ Deno.serve(async (request: Request) => {
       account: TEST_ACCOUNT,
       type: 'account_onboarding',
       'collection_options[fields]': 'eventually_due',
-      return_url: RETURN_URL,
-      refresh_url: RETURN_URL
+      return_url: site.baseUrl + '#platform-configuration',
+      refresh_url: site.baseUrl + '#platform-configuration'
     });
     const response = await fetch('https://api.stripe.com/v1/account_links', {
       method: 'POST',

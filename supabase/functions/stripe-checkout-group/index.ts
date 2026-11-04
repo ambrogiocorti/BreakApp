@@ -2,15 +2,8 @@
 // Requires STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_ANON_KEY and
 // SUPABASE_SERVICE_ROLE_KEY in the Supabase Edge secrets manager.
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
-const origin='https://ambrogiocorti.github.io';
-const site=origin+'/BreakApp/';
+import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
 const uid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const response=(data:unknown,status=200)=>new Response(status===204?null:JSON.stringify(data),{
- status,headers:{'content-type':'application/json','cache-control':'no-store',
-  'access-control-allow-origin':origin,'vary':'Origin',
-  'access-control-allow-methods':'POST, OPTIONS',
-  'access-control-allow-headers':'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage'}
-});
 const required=(name:string)=>{const s=Deno.env.get(name);if(!s)throw Error('Config server incompleta: '+name);return s;};
 async function stripe(endpoint:string,account:string,key:string,init?:RequestInit){
  const res=await fetch('https://api.stripe.com/v1/'+endpoint,{
@@ -20,9 +13,14 @@ async function stripe(endpoint:string,account:string,key:string,init?:RequestIni
  return out;
 }
 Deno.serve(async req=>{
+ const site=resolveAllowedSite(req.headers.get('Origin'),Deno.env.get('BREAKAPP_ALLOWED_SITE_URLS'));
+ const headers=corsHeaders(site,'POST, OPTIONS');
+ const response=(data:unknown,status=200)=>new Response(status===204?null:JSON.stringify(data),{
+  status,headers:{...headers,'content-type':'application/json'}
+ });
+ if(!site)return response({error:'Origine non autorizzata'},403);
  if(req.method==='OPTIONS')return response({},204);
  if(req.method!=='POST')return response({error:'Metodo non consentito'},405);
- if(req.headers.get('Origin')!==origin)return response({error:'Origine non autorizzata'},403);
  try{
   const token=req.headers.get('Authorization')?.replace(/^Bearer\s+/i,'').trim();
   if(!token)return response({error:'Autenticazione richiesta'},401);
@@ -62,7 +60,7 @@ Deno.serve(async req=>{
     'line_items[0][price_data][unit_amount]':String(attempt.amount_cents),
     'line_items[0][price_data][product_data][name]':'BreakApp · Righe intere del gruppo',
     expires_at:String(Math.floor(Date.now()/1000)+35*60),
-    success_url:site+'#groups',cancel_url:site+'#groups'
+    success_url:site.baseUrl+'#groups',cancel_url:site.baseUrl+'#groups'
    });
    checkout=await stripe('checkout/sessions',attempt.stripe_account_id,key,{
     method:'POST',

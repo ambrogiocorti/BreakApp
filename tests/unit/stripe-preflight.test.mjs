@@ -3,15 +3,19 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 import {stripTypeScriptTypes} from 'node:module';
+import {resolveAllowedSite,corsHeaders} from '../../supabase/functions/_shared/allowed-sites.mjs';
 
 for(const name of ['stripe-checkout-individual','stripe-checkout-group','stripe-full-refund']){
  test(name+' returns a valid bodyless CORS preflight for Supabase browser requests',async()=>{
   const source=await readFile('supabase/functions/'+name+'/index.ts','utf8');
-  const isolated=source.replace(/^import\s*\{[^}]+\}\s*from\s*'npm:@supabase\/supabase-js@2\.118\.0';\s*/m,'');
+  const isolated=source.replace(/^import\s*\{[^}]+\}\s*from\s*'npm:@supabase\/supabase-js@2\.118\.0';\s*/m,'')
+   .replace("import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';",
+    'const {resolveAllowedSite,corsHeaders}=globalThis.__siteHelpers;');
   let handler;
   const context={
    Response,Request,URL,URLSearchParams,JSON,
    Deno:{serve(callback){handler=callback;},env:{get(){return null;}}},
+   __siteHelpers:{resolveAllowedSite,corsHeaders},
    fetch(){throw Error('Network must not be called on OPTIONS');}
   };
   context.globalThis=context;
@@ -32,5 +36,10 @@ for(const name of ['stripe-checkout-individual','stripe-checkout-group','stripe-
   for(const key of ['authorization','x-client-info','apikey','content-type']){
    assert.ok(allowed.includes(key),'CORS missing '+key);
   }
+  const foreign=await handler(new Request('https://example.supabase.co/functions/v1/'+name,{
+   method:'OPTIONS',headers:{Origin:'https://attacker.example'}
+  }));
+  assert.equal(foreign.status,403);
+  assert.equal(foreign.headers.get('access-control-allow-origin'),null);
  });
 }

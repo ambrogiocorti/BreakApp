@@ -2,21 +2,17 @@
 // Authenticated Admin (AAL2) calls a protected database RPC, not Stripe directly.
 // Stripe Connect secret stays in Supabase Edge Function secrets.
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
-const origin='https://ambrogiocorti.github.io';
+import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function json(value:unknown,status=200){
- return new Response(JSON.stringify(value),{
- status,headers:{'content-type':'application/json','cache-control':'no-store',
- 'access-control-allow-origin':origin,
- 'access-control-allow-headers':'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage',
- 'access-control-allow-methods':'POST,OPTIONS','vary':'Origin'}});
-}
 Deno.serve(async(req)=>{
- if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{
-  'access-control-allow-origin':origin,'access-control-allow-methods':'POST,OPTIONS',
-  'access-control-allow-headers':'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage','vary':'Origin'}});
+ const site=resolveAllowedSite(req.headers.get('Origin'),Deno.env.get('BREAKAPP_ALLOWED_SITE_URLS'));
+ const headers=corsHeaders(site,'POST,OPTIONS');
+ const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{
+  status,headers:{...headers,'content-type':'application/json'}
+ });
+ if(!site)return json({error:'Origine non autorizzata'},403);
+ if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(req.method!=='POST')return json({error:'Metodo non consentito'},405);
- if(req.headers.get('Origin')!==origin)return json({error:'Origine non autorizzata'},403);
  try{
   const token=req.headers.get('Authorization')?.replace(/^Bearer\s+/i,'').trim();
   if(!token)return json({error:'Accesso richiesto'},401);

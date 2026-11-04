@@ -1,12 +1,13 @@
 // Supabase Edge Function: push-public-key (public information only).
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
+import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
 Deno.serve(async request=>{
+ const site=resolveAllowedSite(request.headers.get('Origin'),Deno.env.get('BREAKAPP_ALLOWED_SITE_URLS'));
  const headers={
-  'content-type':'application/json','cache-control':'no-store',
-  'access-control-allow-origin':'https://ambrogiocorti.github.io',
-  'access-control-allow-methods':'GET, OPTIONS','vary':'Origin'
+  ...corsHeaders(site,'GET, OPTIONS'),'content-type':'application/json'
  };
- if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+ if(request.method==='OPTIONS')return site?new Response(null,{status:204,headers}):
+  new Response(JSON.stringify({error:'Origine non autorizzata'}),{status:403,headers});
  if(request.method!=='GET')return new Response(JSON.stringify({error:'Method not allowed'}),{status:405,headers});
  let publicKey=Deno.env.get('VAPID_PUBLIC_KEY');
  if(!publicKey){

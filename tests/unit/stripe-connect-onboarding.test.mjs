@@ -3,25 +3,29 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 import { stripTypeScriptTypes } from 'node:module';
+import {resolveAllowedSite,corsHeaders} from '../../supabase/functions/_shared/allowed-sites.mjs';
 
 const origin = 'https://ambrogiocorti.github.io';
 const source = await readFile('supabase/functions/stripe-connect-onboarding/index.ts', 'utf8');
 const isolated = source.replace(
   "import { createClient } from 'npm:@supabase/supabase-js@2.118.0';",
   'const createClient = globalThis.__createClient;'
-);
+).replace("import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';",
+  'const {resolveAllowedSite,corsHeaders}=globalThis.__siteHelpers;');
 const compiled = stripTypeScriptTypes(isolated);
 
-function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY', stripeStatus = 200, stripeCode = 'resource_missing' } = {}) {
+function harness({ authenticated = true, admin = true, key = 'rk_test_TESTONLY', stripeStatus = 200, stripeCode = 'resource_missing', sites = '' } = {}) {
   let handler;
   const outbound = [];
   const env = {
     SUPABASE_URL: 'https://example.supabase.co',
     SUPABASE_ANON_KEY: 'public-test-only',
-    STRIPE_ONBOARDING_KEY: key
+    STRIPE_ONBOARDING_KEY: key,
+    BREAKAPP_ALLOWED_SITE_URLS: sites
   };
   const context = {
     Response, URL, URLSearchParams, JSON, console: { error() {} },
+    __siteHelpers:{resolveAllowedSite,corsHeaders},
     Deno: { env: { get: (name) => env[name] }, serve: (callback) => { handler = callback; } },
     __createClient: () => ({
       auth: { getUser: async () => authenticated ? { data: { user: { id: 'user-1' } }, error: null } : { data: {}, error: new Error('not authenticated') } },
@@ -69,7 +73,18 @@ test('Stripe onboarding preflight permits the Supabase SDK headers on the truste
   }
   assert.equal(h.outbound.length, 0);
   const foreign = await h.preflight('https://attacker.example');
-  assert.equal(foreign.headers.get('access-control-allow-origin'), origin);
+  assert.equal(foreign.status, 403);
+  assert.equal(foreign.headers.get('access-control-allow-origin'), null);
+});
+
+test('Stripe onboarding redirects only to the configured site for the request origin', async () => {
+  const h = harness({sites:origin+'/BreakApp/,https://demo.example/preview/'});
+  const result = await h.invoke('Bearer token','https://demo.example');
+  assert.equal(result.status,200);
+  assert.equal(result.headers.get('access-control-allow-origin'),'https://demo.example');
+  const body=new URLSearchParams(h.outbound[0].options.body);
+  assert.equal(body.get('return_url'),'https://demo.example/preview/#platform-configuration');
+  assert.equal(body.get('refresh_url'),'https://demo.example/preview/#platform-configuration');
 });
 
 test('Stripe onboarding is only callable from the published BreakApp origin', async () => {
