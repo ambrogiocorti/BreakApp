@@ -86,29 +86,33 @@
         </div>
         <span class="workspace-page-role" id="workspace-page-role"></span>
       </div>
-      <section class="access-section" id="accesso" aria-labelledby="access-heading">
+      <section class="access-section" id="accesso" aria-label="Accesso e profilo">
         <div class="container access-layout">
           <div class="auth-card">
             <div id="signed-out-view">
-              <span class="auth-tag">IL TUO BAR SCOLASTICO</span>
-              <h3>Il tuo intervallo<br/>inizia qui.</h3>
-              <p class="auth-subtitle">Accedi con il tuo account scolastico. Il resto lo trovi già al suo posto.</p>
+              <div id="login-panel">
+              <span class="auth-tag">BENVENUTO SU BREAKAPP</span>
+              <h1 id="access-heading">Accedi</h1>
+              <p class="auth-subtitle">Il bar della tua scuola, a portata di mano.</p>
               <form id="auth-form" novalidate>
                 <label for="auth-email">Indirizzo email</label>
                 <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@esempio.it" required />
                 <label for="auth-password">Password</label>
-                <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+                <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" placeholder="La tua password" required />
                 <div class="form-actions">
-                  <button class="button button-primary" id="login-button" type="submit">Accedi <span aria-hidden="true">→</span></button>
-                  <button class="button button-outline" id="signup-button" type="button">Registrati</button>
+                  <button class="button button-primary" id="login-button" type="submit">Accedi</button>
                 </div>
               </form>
-              <div class="auth-divider"><span>oppure continua con</span></div>
+              <div class="auth-divider"><span>oppure</span></div>
               <div class="social-actions">
                 <button type="button" id="google-button" class="button button-secondary social-button" aria-describedby="social-auth-status"><svg viewBox="0 0 24 24" aria-hidden="true" class="provider-mark"><path fill="#4285f4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.61 4.61 0 0 1-2 3.03v2.52h3.23c1.89-1.74 2.99-4.3 2.99-7.38Z"/><path fill="#34a853" d="M12 22c2.7 0 4.96-.9 6.61-2.39l-3.23-2.52c-.9.6-2.05.97-3.38.97-2.6 0-4.81-1.76-5.6-4.12H3.06v2.6A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" d="M6.4 13.94a6 6 0 0 1 0-3.88v-2.6H3.06a10 10 0 0 0 0 9.08Z"/><path fill="#ea4335" d="M12 5.94c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.58 9.58 0 0 0 12 2a10 10 0 0 0-8.94 5.46l3.34 2.6A5.99 5.99 0 0 1 12 5.94Z"/></svg>Google</button>
                 <button type="button" id="microsoft-button" class="button button-secondary social-button" aria-describedby="social-auth-status"><svg viewBox="0 0 24 24" aria-hidden="true" class="provider-mark"><path fill="#f25022" d="M2 2h9v9H2z"/><path fill="#7fba00" d="M13 2h9v9h-9z"/><path fill="#00a4ef" d="M2 13h9v9H2z"/><path fill="#ffb900" d="M13 13h9v9h-9z"/></svg>Microsoft</button>
               </div>
               <p id="social-auth-status" class="social-auth-status" role="status" aria-live="polite" hidden></p>
+              <p class="auth-signup">Non hai un account? <button class="auth-inline-action" id="signup-button" type="button">Registrati</button></p>
+              <button id="guest-open" class="auth-guest-action" type="button" hidden>Continua come ospite <span aria-hidden="true">→</span></button>
+              <p class="auth-test-note">Ambiente di test</p>
+              </div>
             </div>
             <div id="signed-in-view" hidden>
               <span class="auth-tag">ACCOUNT</span>
@@ -154,18 +158,6 @@
             <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
             <div id="environment-status" class="status-box" role="status" aria-live="polite" hidden></div>
           </div>
-          <aside class="login-art" aria-hidden="true">
-            <div class="login-art-meta"><span>UNA PAUSA FATTA BENE</span><span>BREAKAPP / 01</span></div>
-            <div class="login-poster-statement"><span class="login-poster-overline">IL BAR DELLA TUA SCUOLA, SENZA FILA</span>
-              <p>La pausa<br/>è tua<span>.</span></p>
-            </div>
-            <div class="login-poster-process">
-              <div><span>01</span><strong>Scegli</strong><small>Il menu della scuola</small></div>
-              <div><span>02</span><strong>Prenota</strong><small>La fascia di ritiro</small></div>
-              <div><span>03</span><strong>Ritira</strong><small>All'intervallo, con QR</small></div>
-            </div>
-            <p class="login-art-note">Dalla scelta del prodotto alla gestione del banco. Una piattaforma, ogni ruolo al proprio posto.</p>
-          </aside>
         </div>
       </section>
 

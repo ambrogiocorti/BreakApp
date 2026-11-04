@@ -2,7 +2,24 @@ export function initializeGuestAccess(client){
  if(!client)return;
  const make=(tag,text='')=>{const n=document.createElement(tag);n.textContent=text;return n;};
  const label=(text,field)=>{const wrapper=make('label',text);wrapper.append(field);return wrapper;};
- const form=make('form'),heading=make('h4','Continua come ospite'),school=make('select'),name=make('input'),klass=make('input'),status=make('p');form.className='guest-access-form';
+ const signedOut=document.getElementById('signed-out-view'),loginPanel=document.getElementById('login-panel'),guestOpen=document.getElementById('guest-open');
+ const guestPanel=make('div'),recoverPanel=make('div'),guestHeading=make('h2','Accesso ospite'),recoverHeading=make('h2','Recupera accesso ospite');
+ guestPanel.className='auth-alt-panel';guestPanel.id='guest-access-panel';guestPanel.hidden=true;
+ recoverPanel.className='auth-alt-panel';recoverPanel.id='guest-recovery-panel';recoverPanel.hidden=true;
+ guestHeading.tabIndex=-1;recoverHeading.tabIndex=-1;
+ const backToLogin=make('button','← Torna all’accesso');backToLogin.type='button';backToLogin.className='auth-back-action';
+ const backToGuest=make('button','← Torna all’accesso ospite');backToGuest.type='button';backToGuest.className='auth-back-action';
+ const openRecovery=make('button','Recupera accesso ospite');openRecovery.type='button';openRecovery.className='auth-inline-action guest-recovery-open';
+ function showPanel(panel,moveFocus=true){
+  loginPanel.hidden=panel!=='login';guestPanel.hidden=panel!=='guest';recoverPanel.hidden=panel!=='recovery';
+  const feedback=document.getElementById('auth-feedback');if(feedback)feedback.textContent='';
+  if(moveFocus)(panel==='guest'?guestHeading:panel==='recovery'?recoverHeading:guestOpen).focus({preventScroll:true});
+ }
+ guestOpen.addEventListener('click',()=>showPanel('guest'));
+ backToLogin.addEventListener('click',()=>showPanel('login'));
+ backToGuest.addEventListener('click',()=>showPanel('guest'));
+ openRecovery.addEventListener('click',()=>showPanel('recovery'));
+ const form=make('form'),school=make('select'),name=make('input'),klass=make('input'),status=make('p');form.className='guest-access-form';
  const classLabel=label('Classe (facoltativa)',klass);
  school.setAttribute('aria-label','Scuola dell’ospite');name.placeholder='Nome e cognome';name.setAttribute('aria-label','Nome e cognome');name.required=true;name.maxLength=100;
  school.required=true;
@@ -16,8 +33,9 @@ export function initializeGuestAccess(client){
  }
  school.addEventListener('change',()=>void updateClasses());
  const submit=make('button','Accedi come ospite');submit.className='button button-outline';submit.type='submit';status.setAttribute('role','status');
- form.append(heading,label('Scuola',school),label('Nome e cognome',name),classLabel,make('p','Conserva il link privato per ritrovare ordini e pagamenti. Come ospite puoi partecipare a gruppi, ma non coordinarli.'),submit,status);
- document.getElementById('signed-out-view').append(form);
+ form.append(label('Scuola',school),label('Nome e cognome',name),classLabel,make('p','Conserva il link privato per ritrovare ordini e pagamenti. Come ospite puoi partecipare ai gruppi, ma non coordinarli.'),submit,status);
+ guestPanel.append(backToLogin,guestHeading,form,openRecovery);
+ signedOut.append(guestPanel,recoverPanel);guestOpen.hidden=false;
  const recovery=make('div'),link=make('input');recovery.className='guest-private-link';link.readOnly=true;link.setAttribute('aria-label','Link privato personale');
  const copy=make('button','Copia link privato');copy.type='button';copy.className='button button-outline button-small';recovery.hidden=true;recovery.append(make('p','Questo link dà accesso al tuo profilo ospite. Conservalo in un luogo privato.'),link,copy);
  document.getElementById('signed-in-view').append(recovery);copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(link.value);copy.textContent='Link copiato';}catch{link.select();copy.textContent='Copia il link selezionato';}});
@@ -34,7 +52,7 @@ export function initializeGuestAccess(client){
    if(sent.error)throw sent.error;
    emailStatus.textContent='Apri il link ricevuto, poi scegli «Verifica o recupera accesso ospite» e conferma il tuo profilo. La verifica scade dopo un’ora.';
   }catch(error){emailStatus.textContent='Verifica non completata: '+error.message;}finally{emailButton.disabled=false;}});
- const recover=make('form'),recoverEmail=make('input'),recoverButton=make('button','Ricevi il link di accesso via email'),recoverStatus=make('p');recover.className='guest-recovery-form';recoverEmail.type='email';recoverEmail.required=true;recoverEmail.setAttribute('aria-label','Email già verificata per recuperare l’accesso');recoverButton.className='button button-outline button-small';recover.append(make('h4','Recupera un accesso con email verificata'),label('Email verificata',recoverEmail),recoverButton,recoverStatus);document.getElementById('signed-out-view').append(recover);
+ const recover=make('form'),recoverEmail=make('input'),recoverButton=make('button','Ricevi il link di accesso via email'),recoverStatus=make('p');recover.className='guest-recovery-form';recoverEmail.type='email';recoverEmail.required=true;recoverEmail.setAttribute('aria-label','Email già verificata per recuperare l’accesso');recoverButton.className='button button-outline button-small';recoverStatus.setAttribute('role','status');recover.append(label('Email verificata',recoverEmail),recoverButton,recoverStatus);recoverPanel.append(backToGuest,recoverHeading,make('p','Inserisci l’email che hai già collegato al tuo profilo ospite.'),recover);
  recover.addEventListener('submit',async e=>{e.preventDefault();recoverButton.disabled=true;await client.auth.signInWithOtp({email:recoverEmail.value.trim(),options:{shouldCreateUser:false,emailRedirectTo:new URL(import.meta.env.BASE_URL,location.origin).href}});recoverStatus.textContent='Se l’indirizzo è associato a un accesso verificato riceverai un link. Dopo l’accesso scegli «Verifica o recupera accesso ospite». Controlla anche lo spam.';recoverButton.disabled=false;});
  const chooser=make('details'),summary=make('summary','Recupero ospite con email verificata'),find=make('button','Verifica o recupera accesso ospite'),choices=make('div'),choiceStatus=make('p');
  chooser.className='guest-recovery-form';chooser.hidden=true;find.type='button';find.className='button button-outline button-small';choiceStatus.setAttribute('role','status');chooser.append(summary,find,choices,choiceStatus);document.getElementById('signed-in-view').append(chooser);
@@ -59,10 +77,10 @@ export function initializeGuestAccess(client){
   catch(error){status.textContent=error.message;}finally{submit.disabled=false;form.removeAttribute('aria-busy');}});
  client.from('schools').select('id,name,require_guest_class').eq('is_active',true).order('name').then(({data,error})=>{if(!error){schoolRows=data||[];for(const s of schoolRows)school.add(new Option(s.name,s.id));if(schoolRows.length)void updateClasses();}});
  const token=location.hash.startsWith('#guest=')?location.hash.slice(7):null;
- if(token){history.replaceState(null,'',location.pathname+location.search+'#accesso');void login({action:'resume',token}).catch(error=>{status.textContent=error.message;});}
+ if(token){history.replaceState(null,'',location.pathname+location.search+'#accesso');showPanel('guest',false);status.textContent='Ripristino dell’accesso ospite…';void login({action:'resume',token}).catch(error=>{status.textContent=error.message;});}
  client.auth.onAuthStateChange((_event,session)=>{emailForm.hidden=!session?.user?.app_metadata?.guest;chooser.hidden=!session||!session.user.email_confirmed_at||!session.user.email||session.user.email.endsWith('@guest.breakapp.invalid');
   const userId=session?.user?.id||null,version=++identityGeneration;
   if(userId!==activeIdentity){activeIdentity=userId;recovery.hidden=true;link.value='';email.value='';emailStatus.textContent='';choices.replaceChildren();choiceStatus.textContent='';removeEmail.hidden=true;}
   if(session?.user?.app_metadata?.guest)queueMicrotask(()=>{void client.rpc('my_guest_email_recovery_status').then(({data,error})=>{if(version===identityGeneration&&!emailForm.hidden&&!error){removeEmail.hidden=!data;if(data&&!emailStatus.textContent)emailStatus.textContent='Email di recupero verificata collegata.';}});});
-  if(!userId){name.value='';klass.value='';recoverEmail.value='';recoverStatus.textContent='';status.textContent='';}});
+  if(!userId){name.value='';klass.value='';recoverEmail.value='';recoverStatus.textContent='';status.textContent='';if(_event==='SIGNED_OUT')showPanel('login',false);}});
 }

@@ -4,8 +4,9 @@ import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5180',app=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const script=`
-import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';
+import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';import '/src/css/login.css';
 import {initializeAuth} from '/src/js/features/auth/auth.js';
+import {initializeGuestAccess} from '/src/js/features/auth/guest.js';
 import {initializeTheme} from '/src/js/core/theme.js';
 import {initializeAdminMfa} from '/src/js/features/auth/mfa.js';
 const mode=new URLSearchParams(location.search).get('mode');
@@ -19,7 +20,7 @@ if(mode==='mfa'){
  window.fixture.primary=async()=>{window.fixture.totp=[];window.fixture.aal='aal1';await controller.show()};
  window.fixture.pending=async()=>{window.fixture.totp=[{id:'pending',status:'unverified'}];window.fixture.aal='aal1';await controller.show()};
  window.fixture.hide=controller.hide;await controller.show();
-}else initializeAuth({configured:true,url:location.origin,publishableKey:'fixture-public-key'},(_url,_key,options)=>{window.fixture.options=options;return client});
+}else {const auth=initializeAuth({configured:true,url:location.origin,publishableKey:'fixture-public-key'},(_url,_key,options)=>{window.fixture.options=options;return client});initializeGuestAccess(auth)}
 window.fixture.ready=true;
 `;
 const html=app.replaceAll('%BASE_URL%','/').replace('<script type="module" src="/src/js/main.js"></script>','<script type="module">'+script+'</script>');
@@ -29,9 +30,21 @@ const engines=process.env.AUTH_BROWSER==='chromium'?{chromium}:{chromium,firefox
 try{
  for(const[name,engine]of Object.entries(engines)){
   browser=await engine.launch({headless:true});
-  for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
+  for(const viewport of [{width:1440,height:1000},{width:390,height:844},{width:360,height:640},{width:320,height:568}]){
    let page=await browser.newPage({viewport});const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(origin+'/__auth-qa');await page.waitForFunction(()=>window.fixture?.ready&&document.getElementById('google-button').disabled===false);
+   const geometry=await page.evaluate(()=>{
+    const bounds=id=>{const r=document.getElementById(id).getBoundingClientRect();return{top:r.top,bottom:r.bottom}};
+    return{height:innerHeight,scroll:document.documentElement.scrollHeight,
+      controls:['auth-email','auth-password','login-button','google-button','microsoft-button','guest-open'].map(bounds)};
+   });
+   assert.ok(geometry.scroll<=geometry.height+2,'Login requires scrolling: '+JSON.stringify(geometry));
+   assert.ok(geometry.controls.every(r=>r.top>=0&&r.bottom<=geometry.height+1),'Login controls outside viewport: '+JSON.stringify(geometry));
+   await page.getByRole('button',{name:'Continua come ospite',exact:true}).click();
+   await page.getByRole('heading',{name:'Accesso ospite',exact:true}).waitFor();
+   assert.equal(await page.getByLabel('Indirizzo email',{exact:true}).isVisible(),false);
+   await page.getByRole('button',{name:'← Torna all’accesso',exact:true}).click();
+   await page.getByLabel('Indirizzo email',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>window.fixture.options.auth.flowType),'pkce');
    await page.getByRole('button',{name:'Google',exact:true}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='oauth'&&c.args.provider==='google'));
