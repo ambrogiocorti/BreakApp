@@ -287,6 +287,9 @@ export function initializeWorkspace(client){
    if(target!=='accesso'&&document.getElementById(target)?.hidden){
      if(!active.verified)route='accesso';
    }
+   // Presentation-only route marker for responsive page layouts. Permission
+   // checks continue to use the verified context and allowedRoute above.
+   document.body.dataset.activeRoute=route;
    if(history && location.hash!=='#'+route)window.history.pushState(null,'','#'+route);
    updateSectionVisibility();
    renderLinks();
@@ -360,6 +363,7 @@ export function initializeWorkspace(client){
    document.body.dataset.workspace='false';
    document.body.removeAttribute('data-active-role');
    document.body.removeAttribute('data-active-school');
+   document.body.removeAttribute('data-active-route');
    sidebar.hidden=true;nav.hidden=true;mobile.hidden=true;heading.hidden=true;
    if(breadcrumb)breadcrumb.hidden=true;
    if(accountLink)accountLink.hidden=true;
@@ -393,6 +397,7 @@ export function initializeWorkspace(client){
      if(breadcrumb)breadcrumb.hidden=true;
      if(accountLink)accountLink.hidden=true;
      document.body.dataset.workspace='false';
+     document.body.removeAttribute('data-active-route');
      document.getElementById('school-access-status').textContent=
        'Impossibile verificare ruolo e scuola. Riprova dal Profilo.';
      return;
