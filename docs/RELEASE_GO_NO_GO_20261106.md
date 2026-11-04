@@ -1,6 +1,6 @@
 # BreakApp — Decisione di rilascio per venerdì 6 novembre 2026
 
-**Destinazione:** primo cliente / scuola pilota. **Ambiente attuale:** GitHub Pages + Supabase di sviluppo, Stripe TEST. **Stato aggiornato al 3 novembre:** **NO-GO per transazioni reali e uso commerciale senza limitazioni**.
+**Destinazione:** primo cliente / scuola pilota. **Ambiente attuale:** GitHub Pages + Supabase di sviluppo, Stripe TEST. **Stato aggiornato al 4 novembre:** **NO-GO per transazioni reali e uso commerciale senza limitazioni**.
 
 Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il rilascio, non riduce né modifica tacitamente i requisiti. Il via libera è distinto per **demo**, **pilota controllato senza incassi reali** e **esercizio commerciale con pagamenti**. Non basta una build verde.
 
@@ -13,8 +13,8 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 | Host pubblico | GitHub Pages disponibile; workflow uptime positivo il 3/11 | Verde per disponibilità **statica** |
 | Autorizzazioni | RLS ordini attiva, cron autorizzato; test SQL isolati | Verifica intertenant con utenti reali ancora pendente |
 | Cron | `breakapp-push-and-refunds` attivo ogni minuto, ultimi audit dei due endpoint HTTP 200 | Endpoint raggiungibili; consegna push non verificata su telefono |
-| Stripe TEST | Merchant `acct_1UVx5F2RLtxMJCNo` censito in Supabase, ma zero `payment_attempts`, zero `payment_refunds` e zero webhook in inbox; il connettore Stripe disponibile è associato a un'altra piattaforma test priva di quel merchant | **NO-GO:** collegare/identificare la piattaforma Stripe TEST corretta; eseguire workflow `Stripe TEST Connect readiness` e prova Checkout → webhook firmato → ledger → rimborso |
-| Backup giornaliero | **Database:** run reale #41654538860 decifrata e ripristinata su Supabase-Postgres 17 isolato, con verifiche SQL; **Storage:** backup reale e prova di recovery in streaming riusciti il 03/11 (run #41709597575, 2 bucket, 1 oggetto da 5.661 byte, SHA-256 verificato, artifact AES-256 #13266617186, conservazione fino al 03/12/2026) | Database ripristinato; Storage realmente acquisito e cifrato. **Ancora da provare:** ripristino file in un progetto distinto, configurazione completa servizi Supabase, copia indipendente, successivi cron schedulati |
+| Stripe TEST | Il 04/11 Checkout individuale da 2,50 EUR, webhook firmato e rimborso sono riusciti in sandbox; prova via RPC/QA, non tramite interfacce complete. Il webhook non gestisce `refund.failed` e il ledger non riapre un rimborso passato da `succeeded` a `failed`; `checkout.session.async_payment_failed` è ignorato. | **NO-GO** per pagamenti reali: correggere e testare gli esiti tardivi, gli eventi fuori ordine e le prove UI/gruppi prima del rilascio |
+| Backup giornaliero | **Database:** run reale #41654538860 decifrata e ripristinata su Supabase-Postgres 17 isolato, con verifiche SQL; **Storage:** backup reale e prova di recovery in streaming riusciti il 03/11 (run #41709597575, 2 bucket, 1 oggetto da 5.661 byte, SHA-256 verificato, artifact AES-256 #13266617186, conservazione fino al 03/12/2026) | Database ripristinato; Storage realmente acquisito e cifrato. **Schedulazione:** run database #41807385492 e Storage #41809932298 riuscite il 04/11. **Ancora da provare:** ripristino file in un progetto distinto, configurazione completa servizi Supabase e copia indipendente |
 | Privacy e fiscale | Documentazione ancora da finalizzare con il cliente e professionisti competenti | **NO-GO** per esercizio commerciale non delimitato |
 | Prove fisiche | Android, iPhone, terminale bar, Wi-Fi degradato, offline e revoche non certificate | **NO-GO** per operatività non supervisionata |
 | Hosting definitivo | Stack confermato Cloudflare Pages; attualmente GitHub Pages per test e anteprime Vercel | Da configurare, collaudare e promuovere manualmente |
@@ -33,6 +33,8 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 Non inserire URL, password o passphrase in chat, issue, commit o screenshot.
 
 ### B. Stripe TEST: un flusso finanziario completo
+
+**Blocco rilevato il 04/11:** il codice restituisce successo senza elaborare `refund.failed`, e le RPC individuale e gruppo ignorano un fallimento successivo a `succeeded`. Inoltre `checkout.session.async_payment_failed` non viene riconciliato. Correggere webhook e ledger per eventi firmati, duplicati e fuori ordine; verificare gli stati intermedi e configurare gli eventi Stripe solo insieme a un handler funzionante. La sola iscrizione agli eventi non risolve il problema.
 
 1. Admin scuola configura fascia di ritiro reale/futura e prodotto con stock effettivo; Cliente distinto dal Super Admin, entro raggio GPS, conferma un ordine.
 2. Verificare sessione Stripe Checkout con carta di TEST, connessione all'account merchant atteso, importo in centesimi e singolo PaymentIntent.

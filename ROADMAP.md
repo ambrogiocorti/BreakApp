@@ -17,6 +17,12 @@ Aggiornato il 4 novembre 2026. La specifica privata resta la fonte dei requisiti
 | Comunicazioni e report | Push/in-app, preferenze, cron ogni minuto, promemoria ritiro/chiusura, annunci, rendiconti e CSV/XLSX/PDF | Destinatari, backoff, rimborsi elaborati/pendenti e contanti da restituire distinti; ricevute interne separate dai documenti fiscali |
 | Backup | Job giornaliero, export PostgreSQL 17, AES-256, archivio esterno al database, verifica e restore su target vuoto | **Primo backup reale riuscito** su GitHub il 03/11 (run #41654538860); **restore SQL manuale riuscito** in Docker con PostgreSQL Supabase 17 e conteggi/RLS verificati. Storage reale acquisito e decifrato in streaming con SHA-256 verificato (run #41709597575). Mancano restore Storage su progetto separato, prova integrale servizi e cron schedulato |
 
+## Blocco integrità pagamenti individuato — 4 novembre 2026
+
+Il webhook attuale non elabora `refund.failed`; le RPC di rimborso individuale e di gruppo restituiscono `duplicate` quando un rimborso già segnato `succeeded` passa successivamente a `failed`. Inoltre `checkout.session.async_payment_failed` non viene riconciliato. Questi casi possono lasciare uno stato finanziario non aggiornato e bloccano il go-live: servono correzione coordinata di webhook e ledger, prova di eventi firmati duplicati/fuori ordine e collaudo in sandbox. Iscrivere un evento nel Dashboard non basta a garantire che il backend lo elabori.
+
+I backup pianificati del 04/11 sono riusciti: database [run #41807385492](https://github.com/ambrogiocorti/BreakApp/actions/runs/41807385492), Storage [run #41809932298](https://github.com/ambrogiocorti/BreakApp/actions/runs/41809932298). Il ripristino completo in un progetto separato rimane da verificare.
+
 ## Gate di rilascio Stripe e Storage — 4 novembre 2026
 
 - Il progetto BreakApp ha verificato **3 eventi firmati** nella inbox TEST: `checkout.session.expired`, `checkout.session.completed` e `refund.updated`. Primo checkout scaduto; secondo checkout individuale da **250 centesimi pagato** con carta fittizia ufficiale, successivamente **rimborsato** tramite dispatcher automatico e webhook. Tentativo di pagamento `succeeded`, refund `succeeded`, ordine `cancelled/refunded`, scorta allocata 0. Le conte iniziali a zero erano fotografie storiche del 03/11.
