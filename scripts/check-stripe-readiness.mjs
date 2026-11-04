@@ -7,8 +7,17 @@ const requiredEvents=[
   'checkout.session.completed',
   'checkout.session.expired',
   'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
   'refund.created',
-  'refund.updated'
+  'refund.updated',
+  'refund.failed'
+];
+
+// These blockers refer to the application, not to the Stripe endpoint configuration.
+// Remove each entry only after the corresponding server-side behavior is fixed and verified.
+const implementationBlockers=[
+  'Rimborsi: il webhook ignora refund.failed e il ledger non riapre un refund fallito dopo succeeded.',
+  'Pagamenti asincroni: il webhook non riconcilia checkout.session.async_payment_failed.'
 ];
 
 function assertion(ok,message,checks){
@@ -45,7 +54,7 @@ export async function checkStripeReadiness({
   let account;
   try{account=await get('accounts/'+encodeURIComponent(connectedAccountId));}
   catch(err){
-    return {ready:false,endpoint,checks:[{
+    return {ready:false,configurationReady:false,implementationBlockers:[...implementationBlockers],endpoint,checks:[{
       name:'Account Connect leggibile dalla piattaforma Stripe configurata',
       ok:false,
       reason:err instanceof Error?err.message:'Account Stripe non verificabile'
@@ -62,7 +71,7 @@ export async function checkStripeReadiness({
     let list;
     try{list=await get(route);}catch(err){
       assertion(false,'Elenco webhook leggibile dalla piattaforma',checks);
-      return {ready:false,endpoint,checks,limitations:[err.message]};
+      return {ready:false,configurationReady:false,implementationBlockers:[...implementationBlockers],endpoint,checks,limitations:[err.message]};
     }
     if(!Array.isArray(list?.data))
       throw Error('Stripe ha restituito un elenco webhook non valido.');
@@ -94,9 +103,11 @@ export async function checkStripeReadiness({
       'Evento webhook '+event+' abilitato (ambito Connect non leggibile)',checks);
   assertion(Boolean(readyWebhook),'Un singolo webhook TEST copre tutti gli eventi richiesti',checks);
   return {
-    // "ready" means observable REST configuration only, not Connect scope
-    // or a completed payment. It must never be presented as go-live approval.
-    ready:checks.every(c=>c.ok),
+    // Configuration alone is insufficient while known payment integrity blockers exist.
+    // Neither flag verifies Connect scope, physical devices, live mode or legal release.
+    ready:checks.every(c=>c.ok)&&implementationBlockers.length===0,
+    configurationReady:checks.every(c=>c.ok),
+    implementationBlockers:[...implementationBlockers],
     connectScopeVerified:false,
     endpoint,
     checks,
@@ -127,7 +138,9 @@ async function main(){
     if(result.connectScopeVerified===false)
       console.log('[DA VERIFICARE] Ambito Connected accounts: impossibile determinarlo tramite GET /v1/webhook_endpoints.');
     for(const caveat of result.limitations)console.log('NOTA:',caveat);
-    console.log(result.ready?'[OK] Verifiche di configurazione REST superate (NON e un test Connect E2E).':'[NO] Alcune verifiche osservabili della configurazione Stripe sono fallite.');
+    for(const blocker of result.implementationBlockers)console.log('[NO] Blocco applicativo:',blocker);
+    console.log(result.configurationReady?'[OK] Configurazione REST osservabile verificata (NON e un test Connect E2E).':'[NO] Alcune verifiche osservabili della configurazione Stripe sono fallite.');
+    if(!result.ready)console.log('[NO] Gate Stripe non superato: verificare anche i blocchi applicativi elencati.');
     if(!result.ready)process.exitCode=1;
   }catch(err){
     console.error('BLOCCO STRIPE:',err.message);
