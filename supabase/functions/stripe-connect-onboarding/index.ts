@@ -1,10 +1,7 @@
-// Stripe Connect: bootstrap di un merchant demo in SOLO ambiente di test.
+// Stripe Connect: link di onboarding per il merchant TEST della scuola scelta.
 // La chiave STRIPE_ONBOARDING_KEY deve restare nei Secrets delle Edge Functions.
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
-
-// Account demo creato appositamente per il collaudo; nessun ID dal client.
-const TEST_ACCOUNT = 'acct_1UVx5F2RLtxMJCNo';
 
 function secret(name: string) {
   return Deno.env.get(name)?.trim() ?? '';
@@ -48,15 +45,40 @@ Deno.serve(async (request: Request) => {
       return respond({ error: 'Solo il Super Admin con 2FA può avviare Stripe' }, 403);
     }
 
+    // The browser chooses a school, never a Stripe account. Resolve the
+    // association on the server only after checking the global role and MFA.
+    const raw = await request.text();
+    if (raw.length > 4096) return respond({ error: 'Richiesta troppo grande' }, 413);
+    let input: { school_id?: unknown };
+    try { input = JSON.parse(raw); } catch { return respond({ error: 'Scuola non valida' }, 400); }
+    if (!input || typeof input !== 'object' || Array.isArray(input) ||
+        typeof input.school_id !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.school_id) ||
+        Object.keys(input).some(key => key !== 'school_id')) {
+      return respond({ error: 'Scuola non valida' }, 400);
+    }
+
+    const serviceKey = secret('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceKey) return respond({ error: 'Configurazione server non disponibile' }, 503);
+    const db = createClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+    const { data: merchant, error: merchantError } = await db.from('school_stripe_merchants')
+      .select('stripe_account_id').eq('school_id', input.school_id).maybeSingle();
+    if (merchantError) return respond({ error: 'Impossibile verificare il merchant della scuola' }, 503);
+    const accountId = merchant?.stripe_account_id;
+    if (typeof accountId !== 'string' || !/^acct_[A-Za-z0-9]+$/.test(accountId)) {
+      return respond({ error: 'Nessun merchant Stripe TEST è associato a questa scuola' }, 409);
+    }
+
     const stripeKey = secret('STRIPE_ONBOARDING_KEY');
     if (!/^rk_test_[A-Za-z0-9]+$/.test(stripeKey)) {
       return respond({ error: 'Chiave Stripe di test per onboarding non configurata' }, 503);
     }
 
-    // Questo merchant demo esistente è un account Connect Standard (Accounts v1).
-    // Il relativo flusso Stripe-hosted usa /v1/account_links; nessun account viene creato.
+    // This resumes an existing account; it does not create or associate one.
     const params = new URLSearchParams({
-      account: TEST_ACCOUNT,
+      account: accountId,
       type: 'account_onboarding',
       'collection_options[fields]': 'eventually_due',
       return_url: site.baseUrl + '#platform-configuration',
@@ -91,7 +113,7 @@ Deno.serve(async (request: Request) => {
         : response.status === 403
           ? 'La chiave Stripe non è autorizzata a creare link Connect: controlla i permessi Account Links.'
           : code === 'resource_missing' || response.status === 404
-            ? 'Il merchant demo indicato non è accessibile alla piattaforma Stripe usata dalla chiave.'
+            ? 'Il merchant associato non è accessibile alla piattaforma Stripe usata dalla chiave.'
             : response.status === 400
               ? 'Stripe ha respinto la richiesta di onboarding: controlla parametri, modalità test e stato del merchant.'
               : 'Stripe non ha generato il link di attivazione.';
@@ -107,7 +129,7 @@ Deno.serve(async (request: Request) => {
       return respond({ error: 'Destinazione Stripe non verificabile' }, 502);
     }
 
-    return respond({ onboarding_url: data.url, account_id: TEST_ACCOUNT });
+    return respond({ onboarding_url: data.url, account_id: accountId });
   } catch {
     // Non registrare mai chiavi, token, URL di onboarding o dati personali.
     return respond({ error: 'Attivazione Stripe momentaneamente non disponibile' }, 503);

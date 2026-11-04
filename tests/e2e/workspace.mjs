@@ -80,6 +80,9 @@ try{
    await page.getByRole('link',{name:'Gestisci Liceo Leonardo',exact:true}).click();
    await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
    await page.waitForFunction(()=>document.getElementById('pilot-school').value==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+   await page.getByRole('button',{name:'Completa attivazione Stripe TEST',exact:true}).click();
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='stripe-connect-onboarding'&&c.args.body.school_id==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'));
+   await page.getByText(/Nessun merchant Stripe TEST associato/).waitFor();
    // Exercise same-document SPA history through the DOM History API. A driver
    // document-navigation lifecycle is not part of this application transition.
    await page.evaluate(()=>history.back());await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();

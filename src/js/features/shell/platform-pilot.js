@@ -55,11 +55,20 @@ export function initializePlatformPilot(client){
  const stripeButton=$('pilot-stripe-onboarding'),stripeFeedback=$('pilot-stripe-feedback');
  stripeButton.addEventListener('click',async()=>{
    if(!allowed||stripeButton.disabled)return;
+   const schoolId=schoolSelect.value,actor=currentUser?.id,requestEpoch=authEpoch;
+   if(!schools.some(s=>s.id===schoolId)){
+     stripeFeedback.textContent='Seleziona una scuola prima di avviare Stripe.';
+     stripeFeedback.dataset.type='error';return;
+   }
+   const stillCurrent=()=>allowed&&currentUser?.id===actor&&authEpoch===requestEpoch&&schoolSelect.value===schoolId;
+   let redirecting=false;
    stripeButton.disabled=true;
+   schoolSelect.disabled=true;
    stripeFeedback.textContent='Generazione del link sicuro Stripe…';
    stripeFeedback.dataset.type='information';
    try{
-     const {data,error}=await client.functions.invoke('stripe-connect-onboarding',{body:{}});
+     const {data,error}=await client.functions.invoke('stripe-connect-onboarding',{body:{school_id:schoolId}});
+     if(!stillCurrent())return;
      if(error){
        let reason=error.message||'Link non disponibile';
        try{
@@ -76,11 +85,16 @@ export function initializePlatformPilot(client){
        !(destination.hostname==='stripe.com'||destination.hostname.endsWith('.stripe.com')))
        throw new Error('Indirizzo di attivazione non valido');
      stripeFeedback.textContent='Reindirizzamento verso Stripe…';
+     redirecting=true;
      window.location.assign(destination.href);
    }catch(error){
-     stripeFeedback.dataset.type='error';
-     stripeFeedback.textContent='Impossibile avviare Stripe: '+error.message;
-     stripeButton.disabled=false;
+     if(stillCurrent()){
+       stripeFeedback.dataset.type='error';
+       stripeFeedback.textContent='Impossibile avviare Stripe: '+error.message;
+     }
+   }finally{
+     schoolSelect.disabled=false;
+     stripeButton.disabled=!allowed||redirecting;
    }
  });
  const school=()=>schools.find(s=>s.id===schoolSelect.value);
@@ -284,13 +298,13 @@ export function initializePlatformPilot(client){
    const refreshToken=++refreshEpoch,selected=requestedSchool||school()?.id;
    const currentBar=bar()?.id;
    const [s,b]=await Promise.all([
-     client.from('schools').select('id,name,is_active,latitude,longitude').eq('is_active',true).order('name'),
+     client.from('schools').select('id,name,is_active,latitude,longitude').order('name'),
      client.from('bars').select('id,name,school_id,is_active').eq('is_active',true).order('name')
    ]);
    if(refreshToken!==refreshEpoch||!allowed)return;
    if(s.error||b.error){say((s.error||b.error).message,true);return;}
    schools=s.data||[];bars=b.data||[];
-   replaceOptions(schoolSelect,schools.map(x=>[x.id,x.name]),selected);
+   replaceOptions(schoolSelect,schools.map(x=>[x.id,x.name+(x.is_active?'':' · sospesa')]),selected);
    requestedSchool=null;
    updateSchool();
    if(currentBar&&bars.some(x=>x.id===currentBar&&x.school_id===schoolSelect.value)){
