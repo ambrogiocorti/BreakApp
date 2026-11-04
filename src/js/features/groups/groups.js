@@ -240,16 +240,19 @@ export function initializeGroupDrafts(client){
   event.preventDefault();if(!detail||!user)return;
   let items;
   try{items=cartItems();}catch(error){return report(error.message,true);}
-  const button=cartForm.querySelector('button[type=submit]');button.disabled=true;
-  const {error}=await client.rpc('replace_group_personal_cart',{p_group_id:detail.id,p_items:items});
-  button.disabled=false;
-  if(error)return report(error.message,true);
-  await showGroup(detail.id);
-  report('Carrello salvato.');
+  const button=cartForm.querySelector('button[type=submit]'),ready=byId('group-ready');
+  button.disabled=ready.disabled=true;
+  try{
+   const {error}=await client.rpc('replace_group_personal_cart',{p_group_id:detail.id,p_items:items});
+   if(error)throw error;
+   await showGroup(detail.id);report('Carrello salvato.');
+  }catch(error){report(error.message||'Impossibile salvare il carrello.',true);}
+  finally{button.disabled=ready.disabled=false;}
  });
  byId('group-ready').addEventListener('click',async()=>{
   if(!detail)return;
-  const button=byId('group-ready');button.disabled=true;
+  const button=byId('group-ready'),save=cartForm.querySelector('button[type=submit]');
+  let cartSaved=false;button.disabled=save.disabled=true;
   try{
    if(!detail.my_ready){
     const items=cartItems();
@@ -259,6 +262,7 @@ export function initializeGroupDrafts(client){
      if(saved.some(item=>!visible.has(item.product_id)))throw new Error('Alcuni prodotti non sono più disponibili. Verifica e salva il carrello prima di proseguire.');
      const result=await client.rpc('replace_group_personal_cart',{p_group_id:detail.id,p_items:items});
      if(result.error)throw result.error;
+     cartSaved=true;
     }
    }
    const {error}=await client.rpc('set_group_personal_ready',{
@@ -266,8 +270,8 @@ export function initializeGroupDrafts(client){
    });
    if(error)throw error;
    await showGroup(detail.id);
-  }catch(error){report(error.message||'Impossibile aggiornare il carrello.',true);}
-  finally{button.disabled=false;}
+  }catch(error){report((cartSaved?'Carrello salvato, ma non sei ancora segnato come pronto. ':'')+(error.message||'Impossibile aggiornare il carrello.'),true);}
+  finally{button.disabled=save.disabled=false;}
  });
  async function loadPayableLines(groupId,seq){
   const {data,error}=await client.rpc('group_payable_lines',{p_group_id:groupId});

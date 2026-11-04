@@ -12,6 +12,15 @@ try{
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
    const context=await browser.newContext({viewport,geolocation:{latitude:45.5,longitude:9.3,accuracy:35},permissions:['geolocation']});
    const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+   await page.addInitScript(()=>{
+    const geo=navigator.geolocation;
+    if(!geo)return;
+    const nativeWatch=geo.watchPosition.bind(geo);
+    geo.watchPosition=(success,error,options)=>nativeWatch(position=>{
+     window.geoTestDiagnostic={accuracy:position.coords.accuracy,age:Date.now()-position.timestamp};
+     success(position);
+    },failure=>{window.geoTestDiagnostic={error:failure.code};error(failure);},options);
+   });
    await page.goto(origin+'/__groups-qa');
    await page.getByRole('button',{name:'Apri gruppo'}).waitFor();
    assert.equal(await page.locator('#groups-create-form').isVisible(),false);
@@ -39,10 +48,14 @@ try{
    await page.getByText('Entra in un gruppo',{exact:true}).click();
    await page.getByLabel('Link o codice invito').fill('11111111-1111-4111-8111-111111111111');
    await page.getByRole('button',{name:'Verifica posizione e partecipa'}).click();
+   // Trigger a fresh native geolocation event in each browser after the watch
+   // has started; Firefox's emulated provider does not always replay its initial fix.
+   await context.setGeolocation({latitude:45.50001,longitude:9.3,accuracy:35});
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='join_group_draft')||document.getElementById('groups-feedback').dataset.type==='error',null,{timeout:27000});
    const locationMessage=await page.locator('#groups-feedback').innerText();
    const join=await page.evaluate(()=>window.fixture.calls.find(c=>c.name==='join_group_draft'));
-   assert.ok(join,'Ingresso gruppo non completato in '+name+': '+locationMessage);
+   const locationDiagnostic=await page.evaluate(()=>window.geoTestDiagnostic||null);
+   assert.ok(join,'Ingresso gruppo non completato in '+name+': '+locationMessage+' '+JSON.stringify(locationDiagnostic));
    assert.equal(join.args.p_accuracy_m,35);
    await page.getByRole('button',{name:'← Tutti i gruppi'}).click();
    await page.evaluate(()=>window.fixture.setGuest());
