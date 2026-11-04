@@ -166,6 +166,8 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
       - name: Verify signed async checkout failures, group release and late settlement
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-async-failure.sql
+      - name: Verify current Stripe refund state, leases and out-of-order events
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-refund-observations.sql
       - name: Complete approval, amendment, payer refund, guest, coupon and onboarding workflows
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/complete-workflows.sql
       - name: Snapshot and restore disposable database into a separate empty DB
