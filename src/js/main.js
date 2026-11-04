@@ -4,6 +4,7 @@ import '../css/groups.css';
 import '../css/studio.css';
 import '../css/service-desk.css';
 import '../css/login.css';
+import '../css/customer-experience.css';
 import { readSupabaseConfig } from './core/config.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeAuth } from './features/auth/auth.js';

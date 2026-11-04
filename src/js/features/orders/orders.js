@@ -1,6 +1,7 @@
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals } from './staff-board.js';
+import { accuratePosition } from '../../core/geolocation.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -8,12 +9,10 @@ const elem = (tag, text='', cls='') => {
 const report=(node,msg,error=false)=>{
   node.textContent=msg; node.dataset.type=error?'error':'information';
 };
-function positionOnce() {
-  return new Promise((resolve,reject)=>{
-    if (!navigator.geolocation) return reject(new Error('Geolocalizzazione non disponibile'));
-    navigator.geolocation.getCurrentPosition(resolve,()=>reject(new Error('Per ordinare, consenti la posizione GPS e riprova.')),
-      {enableHighAccuracy:true,maximumAge:0,timeout:20000});
-  });
+function positionOnce(signal) {
+  return accuratePosition({signal,onProgress:accuracy=>report(
+    document.querySelector('#order-checkout-feedback'),
+    'Posizione approssimativa (±'+accuracy+' m). Attendi, cerchiamo una misura più precisa…')});
 }
 export function initializeOrders(client) {
   if (!client) return;
@@ -65,7 +64,7 @@ export function initializeOrders(client) {
   const orderBack=document.querySelector('#order-back');
   const orderSubmit=document.querySelector('#order-submit');
   let user=null, context={schoolId:'',barId:'',products:[]}, cart=[], product=null;
-  let step=2,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0;
+  let step=2,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0,locationAbort=null;
   let staffOrders=[];
   let staffContextSchool=null;
   let staffFetchSequence=0,staffAuthVersion=0;
@@ -193,12 +192,14 @@ export function initializeOrders(client) {
       report(refundFeedback,'Rimborso non registrato o esito incerto: '+(e?.message||'riprovare verificando prima lo stato ordine')+'. In caso di errore di rete, riprova dalla stessa finestra.',true);
     }finally{refundSubmit.disabled=false;}
   });
-  const couponLabel=elem('label','Codice sconto (facoltativo)');
+  const couponDisclosure=elem('details','','checkout-coupon');
+  const couponLabel=elem('label','Codice sconto');
   couponLabel.htmlFor='order-coupon';
   const coupon=document.createElement('input');
   coupon.id='order-coupon';coupon.maxLength=32;coupon.placeholder='Inserisci un codice sconto';
   couponLabel.append(coupon);
-  checkoutReview.parentElement.insertBefore(couponLabel,checkoutReview);
+  couponDisclosure.append(elem('summary','Hai un codice sconto?'),couponLabel);
+  checkoutReview.parentElement.insertBefore(couponDisclosure,checkoutReview);
   const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
   const favoriteStatus=elem('p');favoriteStatus.setAttribute('role','status');productDialog.append(favoriteStatus);
   const favoritesBox=elem('article','','order-card');section.append(favoritesBox);
@@ -382,26 +383,28 @@ export function initializeOrders(client) {
       const s=total();
       checkoutReview.replaceChildren(
         elem('p',`Prodotti: ${s.count} · ${formatEuro(s.totalCents)} (indicativo)`),
-        elem('p',`Ritiro: ${selected?selected.service_date+' '+selected.starts_at.slice(0,5):'Non selezionato'}`),
-        elem('p','Pagamento al ritiro: contanti o POS esterno presso il bar.'),
-        elem('p','La posizione serve per verificare la vicinanza alla scuola; prezzi e disponibilità sono controllati dal bar.')
+        elem('p',`Ritiro: ${selected?slotLabel({pickup_windows:selected}):'Non selezionato'}`),
+        elem('p','Pagamento al banco: contanti o POS esterno.')
       );
     }
   }
   document.querySelector('#cart-checkout').addEventListener('click',()=>{
     if(!enabled||!windows.length)return;
-    cartDialog.close();step=2;drawStep();stepper.showModal();
+    report(checkoutFeedback,'');cartDialog.close();step=2;drawStep();stepper.showModal();
   });
   orderNext.addEventListener('click',()=>{
     if(step===2&&!slotSelect.value){report(checkoutFeedback,'Scegli una fascia.',true);return;}
-    if(step===2){step=4;drawStep();}
+    if(step===2){report(checkoutFeedback,'');step=4;drawStep();}
   });
-  orderBack.addEventListener('click',()=>{if(step===4){step=2;drawStep();}});
+  orderBack.addEventListener('click',()=>{if(step===4){report(checkoutFeedback,'');step=2;drawStep();}});
+  stepper.addEventListener('close',()=>{locationAbort?.abort();locationAbort=null;});
   orderSubmit.addEventListener('click',async()=>{
     if(!user||!cart.length||!slotSelect.value||!enabled)return;
-    orderSubmit.disabled=true;report(checkoutFeedback,'Verifica posizione GPS…');
+    orderSubmit.disabled=true;orderBack.disabled=true;report(checkoutFeedback,'Verifica della posizione in corso…');
+    const controller=new AbortController();locationAbort=controller;
     try {
-      const loc=await positionOnce();
+      const loc=await positionOnce(controller.signal);
+      if(!stepper.open)return;
       requestKey??=crypto.randomUUID();
       const {data,error}=await client.rpc('submit_promoted_order',{
         p_bar:context.barId,p_window:slotSelect.value,p_items:toRpcItems(cart),
@@ -414,8 +417,8 @@ export function initializeOrders(client) {
       changeCart([]);requestKey=null;coupon.value='';stepper.close();
       await loadOrders();location.hash='orders';
       report(feedback,'Ordine creato correttamente sul server.');
-    } catch(err){report(checkoutFeedback,err.message||'Ordine non riuscito.',true);}
-    finally{orderSubmit.disabled=false;}
+    } catch(err){if(err.name!=='AbortError')report(checkoutFeedback,err.message||'Ordine non riuscito.',true);}
+    finally{if(locationAbort===controller)locationAbort=null;orderSubmit.disabled=false;orderBack.disabled=false;}
   });
   async function loadOrders(){
     if(!user)return;

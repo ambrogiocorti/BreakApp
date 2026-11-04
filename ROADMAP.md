@@ -1,5 +1,11 @@
 # Stato della piattaforma
 
+## Esperienza cliente — 5 novembre 2026
+
+La pagina Gruppi mostra prima i gruppi esistenti; creazione, ingresso, partecipanti, pagamenti e impostazioni si aprono quando richiesti. Gli stati sono leggibili in italiano e un ospite non vede la creazione di gruppi. Quando si preme «Ho finito», le quantità modificate vengono salvate prima dello stato di pronto; la conferma non procede con modifiche non salvate.
+
+Il riepilogo della prenotazione è stato alleggerito. Ordini individuali e gruppi attendono per qualche secondo una posizione più precisa e spiegano permessi, tempi e precisione insufficienti. La soglia di accuratezza di 100 m e il raggio configurato dalla scuola rimangono verificati dal server. Servono ancora prove con GPS e telefoni fisici, oltre ai collaudi operativi riportati sotto.
+
 Aggiornato il 4 novembre 2026. La specifica privata resta la fonte dei requisiti. Le verifiche automatiche usano database e pagamenti sintetici isolati; il servizio collegato è l'ambiente di sviluppo. La pagina Gruppi ha un'interfaccia responsive dedicata; nessun ruolo amministrativo è stato assegnato agli account social usati per il test.
 
 | Area | Implementazione | Verifica |

@@ -7,10 +7,15 @@ on:
       - 'index.html'
       - 'src/js/features/shell/**'
       - 'src/js/features/auth/**'
+      - 'src/js/features/groups/**'
+      - 'src/js/features/orders/**'
+      - 'src/js/core/geolocation.js'
       - 'src/css/login.css'
+      - 'src/css/customer-experience.css'
       - 'tests/e2e/auth.mjs'
       - 'tests/e2e/guest.mjs'
       - 'tests/e2e/workspace*.mjs'
+      - 'tests/e2e/groups*.mjs'
       - '.github/workflows/workspace-chromium.yml'
 permissions:
   contents: read
@@ -40,3 +45,7 @@ jobs:
         run: |
           node tests/e2e/auth.mjs
           node tests/e2e/guest.mjs
+      - name: Group overview, cart and location controls
+        env:
+          GROUP_BROWSER: chromium
+        run: node tests/e2e/groups.mjs
