@@ -15,6 +15,20 @@ try{
  page=await context.newPage();page.setDefaultTimeout(30000);
  stage='accesso ospite demo';
  await page.goto(url,{waitUntil:'domcontentloaded'});
+ const manifestResponse=await page.request.get(new URL('manifest.webmanifest',url).href);
+ assert.equal(manifestResponse.status(),200,'Manifest PWA non disponibile');
+ const manifest=await manifestResponse.json();
+ for(const [size,path] of [['192x192','/BreakApp/icon-192.png'],['512x512','/BreakApp/icon-512.png']]){
+  assert.ok(manifest.icons?.some(icon=>icon.sizes===size&&icon.src===path&&icon.type==='image/png'),'Icona PWA mancante: '+size);
+  const iconResponse=await page.request.get(new URL(path,url).href);
+  assert.equal(iconResponse.status(),200,'Icona PWA non disponibile: '+size);
+  assert.match(iconResponse.headers()['content-type']||'',/^image\/png/);
+ }
+ const appleIcon=page.locator('link[rel="apple-touch-icon"]');
+ assert.equal(await appleIcon.getAttribute('href'),'/BreakApp/apple-touch-icon.png');
+ const appleResponse=await page.request.get(new URL('/BreakApp/apple-touch-icon.png',url).href);
+ assert.equal(appleResponse.status(),200,'Icona Apple non disponibile');
+ assert.match(appleResponse.headers()['content-type']||'',/^image\/png/);
  await page.getByRole('option',{name:school,exact:true}).waitFor({state:'attached'});
  await page.getByRole('combobox',{name:'Scuola dell’ospite'}).selectOption({label:school});
  await page.getByRole('textbox',{name:'Nome e cognome'}).fill(name);
