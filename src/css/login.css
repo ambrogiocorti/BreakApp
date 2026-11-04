@@ -5,6 +5,12 @@ body:not([data-authenticated="true"]):not([data-workspace="true"]) .site-header 
 body:not([data-authenticated="true"]):not([data-workspace="true"]) .site-header .header-inner {
  height:100%;min-height:0;
 }
+body:not([data-authenticated="true"]):not([data-workspace="true"]) .brand-symbol {
+ background:var(--accent);color:var(--on-accent);
+}
+body:not([data-authenticated="true"]):not([data-workspace="true"]) .brand-symbol span {
+ color:var(--on-accent);
+}
 body:not([data-authenticated="true"]):not([data-workspace="true"]) .app-main {
  min-height:calc(100svh - 64px);
 }
