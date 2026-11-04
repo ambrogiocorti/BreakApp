@@ -1,5 +1,11 @@
 # Indirizzi autorizzati per hosting e pagamenti
 
+Aggiornamento 04/11/2026: questa configurazione è distribuita nel progetto
+Supabase DEV. I preflight delle cinque funzioni restituiscono 204 per l'origin
+GitHub Pages predefinito e 403 per un origin estraneo; le quattro funzioni
+Stripe rifiutano con 401 le richieste senza sessione. La chiave push pubblica
+risponde nel DEV. Non è ancora una prova da Cloudflare Pages.
+
 Le funzioni Stripe e `push-public-key` leggono dal server la variabile
 `BREAKAPP_ALLOWED_SITE_URLS`. Il valore è un elenco separato da virgole di URL
 base completi, HTTPS, ciascuno con il percorso pubblico della PWA. Esempio:

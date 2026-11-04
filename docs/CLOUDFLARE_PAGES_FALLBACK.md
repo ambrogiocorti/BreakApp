@@ -1,38 +1,45 @@
-# BreakApp — pacchetto Cloudflare Pages quando Vercel supera la quota
+# BreakApp — preparazione Cloudflare Pages di test
 
-Al 26 ottobre 2026 l'API di Vercel ha restituito `402 api-deployments-free-per-day`; Vercel è soltanto l'ambiente di test. Lo stack confermato per il sito statico è Cloudflare Pages.
+Il sito attualmente verificato è GitHub Pages. Cloudflare Pages è l'hosting
+previsto, ma il progetto Cloudflare e il suo dominio non risultano ancora
+verificati. Usare un sito di **test** separato e dati fittizi; la promozione
+commerciale richiede approvazione manuale e gate di rilascio superati.
 
-## Creazione del pacchetto
+## Build con Git
 
-La GitHub Action `Cloudflare Pages emergency build package` esegue a ogni push in `main`:
+1. Verificare se esiste già un progetto Pages per BreakApp. Se non esiste,
+   predisporre un progetto di test collegato al repository
+   `ambrogiocorti/BreakApp`, senza sostituire progetti esistenti.
+2. Configurare Node.js 22.12 o superiore, comando `npm run build` e cartella di
+   output `dist`. Per un sito alla radice lasciare `GITHUB_PAGES_BASE` non
+   impostata: Vite usa `/`. La build deve ricevere le sole variabili pubbliche
+   `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` del progetto DEV.
+   Nessuna service-role key, chiave privata o secret Stripe va nel frontend.
+3. Verificare build e test su GitHub prima di distribuire; un deployment
+   automatico del progetto di test non equivale a promozione in produzione.
+4. Una volta noto l'URL HTTPS effettivo, configurarlo sul server insieme
+   all'indirizzo GitHub Pages esistente secondo `HOSTING_ALLOWED_SITES.md`.
+   Configurare separatamente i redirect autorizzati di Supabase Auth e i
+   provider OAuth; non assumere che le anteprime con nomi variabili siano già
+   autorizzate.
 
-1. `npm ci` e `npm run verify` (test JavaScript e build Vite).
-2. Configura l'URL del progetto Supabase BreakApp e la **chiave publishable** (non una service key). Le autorizzazioni sono applicate da RLS/RPC.
-3. Crea `breakapp-pages.zip` con **il contenuto della cartella dist alla radice**.
-4. Lo pubblica come artifact GitHub scaricabile. Se il job o i test falliscono, non produce un pacchetto approvato.
+La vecchia istruzione che rimandava alla workflow `Cloudflare Pages emergency
+build package` è superata: non è presente tra le workflow attuali. In caso di
+Direct Upload, verificare prima le limitazioni Cloudflare: un progetto creato
+con quel metodo non si converte successivamente in progetto con integrazione
+Git. Non creare un secondo progetto senza aver controllato quelli esistenti.
 
-## Pubblicazione temporanea tramite Cloudflare Dashboard
+## Verifica del sito di test
 
-- Apri la pagina GitHub Actions della repository.
-- Seleziona l'ultima esecuzione **verde** di `Cloudflare Pages emergency build package` su `main`.
-- Scarica l'artifact `breakapp-pages.zip`.
-- Nel tuo account Cloudflare apri **Workers & Pages → Create application → Pages → Direct Upload / Drag and drop**.
-- Crea un progetto di test con nome distinto, ad esempio `breakapp-pilot-manual`, e carica il file ZIP.
-- Conferma il deployment e verifica l'URL `*.pages.dev`.
+- Aprire il sito dalla sua origine effettiva e verificare caricamento, CSP,
+  service worker, installazione e percorsi PWA.
+- Provare accessi email, Google e Microsoft con account di prova; verificare
+  la 2FA amministrativa, i redirect e l'isolamento tra scuole.
+- Configurare una scuola di prova con catalogo, orari, fasce e scorte;
+  verificare un ordine completo e il relativo rimborso Stripe TEST con ruoli
+  distinti. Provare anche gruppi, offline e notifiche su dispositivi fisici.
+- Non usare dati o incassi reali finché backup, privacy, fiscalità, merchant,
+  collaudi e accettazione del gestore non siano completati.
 
-**Attenzione:** Cloudflare non consente di trasformare successivamente un progetto Pages creato con **Direct Upload** in uno con integrazione Git. Perciò usare un progetto **temporaneo separato**, non il futuro progetto Pages principale con build automatica.
-
-Se esiste già un progetto Cloudflare Pages con integrazione Git, non ricrearlo con Direct Upload: impostare il repository `ambrogiocorti/BreakApp`, branch `main`, comando `npm run build`, output `dist` e le due variabili pubbliche `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`.
-
-## Verifiche dopo upload
-
-- Login con utente registrato e MFA Super Admin `breakapp.app@gmail.com`.
-- Il Super Admin NON deve vedere Cliente come opzione.
-- La sezione Piattaforma deve mostrare le operazioni per assegnare personale, calendario, fasce e stock.
-- Formati allergeni e scorte devono aggiornare il progetto Supabase corretto.
-- Inserire orari, personale, ingredienti e scorte **reali**, non esempi.
-- Testare con Cliente e Barista separati prima di utilizzare denaro reale.
-
-**Il pacchetto è una build software:** non rende implementati gruppi, Stripe, modalità offline e le altre funzionalità del Prompt Master ancora aperte.
-
-Documentazione Cloudflare: https://developers.cloudflare.com/pages/get-started/direct-upload/
+Riferimenti: https://developers.cloudflare.com/pages/configuration/build-configuration/ e
+https://developers.cloudflare.com/pages/get-started/git-integration/.

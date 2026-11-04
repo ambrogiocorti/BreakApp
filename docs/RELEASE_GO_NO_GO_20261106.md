@@ -17,7 +17,9 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 | Backup giornaliero | **Database:** run reale #41654538860 decifrata e ripristinata su Supabase-Postgres 17 isolato, con verifiche SQL; **Storage:** backup reale e prova di recovery in streaming riusciti il 03/11 (run #41709597575, 2 bucket, 1 oggetto da 5.661 byte, SHA-256 verificato, artifact AES-256 #13266617186, conservazione fino al 03/12/2026) | Database ripristinato; Storage realmente acquisito e cifrato. **Schedulazione:** run database #41807385492 e Storage #41809932298 riuscite il 04/11. **Ancora da provare:** ripristino file in un progetto distinto, configurazione completa servizi Supabase e copia indipendente |
 | Privacy e fiscale | Documentazione ancora da finalizzare con il cliente e professionisti competenti | **NO-GO** per esercizio commerciale non delimitato |
 | Prove fisiche | Android, iPhone, terminale bar, Wi-Fi degradato, offline e revoche non certificate | **NO-GO** per operatività non supervisionata |
-| Hosting definitivo | Stack confermato Cloudflare Pages; attualmente GitHub Pages per test e anteprime Vercel | Da configurare, collaudare e promuovere manualmente |
+| Hosting definitivo | Stack confermato Cloudflare Pages; attualmente GitHub Pages per test. Funzioni Stripe e push DEV predisposte per URL HTTPS espliciti e verificate con origin GitHub e origin estranea. | Cloudflare, redirect Auth/OAuth e collaudo dal nuovo dominio ancora da configurare; promozione manuale |
+| Merchant multipli | Il collegamento a Stripe Checkout è in TEST; l'onboarding attuale riguarda un solo merchant dimostrativo e le chiavi LIVE sono rifiutate. | Da implementare e verificare per ogni gestore/scuola prima degli incassi reali |
+| Demo scuola | L'accesso ospite e la consultazione del menu funzionano nel sito di test; il bar attualmente visibile sospende le nuove prenotazioni. | Preparare una scuola dimostrativa con menu, orari, fasce e scorte e verificare il percorso d'ordine |
 
 ## Operazioni obbligatorie con dati e dispositivi del titolare
 
