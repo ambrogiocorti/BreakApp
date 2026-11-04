@@ -2,15 +2,8 @@
 // Requires STRIPE_SECRET_KEY, SUPABASE_URL, SUPABASE_ANON_KEY,
 // SUPABASE_SERVICE_ROLE_KEY (Edge Function secrets; never frontend).
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
+import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
 
-const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{
- status,headers:{'content-type':'application/json; charset=utf-8',
- 'cache-control':'no-store','access-control-allow-origin':'https://ambrogiocorti.github.io',
- 'vary':'Origin','access-control-allow-headers':'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage',
- 'access-control-allow-methods':'POST, OPTIONS'}
-});
-const origin='https://ambrogiocorti.github.io';
-const site=origin+'/BreakApp/';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function required(name:string){
  const value=Deno.env.get(name);if(!value)throw new Error('Configurazione server incompleta: '+name);
@@ -29,9 +22,14 @@ async function stripe(endpoint:string,account:string,key:string,init?:RequestIni
  return data;
 }
 Deno.serve(async(req)=>{
- if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{'access-control-allow-origin':origin,'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage','vary':'Origin'}});
+ const site=resolveAllowedSite(req.headers.get('Origin'),Deno.env.get('BREAKAPP_ALLOWED_SITE_URLS'));
+ const headers=corsHeaders(site,'POST, OPTIONS');
+ const json=(value:unknown,status=200)=>new Response(JSON.stringify(value),{
+  status,headers:{...headers,'content-type':'application/json; charset=utf-8'}
+ });
+ if(!site)return json({error:'Origine non autorizzata'},403);
+ if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(req.method!=='POST')return json({error:'Metodo non consentito'},405);
- if(req.headers.get('Origin')!==origin)return json({error:'Origine non autorizzata'},403);
  try{
   const token=req.headers.get('Authorization')?.replace(/^Bearer\s+/i,'').trim();
   if(!token)return json({error:'Sessione richiesta'},401);
@@ -72,8 +70,8 @@ Deno.serve(async(req)=>{
     // Stripe requires a window of at least 30 minutes. No local timeout
     // may be used to release the cash-desk payment lock.
     expires_at:String(Math.floor(Date.now()/1000)+35*60),
-    success_url:site+'#orders',
-    cancel_url:site+'#orders'
+    success_url:site.baseUrl+'#orders',
+    cancel_url:site.baseUrl+'#orders'
    });
    checkout=await stripe('checkout/sessions',account,stripeKey,{
     method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',
