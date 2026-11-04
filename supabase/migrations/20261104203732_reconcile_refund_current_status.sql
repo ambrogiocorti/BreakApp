@@ -97,6 +97,17 @@ begin
  on conflict(event_id) do nothing returning event_id into v_inserted;
  if v_inserted is null then
   select * into v_previous from app_private.stripe_webhook_inbox where event_id=p_event;
+  -- Older releases stored only refund_id and status and labelled both
+  -- refund.created and refund.updated as refund.updated. The signed event
+  -- and the ledger checks above still bind account, payment and amount.
+  if v_previous.stripe_account_id is not distinct from p_account
+   and v_previous.event_type='refund.updated'
+   and p_event_type in ('refund.created','refund.updated')
+   and not (v_previous.payload ? 'provider_refund')
+   and v_previous.payload->>'refund_id'=p_refund::text
+   and v_previous.payload->>'status'=p_snapshot_status then
+   return 'duplicate';
+  end if;
   if v_previous.stripe_account_id is distinct from p_account or v_previous.event_type is distinct from p_event_type
    or v_previous.payload is distinct from jsonb_build_object('refund_id',p_refund,
     'provider_refund',p_provider_refund,'payment_intent',p_intent,'amount',p_amount,

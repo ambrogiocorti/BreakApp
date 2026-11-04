@@ -76,6 +76,14 @@ begin
  if result<>'succeeded' or (select payment_status from public.orders where id='93000000-0000-4000-8000-000000000006')<>'refunded'
  then raise exception 'Verified individual refund was not recorded'; end if;
 
+ -- An event handled by the previous release remains a harmless duplicate.
+ insert into app_private.stripe_webhook_inbox(event_id,stripe_account_id,event_type,payload,processed_at)
+ values('evt_LegacyRefund','acct_AsyncTest','refund.updated',
+  jsonb_build_object('refund_id','94000000-0000-4000-8000-000000000001','status','succeeded'),now());
+ result:=public.enqueue_signed_refund_observation('evt_LegacyRefund','refund.created','acct_AsyncTest',
+  '94000000-0000-4000-8000-000000000001','re_RefundIndividual','pi_RefundIndividual',400,'eur','succeeded');
+ if result<>'duplicate' then raise exception 'Legacy Stripe event was not recognized'; end if;
+
  -- A later failure makes the completed refund visibly unresolved immediately.
  result:=public.enqueue_signed_refund_observation('evt_RefundFailed','refund.failed','acct_AsyncTest',
   '94000000-0000-4000-8000-000000000001','re_RefundIndividual','pi_RefundIndividual',400,'eur','failed');
