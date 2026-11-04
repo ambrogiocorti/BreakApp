@@ -1,4 +1,4 @@
-# BreakApp — rilascio Stripe Connect TEST (verifica senza pagamenti)
+# BreakApp — rilascio Stripe Connect TEST (collaudo Sandbox)
 
 ## Stato verificato il 3 novembre 2026
 
@@ -12,7 +12,9 @@ Il connettore Stripe disponibile nell'ambiente di sviluppo corrente espone la pi
 - Creati temporaneamente una finestra di ritiro, scorte e un ordine ospite TEST da **2,50 EUR** nel progetto Supabase DEV. La Edge Function ha prodotto una vera sessione Stripe Checkout Sandbox; la sessione e scaduta **senza addebito**. L'evento `checkout.session.expired` firmato e stato accettato (`HTTP 200`), registrato nella inbox e ha portato il tentativo di pagamento allo stato `cancelled`.
 - L'ordine e stato annullato mediante il workflow applicativo, la scuola e stata riportata allo stato `is_active=false`, la finestra TEST disattivata e la prenotazione della scorta rilasciata. Restano record TEST inattivi per audit, non prenotazioni attive.
 - Stripe aveva **due endpoint TEST attivi con URL identico** e segreti di firma diversi: `we_1UXpLo2RLt7x5EeZLsKaYEIj` (nome *BreakApp Connect TEST*: 1 consegna riuscita, 0 fallite; copre 8 eventi) e `we_1UUxQW2RLt7x5EeZkEpa55TX` (endpoint pilota storico: 3 consegne fallite su 3; copre 4 eventi). L'endpoint pilota e stato **disabilitato**, non eliminato, e lo stato di entrambi e stato riletto via API. Questo evita duplicati invalidi e tentativi ripetuti, ma richiede una nuova prova di consegna dopo il cambio.
-- **Non ancora provati:** conferma di un Checkout pagato con carta di test, stato dell'ordine dopo webhook `completed`, rimborso Stripe e corrispondenza del `refund.updated`. Nessuna transazione finanziaria e stata completata da questo collaudo.
+- **Collaudo reale completato, individuale:** un secondo ordine ospite TEST da **250 centesimi**, ID `fb77abd9-ce00-444b-8b50-8736b3dc2a58`, e stato creato tramite la stessa Edge Function ospite e RPC ordini usate dal client. Il Checkout Stripe collegato al merchant scolastico ha accettato una carta fittizia ufficiale Stripe in **EUR**, reindirizzando alla pagina di successo; l'evento firmato `checkout.session.completed` e stato registrato in inbox alle 17:16:59 UTC. Il tentativo `22468fea-162b-4a72-ae94-8ee1be8db850` e passato a `succeeded` e l'ordine a `payment_status='paid'`.
+- **Rimborso reale Sandbox completato:** il workflow applicativo interno di annullamento ha accodato il refund da **250 centesimi**, ID `83a88559-d58a-40e7-83d0-4df674e20c44`. Il job pg_cron `breakapp-push-and-refunds` ha invocato `group-refund-dispatch` con **HTTP 200** e il primo tentativo ha creato il refund Stripe `re_3UY7nw2RLtxMJCNo1kwQvZFa`. Il webhook firmato `refund.updated` e stato registrato alle 17:18:04 UTC; `payment_refunds.status='succeeded'`, `orders.payment_status='refunded'`, ordine `cancelled`, stock allocato **0**. La scuola resta `is_active=false` e la finestra QA e stata disattivata nuovamente. Totale in inbox: **3 eventi firmati** (`expired`, `completed`, `refund.updated`). Nessun denaro reale e stato movimentato.
+- **Limite della prova:** l'ordine e stato creato via RPC con coordinate GPS sintetiche da QA e l'annullamento e stato invocato tramite workflow interno per il test; manca ancora la prova UI completa con ruolo Barista/Admin, oltre a gruppo, pagatori distinti, dispositivi reali e merchant LIVE.
 
 ### Check automatico di sola lettura
 
