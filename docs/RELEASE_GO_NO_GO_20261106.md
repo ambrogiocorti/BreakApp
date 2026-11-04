@@ -19,7 +19,7 @@ Il Prompt Master (171 decisioni) resta vincolante: questa scheda verifica il ril
 | Prove fisiche | Android, iPhone, terminale bar, Wi-Fi degradato, offline e revoche non certificate | **NO-GO** per operatività non supervisionata |
 | Hosting | Su richiesta del titolare, per ora si usa GitHub Pages. Funzioni Stripe e push DEV verificate con origin GitHub e origin estranea. | Un eventuale dominio personalizzato tramite Register.it, i relativi redirect e il collaudo sono da verificare separatamente; promozione manuale |
 | Merchant multipli | Il collegamento a Stripe Checkout è in TEST; l'onboarding attuale riguarda un solo merchant dimostrativo e le chiavi LIVE sono rifiutate. | Da implementare e verificare per ogni gestore/scuola prima degli incassi reali |
-| Demo scuola | Scuola di prova separata con due prodotti fittizi, scorte e fasce dal 05 all'11/11; UI verificata fino al riepilogo. Creazione e idempotenza dell'ordine provate tramite transazione SQL annullata, con identità e posizione di test. | Conferma UI con GPS reale e ciclo di pagamento non verificati sulla demo; merchant Stripe non associato |
+| Demo scuola | Scuola separata con prodotti fittizi, scorte e fasce dal 05 all'11/11. Un browser ha creato e annullato un ordine con posizione simulata; idempotenza verificata separatamente con una transazione SQL annullata. | GPS reale e ciclo di pagamento non verificati sulla demo; merchant Stripe non associato. Il primo collaudo ha mantenuto le scorte dei prodotti marcati pronti, poi riconciliate nella sola demo, ora configurata con preparazione attiva. |
 
 ## Operazioni obbligatorie con dati e dispositivi del titolare
 

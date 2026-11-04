@@ -44,7 +44,7 @@ finally{
    await page.getByRole('button',{name:'Altro',exact:true}).click({timeout:15000});
    await page.getByRole('link',{name:'Richieste e modifiche',exact:true}).click({timeout:15000});
    const cancel=page.locator('#workflow-center').getByRole('button',{name:'Annulla ordine',exact:true});
-   await cancel.waitFor({state:'visible',timeout:65000});
+   await cancel.waitFor({state:'visible',timeout:30000});
    page.once('dialog',async dialog=>{
     if(dialog.type()==='confirm'&&dialog.message()==='Annullare e avviare gli eventuali rimborsi?')await dialog.accept();
     else await dialog.dismiss();
