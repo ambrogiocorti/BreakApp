@@ -10,7 +10,7 @@ Il workflow `.github/workflows/github-pages.yml` esegue `npm ci`, test e build, 
 
 e distribuisce il contenuto di `dist` con `actions/deploy-pages` tramite OIDC. Non richiede chiavi Stripe, service-role o altre credenziali segrete nel browser.
 
-**Passaggio dell'account proprietario:** in GitHub, repository `ambrogiocorti/BreakApp` → **Settings → Pages → Build and deployment → Source → GitHub Actions**. La configurazione Pages del repository risulta inizialmente disattivata; l'azione `configure-pages` non può abilitarla con il solo `GITHUB_TOKEN`.
+**Configurazione verificata:** per la repository `ambrogiocorti/BreakApp`, GitHub Pages usa **Settings → Pages → Build and deployment → Source → GitHub Actions**. Il sito di test è attivo; su una nuova repository la sorgente Pages va comunque configurata dall'account proprietario.
 
 **Sito senza dominio personalizzato:** lasciare il valore predefinito `GITHUB_PAGES_BASE=/BreakApp/`. Se in futuro si sceglie un dominio personalizzato su GitHub Pages, impostare la repository Actions variable `GITHUB_PAGES_BASE` a `/`, quindi eseguire il workflow di nuovo.
 
