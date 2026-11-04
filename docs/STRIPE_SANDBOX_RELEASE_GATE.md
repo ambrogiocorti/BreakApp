@@ -1,10 +1,19 @@
 # BreakApp — rilascio Stripe Connect TEST (verifica senza pagamenti)
 
-## Stato verificato il 3 novembre 2026
+## Stato verificato il 4 novembre 2026
 
 L'ambiente Supabase BreakApp `ynvswdyirngvdpudcikl` contiene il merchant scolastico sandbox `acct_1UVx5F2RLtxMJCNo` con flag `charges_enabled=true` e `payouts_enabled=true`, ma presenta **0 tentativi di pagamento**, **0 rimborsi** e **0 eventi** nella inbox Stripe. Questi dati non dimostrano che l'intero flusso di incasso funzioni.
 
-Il connettore Stripe disponibile nell'ambiente di sviluppo corrente espone la piattaforma test `acct_1UMbXXCs978fOWHz` (nome Plateform), che restituisce **zero account Connect** e due webhook relativi a **progetti Supabase differenti**. Non usare questo account per creare pagamenti o un webhook di BreakApp. L'account piattaforma BreakApp documentato storicamente nel repository e distinto da quello associato alla chat: occorre verificare nel Dashboard Stripe quale piattaforma sia proprietaria del merchant scolastico.
+La piattaforma Stripe TEST BreakApp corretta è `acct_1UUniH2RLt7x5EeZ` (distinta da Plateform `acct_1UMbXXCs978fOWHz`). L'API Stripe conferma che il merchant scolastico appartiene a questa piattaforma, è abilitato agli addebiti e ha la capability `card_payments=active`.
+
+**Blocco webhook verificato il 4/11:** la piattaforma BreakApp ha **due destinazioni TEST attive per lo stesso identico URL** `https://ynvswdyirngvdpudcikl.supabase.co/functions/v1/stripe-webhook`:
+
+- `we_1UUxQW2RLt7x5EeZkEpa55TX` — destinazione precedente, 4 eventi.
+- `we_1UXpLo2RLt7x5EeZLsKaYEIj` — destinazione più recente, 8 eventi.
+
+Entrambe hanno `events_from=["@accounts"]` (account connessi) e `event_payload="snapshot"` secondo l'API Event Destinations v2. I segreti `whsec_` delle due destinazioni non sono intercambiabili: prima di disabilitarne una, identificare quella corrispondente a `STRIPE_WEBHOOK_SECRET` nell'ambiente Supabase, utilizzando una consegna TEST firmata e verificata. Non eliminare alcuna destinazione alla cieca. Il gate di verifica ora rifiuta più di una destinazione **attiva** per lo stesso URL.
+
+**Blocco prova applicativa:** su Supabase ITSOS Marie Curie è al momento sospesa (`is_active=false`), e le uniche scorte e fasce sono datate 26/10 e 03/11. Non riaprire la scuola reale o inventare ordini senza preparare una prova isolata e concordata. Il database ha ancora 0 `payment_attempts`, 0 `payment_refunds` e 0 eventi nella inbox; la piattaforma Stripe non ha Checkout Sessions registrate.
 
 ### Check automatico di sola lettura
 
