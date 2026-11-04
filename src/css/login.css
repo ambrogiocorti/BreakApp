@@ -30,7 +30,7 @@ body:not([data-authenticated="true"]):not([data-workspace="true"]) .auth-card {
 }
 body:not([data-authenticated="true"]):not([data-workspace="true"]) .site-footer {display:none;}
 body:not([data-authenticated="true"]) .auth-card h1,
-body:not([data-authenticated="true"]) .auth-alt-panel h2 {
+body:not([data-authenticated="true"]) .auth-alt-panel h1 {
  margin:.4rem 0 .35rem;color:var(--text);font-size:1.9rem;
  letter-spacing:-.055em;font-weight:780;line-height:1.14;
 }
@@ -106,11 +106,16 @@ body:not([data-authenticated="true"]) .auth-card .feedback:not(:empty) {margin:.
  body:not([data-authenticated="true"]) #login-panel .auth-tag,
  body:not([data-authenticated="true"]) #login-panel .auth-subtitle {display:none;}
  body:not([data-authenticated="true"]) .auth-card h1,
- body:not([data-authenticated="true"]) .auth-alt-panel h2 {font-size:1.65rem;}
+ body:not([data-authenticated="true"]) .auth-alt-panel h1 {font-size:1.65rem;}
  body:not([data-authenticated="true"]) .auth-card #auth-form {margin-top:.65rem;}
  body:not([data-authenticated="true"]) .auth-card #auth-form label {line-height:1.2;}
  body:not([data-authenticated="true"]) .auth-card #auth-form input {margin-bottom:.55rem;line-height:1.2;}
  body:not([data-authenticated="true"]) .auth-divider {margin:.45rem 0;}
  body:not([data-authenticated="true"]) .auth-signup {margin-top:.45rem;}
  .auth-guest-action {margin-top:.35rem;}
+ .auth-alt-panel .guest-access-form,.auth-alt-panel .guest-recovery-form {gap:.4rem;margin-top:.55rem;}
+ body:not([data-authenticated="true"]) .auth-alt-panel label {line-height:1.2;}
+ body:not([data-authenticated="true"]) .auth-alt-panel input,
+ body:not([data-authenticated="true"]) .auth-alt-panel select {line-height:1.2;}
+ .auth-alt-panel .guest-recovery-open {margin-top:.3rem;}
 }

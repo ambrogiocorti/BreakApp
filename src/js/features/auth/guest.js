@@ -3,7 +3,7 @@ export function initializeGuestAccess(client){
  const make=(tag,text='')=>{const n=document.createElement(tag);n.textContent=text;return n;};
  const label=(text,field)=>{const wrapper=make('label',text);wrapper.append(field);return wrapper;};
  const signedOut=document.getElementById('signed-out-view'),loginPanel=document.getElementById('login-panel'),guestOpen=document.getElementById('guest-open');
- const guestPanel=make('div'),recoverPanel=make('div'),guestHeading=make('h2','Accesso ospite'),recoverHeading=make('h2','Recupera accesso ospite');
+ const guestPanel=make('div'),recoverPanel=make('div'),guestHeading=make('h1','Accesso ospite'),recoverHeading=make('h1','Recupera accesso ospite');
  guestPanel.className='auth-alt-panel';guestPanel.id='guest-access-panel';guestPanel.hidden=true;
  recoverPanel.className='auth-alt-panel';recoverPanel.id='guest-recovery-panel';recoverPanel.hidden=true;
  guestHeading.tabIndex=-1;recoverHeading.tabIndex=-1;

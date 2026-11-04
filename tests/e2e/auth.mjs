@@ -43,6 +43,13 @@ try{
    await page.getByRole('button',{name:'Continua come ospite',exact:true}).click();
    await page.getByRole('heading',{name:'Accesso ospite',exact:true}).waitFor();
    assert.equal(await page.getByLabel('Indirizzo email',{exact:true}).isVisible(),false);
+   const guestGeometry=await page.evaluate(()=>({height:innerHeight,scroll:document.documentElement.scrollHeight}));
+   assert.ok(guestGeometry.scroll<=guestGeometry.height+2,'Guest access requires scrolling: '+JSON.stringify(guestGeometry));
+   await page.getByRole('button',{name:'Recupera accesso ospite',exact:true}).click();
+   await page.getByLabel('Email già verificata per recuperare l’accesso').waitFor();
+   const recoveryGeometry=await page.evaluate(()=>({height:innerHeight,scroll:document.documentElement.scrollHeight}));
+   assert.ok(recoveryGeometry.scroll<=recoveryGeometry.height+2,'Guest recovery requires scrolling: '+JSON.stringify(recoveryGeometry));
+   await page.getByRole('button',{name:'← Torna all’accesso ospite',exact:true}).click();
    await page.getByRole('button',{name:'← Torna all’accesso',exact:true}).click();
    await page.getByLabel('Indirizzo email',{exact:true}).waitFor();
    assert.equal(await page.evaluate(()=>window.fixture.options.auth.flowType),'pkce');
