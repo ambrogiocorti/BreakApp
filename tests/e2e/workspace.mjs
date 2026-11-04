@@ -44,6 +44,14 @@ try{
    assert.equal(await page.locator('#platform-pilot-tools').isVisible(),false);
    assert.equal(await page.locator('#platform-overview').isVisible(),true);
    assert.equal(await page.getByRole('heading',{level:1}).count(),1);
+   assert.equal(await page.locator('body').getAttribute('data-active-route'),'platform-overview');
+   if(viewport.width<=760){
+    // The accessible h1 remains in the document but the duplicated mobile
+    // header must not steal the first screen from the actual indicators.
+    const fold=await page.evaluate(()=>({header:document.querySelector('#workspace-page-head').getBoundingClientRect().height,ledger:document.querySelector('#platform-overview .control-side').getBoundingClientRect().top}));
+    assert.ok(fold.header<=1,'duplicate mobile page heading occupies space');
+    assert.ok(fold.ledger<viewport.height-150,'network indicators are still below the mobile fold: '+JSON.stringify(fold));
+   }
    const layout=await page.evaluate(()=>({main:document.querySelector('.app-main').scrollTop,window:scrollY}));
    assert.equal(layout.main,0,JSON.stringify(layout));
    assert.equal(layout.window,0,JSON.stringify(layout));
@@ -51,6 +59,7 @@ try{
    if(viewport.width>1023)assert.equal(await page.locator('#workspace-sidebar').isVisible(),true);
    await page.getByRole('link',{name:'Vedi tutte'}).click();
    await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
+   assert.equal(await page.locator('body').getAttribute('data-active-route'),'platform-schools');
    await page.reload();
    await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
    await page.locator('#platform-directory-list tbody tr').first().waitFor();
@@ -113,6 +122,7 @@ try{
    await page.evaluate(()=>{window.fixture.fail=false});await page.getByRole('button',{name:'Aggiorna',exact:true}).click();await page.locator('#platform-metrics .metric-card').first().waitFor();
    await page.evaluate(()=>{window.fixture.delay=200});await page.getByRole('button',{name:'Aggiorna',exact:true}).click();await page.evaluate(()=>window.fixture.logout());
    await page.waitForTimeout(300);assert.equal(await page.locator('#platform-metrics').textContent(),'');assert.equal(await page.locator('#workspace-sidebar').isVisible(),false);
+   assert.equal(await page.locator('body').getAttribute('data-active-route'),null);
    assert.deepEqual(errors,[]);console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'workspace navigation, live metrics, search, school state, configuration tabs, onboarding, themes and role isolation'}));await page.close();
   }
   await browser.close();browser=null;
