@@ -798,11 +798,15 @@ export function initializeOrders(client) {
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
       if(actionDialog.open)finishStaffDecision(false);
+      if(productDialog.open)productDialog.close();
+      if(cartDialog.open)cartDialog.close();
+      if(stepper.open)stepper.close();
       stopStaffFeed();staffFetchSequence++;staffAuthVersion++;
       staffSchools=[];staffOrders=[];updateSlotFilter();drawStaff();
       if(refundDialog.open)refundDialog.close();
       if(cashReturnDialog.open)cashReturnDialog.close();
       cashRefundVersion++;cashRefunds=[];drawCashRefunds();
+      version++;enabled=false;windows=[];requestKey=null;
       staffPanel.hidden=true;cart=[];showCartBar();return;
     }
     if(changed){

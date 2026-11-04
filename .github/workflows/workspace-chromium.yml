@@ -16,6 +16,7 @@ on:
       - 'tests/e2e/guest.mjs'
       - 'tests/e2e/workspace*.mjs'
       - 'tests/e2e/groups*.mjs'
+      - 'tests/e2e/checkout*.mjs'
       - '.github/workflows/workspace-chromium.yml'
 permissions:
   contents: read
@@ -49,3 +50,7 @@ jobs:
         env:
           GROUP_BROWSER: chromium
         run: node tests/e2e/groups.mjs
+      - name: Booking and cancellable location request
+        env:
+          CHECKOUT_BROWSER: chromium
+        run: node tests/e2e/checkout.mjs
