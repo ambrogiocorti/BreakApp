@@ -78,16 +78,21 @@ export async function checkStripeReadiness({
   // Check only observable fields and require a real signed Connect delivery
   // (event.account present) for confirmation of the event scope.
   const matching=endpoints.filter(w=>w.url===endpoint&&w.livemode!==true);
+  const activeMatching=matching.filter(w=>w.status==='enabled');
   assertion(matching.length>0,'Webhook TEST BreakApp presente sulla piattaforma',checks);
-  const readyWebhook=matching.find(w=>w.status==='enabled'&&
+  // Every Stripe endpoint has its own signing secret. If multiple active
+  // destinations deliver to the same Edge Function, only one can normally
+  // match STRIPE_WEBHOOK_SECRET; the others keep retrying with HTTP 400.
+  assertion(activeMatching.length===1,'Esattamente un webhook TEST attivo per URL BreakApp',checks);
+  const readyWebhook=activeMatching.find(w=>
     (w.enabled_events?.includes('*')||
       requiredEvents.every(event=>w.enabled_events?.includes(event))));
-  assertion(matching.some(w=>w.status==='enabled'),'Webhook TEST BreakApp attivo',checks);
+  assertion(activeMatching.length>0,'Webhook TEST BreakApp attivo',checks);
   for(const event of requiredEvents)
-    assertion(matching.some(w=>w.status==='enabled'&&
+    assertion(activeMatching.some(w=>
       (w.enabled_events?.includes('*')||w.enabled_events?.includes(event))),
       'Evento webhook '+event+' abilitato (ambito Connect non leggibile)',checks);
-  assertion(Boolean(readyWebhook),'Un solo webhook TEST attivo copre tutti gli eventi richiesti',checks);
+  assertion(Boolean(readyWebhook),'Un singolo webhook TEST copre tutti gli eventi richiesti',checks);
   return {
     // "ready" means observable REST configuration only, not Connect scope
     // or a completed payment. It must never be presented as go-live approval.
@@ -96,6 +101,7 @@ export async function checkStripeReadiness({
     endpoint,
     checks,
     matchingEndpoints:matching.length,
+    activeMatchingEndpoints:activeMatching.length,
     limitations:[
       'DA VERIFICARE: Stripe /v1/webhook_endpoints non restituisce il campo connect. Il test non puo stabilire se la destinazione ascolta Connected accounts. Verificarlo in Workbench e con un evento firmato che contenga event.account.',
       'Non verifica che STRIPE_WEBHOOK_SECRET in Supabase corrisponda al signing secret dell’endpoint.',
@@ -116,6 +122,8 @@ async function main(){
     console.log('Webhook atteso:',result.endpoint);
     if(typeof result.matchingEndpoints==='number')
       console.log('Endpoint TEST con questo URL trovati:',result.matchingEndpoints);
+    if(typeof result.activeMatchingEndpoints==='number')
+      console.log('Di cui attivi:',result.activeMatchingEndpoints);
     if(result.connectScopeVerified===false)
       console.log('[DA VERIFICARE] Ambito Connected accounts: impossibile determinarlo tramite GET /v1/webhook_endpoints.');
     for(const caveat of result.limitations)console.log('NOTA:',caveat);
