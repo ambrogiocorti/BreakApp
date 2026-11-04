@@ -44,6 +44,30 @@ Deno.serve(async request=>{
   const evt=JSON.parse(raw) as Record<string,any>;
   if(!/^evt_[A-Za-z0-9]+$/.test(evt.id||'')||evt.livemode!==false)
    return respond({error:'Evento Stripe non valido per il test'},400);
+  if(evt.type==='checkout.session.async_payment_failed'){
+    const session=evt.data?.object;
+    if(!session||session.object!=='checkout.session'||session.mode!=='payment'||
+      session.payment_status!=='unpaid'||session.currency!=='eur'||
+      !Number.isSafeInteger(session.amount_total)||session.amount_total<=0||
+      !/^cs_test_[A-Za-z0-9]+$/.test(session.id||'')||
+      !/^pi_[A-Za-z0-9]+$/.test(session.payment_intent||'')||
+      !/^acct_[A-Za-z0-9]+$/.test(evt.account||'')||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.client_reference_id||'')||
+      session.metadata?.attempt_id!==session.client_reference_id)
+      return respond({error:'Evento Checkout fallito non valido'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data,error}=await admin.rpc('reconcile_signed_async_checkout_failure',{
+      p_event_id:evt.id,p_stripe_account:evt.account,p_session:session.id,
+      p_intent:session.payment_intent,p_attempt:session.client_reference_id,
+      p_amount:session.amount_total,p_currency:session.currency
+    });
+    // A non-2xx response lets Stripe retry when the ledger could not commit.
+    if(error)return respond({error:'Fallimento Checkout non riconciliato'},500);
+    return respond({received:true,result:data},200);
+  }
   if(evt.type==='checkout.session.expired'){
     const expired=evt.data?.object;
     if(!expired||expired.object!=='checkout.session'||
