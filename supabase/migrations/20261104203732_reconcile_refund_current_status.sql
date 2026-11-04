@@ -191,7 +191,11 @@ begin
    and cl.group_cart_item_id=gr.group_cart_item_id and cl.payment_id=a.id
    and cl.state in ('refunded','refund_pending');
  if a.order_id is not null then perform app_private.refresh_individual_balance(a.order_id); end if;
+ -- Nonterminal refunds remain observable even if a later webhook is delayed
+ -- or lost. Retry at a bounded cadence rather than declaring them complete.
  update app_private.stripe_refund_observations set handled_revision=p_revision,
+  revision=case when v_status in ('processing','review') then p_revision+1 else revision end,
+  next_attempt_at=case when v_status in ('processing','review') then now()+interval '30 minutes' else now() end,
   lease_token=null,lease_until=null,claim_revision=null,attempts=0,last_error=null,updated_at=now()
   where refund_id=p_refund;
  return v_status;

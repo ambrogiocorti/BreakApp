@@ -58,10 +58,18 @@ select set_config('request.jwt.claims','{"role":"service_role"}',true);
 do $$
 declare job record; result text; denied boolean; notices integer;
 begin
- result:=public.enqueue_signed_refund_observation('evt_RefundInitial','refund.updated','acct_AsyncTest',
-  '94000000-0000-4000-8000-000000000001','re_RefundIndividual','pi_RefundIndividual',400,'eur','succeeded');
+ result:=public.enqueue_signed_refund_observation('evt_RefundInitial','refund.created','acct_AsyncTest',
+  '94000000-0000-4000-8000-000000000001','re_RefundIndividual','pi_RefundIndividual',400,'eur','pending');
  if result<>'queued' or (select status from public.payment_refunds where id='94000000-0000-4000-8000-000000000001')<>'processing'
  then raise exception 'A snapshot alone finalized a refund'; end if;
+ select * into job from public.claim_refund_observations(1);
+ result:=public.finish_refund_observation(job.refund_id,job.lease_token,job.claim_revision,job.account,
+  job.provider_refund,job.payment_intent,job.amount_cents,'eur','pending');
+ if result<>'processing' or not exists(select 1 from app_private.stripe_refund_observations
+  where refund_id=job.refund_id and revision>handled_revision and next_attempt_at>now())
+ then raise exception 'Pending refund was not scheduled for rechecking'; end if;
+ perform public.enqueue_signed_refund_observation('evt_RefundSuccess','refund.updated','acct_AsyncTest',
+  '94000000-0000-4000-8000-000000000001','re_RefundIndividual','pi_RefundIndividual',400,'eur','succeeded');
  select * into job from public.claim_refund_observations(1);
  result:=public.finish_refund_observation(job.refund_id,job.lease_token,job.claim_revision,job.account,
   job.provider_refund,job.payment_intent,job.amount_cents,'eur','succeeded');

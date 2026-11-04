@@ -99,7 +99,9 @@ Deno.serve(async request=>{
     p_account:job.account,p_provider_refund:refund.id,p_intent:refund.payment_intent,
     p_amount:refund.amount,p_currency:refund.currency,p_provider_status:refund.status
    });
-   if(finishError){observationErrors++;continue;}
+   if(finishError||!['succeeded','processing','review','failed','superseded'].includes(state)){
+    observationErrors++;continue;
+   }
    if(state==='superseded')superseded++;else reconciled++;
   }catch{
    await db.rpc('fail_refund_observation',{p_refund:job.refund_id,p_token:job.lease_token,
