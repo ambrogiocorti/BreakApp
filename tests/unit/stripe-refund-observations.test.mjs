@@ -38,7 +38,8 @@ function dispatchRequest(){return new Request('https://example.supabase.co/funct
  method:'POST',headers:{'x-breakapp-dispatch-token':token}});}
 const job={refund_id:refundId,lease_token:leaseId,claim_revision:4,account:'acct_TestSchool',
  provider_refund:'re_RefundTest1',payment_intent:'pi_PaymentTest1',amount_cents:250};
-const providerRefund={id:job.provider_refund,object:'refund',livemode:false,
+// Stripe Refund objects do not include a livemode field.
+const providerRefund={id:job.provider_refund,object:'refund',
  payment_intent:job.payment_intent,amount:250,currency:'eur',status:'failed',
  metadata:{breakapp_refund_id:refundId}};
 
@@ -105,6 +106,7 @@ test('dispatcher looks up the current refund in its connected account before fin
 test('unexpected or unavailable provider response is retried without finalizing the ledger',async()=>{
  for(const fetchImpl of [
   async()=>new Response(JSON.stringify({...providerRefund,amount:251}),{status:200}),
+  async()=>new Response(JSON.stringify({...providerRefund,livemode:true}),{status:200}),
   async()=>new Response('',{status:503}),
   async()=>{throw Error('offline');}
  ]){

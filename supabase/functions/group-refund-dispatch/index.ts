@@ -84,7 +84,9 @@ Deno.serve(async request=>{
     observationErrors++;continue;
    }
    const refund=await result.json();
-   if(refund.object!=='refund'||refund.livemode!==false||refund.id!==job.provider_refund||
+   // Stripe's Refund object does not expose livemode. The TEST-only API key
+   // above and the signed TEST event scope the lookup to the sandbox.
+   if(refund.object!=='refund'||refund.livemode===true||refund.id!==job.provider_refund||
       refund.payment_intent!==job.payment_intent||refund.amount!==job.amount_cents||
       refund.currency!=='eur'||refund.metadata?.breakapp_refund_id!==job.refund_id||
       !['pending','requires_action','succeeded','failed','canceled'].includes(refund.status)){
