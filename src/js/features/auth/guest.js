@@ -54,9 +54,9 @@ export function initializeGuestAccess(client){
   const session=await client.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});if(session.error)throw session.error;
   if(data.private_token){const url=new URL(location.href);url.hash='guest='+data.private_token;link.value=url.href;recovery.hidden=false;}
  }
- form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;
+ form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;form.setAttribute('aria-busy','true');status.textContent='Creazione dell’accesso ospite in corso…';
   try{await login({action:'create',name:name.value.trim(),school_id:school.value,class_name:klass.value.trim()});status.textContent='Accesso ospite creato. Conserva il link privato.';}
-  catch(error){status.textContent=error.message;}finally{submit.disabled=false;}});
+  catch(error){status.textContent=error.message;}finally{submit.disabled=false;form.removeAttribute('aria-busy');}});
  client.from('schools').select('id,name,require_guest_class').eq('is_active',true).order('name').then(({data,error})=>{if(!error){schoolRows=data||[];for(const s of schoolRows)school.add(new Option(s.name,s.id));if(schoolRows.length)void updateClasses();}});
  const token=location.hash.startsWith('#guest=')?location.hash.slice(7):null;
  if(token){history.replaceState(null,'',location.pathname+location.search+'#accesso');void login({action:'resume',token}).catch(error=>{status.textContent=error.message;});}
@@ -64,5 +64,5 @@ export function initializeGuestAccess(client){
   const userId=session?.user?.id||null,version=++identityGeneration;
   if(userId!==activeIdentity){activeIdentity=userId;recovery.hidden=true;link.value='';email.value='';emailStatus.textContent='';choices.replaceChildren();choiceStatus.textContent='';removeEmail.hidden=true;}
   if(session?.user?.app_metadata?.guest)queueMicrotask(()=>{void client.rpc('my_guest_email_recovery_status').then(({data,error})=>{if(version===identityGeneration&&!emailForm.hidden&&!error){removeEmail.hidden=!data;if(data&&!emailStatus.textContent)emailStatus.textContent='Email di recupero verificata collegata.';}});});
-  if(!userId){name.value='';klass.value='';recoverEmail.value='';recoverStatus.textContent='';}});
+  if(!userId){name.value='';klass.value='';recoverEmail.value='';recoverStatus.textContent='';status.textContent='';}});
 }
