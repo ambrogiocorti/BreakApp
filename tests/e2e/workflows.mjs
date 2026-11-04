@@ -9,16 +9,17 @@ import {initializeOrderWorkflows} from '/src/js/features/operations/workflows.js
 import {initializeCompletionUI} from '/src/js/features/operations/completion-ui.js';
 import {readClassNames} from '/src/js/features/operations/class-import.js';
 import {workbookBytes} from '/src/js/features/shell/report-files.js';
-window.fixture={calls:[],role:'bartender'};
+window.fixture={calls:[],role:'bartender',customerOrders:[]};
 const user={id:'fixture-user'},notice={id:'request-1',owner_id:'someone-else',order_id:'order-1',group_order_id:null,bar_id:'bar-1',state:'active',service_date:'2026-11-01',starts_at:'12:00:00',reason:'',lease_until:new Date(Date.now()+600000).toISOString()};
 const client={auth:{onAuthStateChange(){},async getUser(){return{data:{user}}}},
  async rpc(name,args){window.fixture.calls.push({name,args});
   if(name==='list_order_approvals')return{data:window.fixture.role==='bartender'?[{...notice}]:[]};
   if(name==='decide_order_approval'){notice.state='approved';return{data:null}};
   if(name==='platform_onboard_school')return{data:{school_id:'created-school',bar_id:'created-bar'}};
+  if(name==='workflow_order_details')return{data:{bar_id:'bar-1',total_cents:250,due_cents:250,lines:[]}};
   if(['list_order_changes','list_cash_refund_obligations','my_payment_documents','list_staff_group_orders','list_my_confirmed_group_orders','list_school_promotions'].includes(name))return{data:[]};
   return{data:null};},
- from(name){const q={select(){return this},eq(){return this},order(){return this},limit(){return this},then(resolve,reject){return Promise.resolve({data:name==='bars'?[{id:'bar-1',name:'School bar'}]:[]}).then(resolve,reject)}};return q}
+ from(name){const q={select(){return this},eq(){return this},order(){return this},limit(){return this},then(resolve,reject){return Promise.resolve({data:name==='bars'?[{id:'bar-1',name:'School bar'}]:name==='orders'?window.fixture.customerOrders:[]}).then(resolve,reject)}};return q}
 };
 initializeCompletionUI(client);initializeOrderWorkflows(client);
 window.fixture.switchRole=role=>{window.fixture.role=role;window.dispatchEvent(new CustomEvent('breakapp:workspace-context',{detail:{role,schoolId:'school-1',verified:true}}));document.getElementById('workflow-center').hidden=false};
@@ -50,6 +51,14 @@ try{
    await promotion.getByRole('button',{name:'Crea promozione'}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='save_school_promotion'&&c.args.p_code==='TEST20'));
    assert.deepEqual(await page.evaluate(()=>window.fixture.testExcel()),['5A','5B']);
+   await page.evaluate(()=>window.fixture.switchRole('customer'));
+   await page.getByRole('heading',{name:'Proposte e modifiche'}).waitFor();
+   assert.equal(await page.getByRole('heading',{name:'Modifica o annulla un ordine'}).count(),0);
+   await page.evaluate(()=>{
+    window.fixture.customerOrders=[{id:'order-2',display_no:2,bar_id:'bar-1',status:'ready'}];
+    window.dispatchEvent(new CustomEvent('breakapp:route-changed',{detail:{route:'workflow-center'}}));
+   });
+   await page.getByRole('button',{name:'Annulla ordine',exact:true}).waitFor();
    await page.evaluate(()=>window.fixture.switchRole('platform_admin'));
    const onboarding=page.locator('article').filter({has:page.getByRole('heading',{name:'Dati della scuola'})});
    await onboarding.getByLabel('Identificativo della scuola (es. liceo-verdi)').fill('test-school');await onboarding.getByLabel('Nome della scuola',{exact:true}).fill('Test school');

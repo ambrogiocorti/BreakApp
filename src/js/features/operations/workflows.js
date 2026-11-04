@@ -79,6 +79,11 @@ export function initializeOrderWorkflows(client){
   }
   void reload();
  });
+ // A new order can be created after the initial workspace load. Refresh when
+ // the user opens this section so its actions reflect the current server state.
+ window.addEventListener('breakapp:route-changed',e=>{
+  if(e.detail?.route==='workflow-center')void reload();
+ });
  client.auth.onAuthStateChange((_e,s)=>queueMicrotask(()=>{user=s?.user||null;if(!user){epoch++;section.hidden=true;context=null;list.replaceChildren();section.querySelector('.completion-panels')?.remove();presence.checked=false;}else void reload();}));
  client.auth.getUser().then(({data})=>{user=data?.user||null;void reload();});
  setInterval(()=>{void heartbeat();if(context?.role!=='platform_admin'&&!section.hidden&&document.visibilityState==='visible'&&!section.contains(document.activeElement))void reload();},45000);
