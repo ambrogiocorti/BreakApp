@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5177';
-const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/base.css"></head><body><main class="container"><article class="auth-card"><div id="signed-out-view"></div><div id="signed-in-view" hidden></div></article></main>
+const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/base.css"><link rel="stylesheet" href="/src/css/login.css"></head><body><main class="container"><article class="auth-card"><div id="signed-out-view"><div id="login-panel"><button id="guest-open" hidden>Continua come ospite</button></div></div><div id="signed-in-view" hidden></div></article></main>
 <script type="module">
 import {initializeGuestAccess} from '/src/js/features/auth/guest.js';
 const guest={id:'guest-original',email:'hidden@guest.breakapp.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{guest:true}},proof={id:'email-identity',email:'me@test.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{}};
@@ -20,13 +20,18 @@ from(name){let filters=[];const q={select(){return this},eq(k,v){filters.push([k
 initializeGuestAccess(client);window.fixture.asEmail=()=>emit(proof);window.fixture.ready=true;
 </script></body></html>`;
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5177','--strictPort'],{stdio:'ignore',env:{...process.env,GITHUB_PAGES_BASE:'/'}});let browser;
+const engines=process.env.GUEST_BROWSER==='chromium'?{chromium}:{chromium,firefox,webkit};
 try{
  for(let i=0;i<50;i++){try{if((await fetch(origin)).ok)break;}catch{}await delay(200);}
- for(const[name,engine]of Object.entries({chromium,firefox,webkit})){
+ for(const[name,engine]of Object.entries(engines)){
   browser=await engine.launch({headless:true});
   for(const viewport of[{width:1440,height:900},{width:390,height:844}]){
    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route(origin+'/fixture',r=>r.fulfill({contentType:'text/html',body:fixture}));await page.goto(origin+'/fixture');await page.waitForFunction(()=>window.fixture?.ready);
+   await page.getByRole('button',{name:'Continua come ospite',exact:true}).click();
+   await page.getByRole('button',{name:'Recupera accesso ospite',exact:true}).click();
+   await page.getByLabel('Email già verificata per recuperare l’accesso').waitFor();
+   await page.getByRole('button',{name:'← Torna all’accesso ospite',exact:true}).click();
    await page.getByLabel('Nome e cognome',{exact:true}).fill('Test Guest');await page.getByLabel('Classe della scuola',{exact:true}).fill('5A');
    await page.getByRole('button',{name:'Accedi come ospite',exact:true}).click();
    await page.getByLabel('Link privato personale').waitFor();

@@ -29,6 +29,8 @@ try{
  const appleResponse=await page.request.get(new URL('/BreakApp/apple-touch-icon.png',url).href);
  assert.equal(appleResponse.status(),200,'Icona Apple non disponibile');
  assert.match(appleResponse.headers()['content-type']||'',/^image\/png/);
+ const guestOpen=page.getByRole('button',{name:'Continua come ospite',exact:true});
+ if(await guestOpen.isVisible())await guestOpen.click();
  await page.getByRole('option',{name:school,exact:true}).waitFor({state:'attached'});
  await page.getByRole('combobox',{name:'Scuola dell’ospite'}).selectOption({label:school});
  await page.getByRole('textbox',{name:'Nome e cognome'}).fill(name);
