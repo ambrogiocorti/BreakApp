@@ -35,3 +35,9 @@ test('dashboard and inventory are distinct real feature modules',()=>{
  assert.match(inventory,/client\.from\('daily_stock'\)/);
  assert.match(inventory,/\.select\('id'\)\.single\(\)/);
 });
+test('only a Super Admin with several contexts gets the school/role switcher',()=>{
+ assert.match(shell,/const canSwitch=isPlatform&&contexts\.length>1;/);
+ assert.match(shell,/profileSwitcher\.hidden=!canSwitch;/);
+ assert.match(shell,/select\.hidden=!canSwitch;/);
+ assert.match(shell,/contextBox\.hidden=!canSwitch;/);
+});

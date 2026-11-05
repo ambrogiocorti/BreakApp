@@ -29,8 +29,6 @@ try{
     const context=await browser.newContext({viewport,colorScheme:theme,reducedMotion:'reduce'});
     // BreakApp parte sempre in chiaro: il tema scuro è una scelta salvata.
     await context.addInitScript(t=>{try{localStorage.setItem('breakapp-theme',t);}catch{}},theme);
-    // TOUR_LAYOUT=b previews an alternative arrangement (tests/e2e/support/layout-b.css).
-    if(process.env.TOUR_LAYOUT==='b')await context.addInitScript(()=>document.addEventListener('DOMContentLoaded',()=>{const l=document.createElement('link');l.rel='stylesheet';l.href='/tests/e2e/support/layout-b.css';document.head.append(l);}));
     const page=await context.newPage();const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push('console: '+m.text());});
