@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5177';
-const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body><main class="container"><article class="auth-card"><div id="signed-out-view"><div id="login-panel"><button id="guest-open" hidden>Continua come ospite</button></div></div><div id="signed-in-view" hidden></div></article></main>
+const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body><main class="container"><article class="auth-card"><div id="signed-out-view"><div id="login-panel"><button id="guest-open" hidden>Entra come ospite</button></div></div><div id="signed-in-view" hidden></div></article></main>
 <script type="module">
 import {initializeGuestAccess} from '/src/js/features/auth/guest.js';
 const guest={id:'guest-original',email:'hidden@guest.breakapp.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{guest:true}},proof={id:'email-identity',email:'me@test.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{}};

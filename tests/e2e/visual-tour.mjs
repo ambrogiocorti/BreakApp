@@ -27,6 +27,8 @@ try{
    if(only&&!only.includes(as))continue;
    for(const viewport of viewports)for(const theme of themes){
     const context=await browser.newContext({viewport,colorScheme:theme,reducedMotion:'reduce'});
+    // BreakApp parte sempre in chiaro: il tema scuro è una scelta salvata.
+    await context.addInitScript(t=>{try{localStorage.setItem('breakapp-theme',t);}catch{}},theme);
     const page=await context.newPage();const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))errors.push('console: '+m.text());});

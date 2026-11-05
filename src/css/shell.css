@@ -37,7 +37,7 @@ body[data-workspace="true"] .site-header { border-bottom-color: var(--line); bac
 .notice-count {
   position: absolute; top: 6px; right: 6px;
   min-width: 18px; height: 18px; padding: 0 4px;
-  border-radius: var(--radius-pill); background: var(--danger); color: #fff;
+  border-radius: var(--radius-pill); background: var(--danger); color: var(--on-danger, #fff);
   font-size: 12px; font-weight: 700; line-height: 18px; text-align: center;
 }
 .workspace-account { display: inline-grid; place-items: center; width: var(--control-h); height: var(--control-h); border-radius: 50%; text-decoration: none; }
