@@ -18,8 +18,8 @@ test('one stylesheet entry, imported once by the application',()=>{
  for(const file of ['tokens.css','base.css','components.css','shell.css'])
   assert.match(css['app.css'],new RegExp("@import './"+file.replace('.','\\.')+"';"));
  assert.match(main,/initializeOrders\(client\)/);
- assert.match(main,/initializeWorkspace\(client\)/);
- assert.match(main,/initializeWorkspaceDashboards\(client\)/);
+ assert.match(main,/initializeWorkspace\(client,\{prepareRole:/);
+ assert.match(read('src/js/staff-modules.js'),/initializeWorkspaceDashboards\(client\)/);
 });
 test('fonts are self-hosted packages: no external font or script hosts (CSP style-src self)',()=>{
  assert.doesNotMatch(allCss+page,/fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr|unpkg\.com/);
