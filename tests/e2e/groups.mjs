@@ -12,21 +12,23 @@ try{
   for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){
    const context=await browser.newContext({viewport,geolocation:{latitude:45.5,longitude:9.3,accuracy:35},permissions:['geolocation']});
    const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
-   await page.addInitScript(({normalizeFirefoxTestTimestamp})=>{
+   await page.addInitScript(({browserName})=>{
     const geo=navigator.geolocation;
     if(!geo)return;
     const nativeWatch=geo.watchPosition.bind(geo);
     geo.watchPosition=(success,error,options)=>nativeWatch(position=>{
      const age=Date.now()-position.timestamp;
      window.geoTestDiagnostic={accuracy:position.coords.accuracy,age};
-     // The Playwright Firefox provider in this runner reports an emulated
-     // timestamp exactly one day ahead. Normalize only this test fixture; the
-     // production client and server continue rejecting future timestamps.
-     if(normalizeFirefoxTestTimestamp&&Math.abs(age+86400000)<5000)
-      success({coords:position.coords,timestamp:Date.now()});
+     // The emulated providers in this runner report a timestamp one day ahead
+     // (Firefox) or in microseconds (WebKit). Normalize only this test fixture;
+     // production and server still reject invalid future readings.
+     if(browserName==='firefox'&&Math.abs(age+86400000)<5000)
+      success({coords:position.coords,timestamp:position.timestamp-86400000});
+     else if(browserName==='webkit'&&Math.abs(position.timestamp/1000-Date.now())<5000)
+      success({coords:position.coords,timestamp:position.timestamp/1000});
      else success(position);
     },failure=>{window.geoTestDiagnostic={error:failure.code};error(failure);},options);
-   },{normalizeFirefoxTestTimestamp:name==='firefox'});
+   },{browserName:name});
    await page.goto(origin+'/__groups-qa');
    await page.getByRole('button',{name:'Apri gruppo'}).waitFor();
    assert.equal(await page.locator('#groups-create-form').isVisible(),false);
@@ -69,7 +71,7 @@ try{
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
    assert.ok(overflow<=3,'horizontal overflow: '+overflow);
    assert.deepEqual(errors,[]);
-   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'compact group overview, saved cart, settings, guest access and location'}));
+   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'compact group overview, saved cart, settings, guest access and emulated location',timestampNormalized:name!=='chromium'}));
    await context.close();
   }
   await browser.close();browser=null;
