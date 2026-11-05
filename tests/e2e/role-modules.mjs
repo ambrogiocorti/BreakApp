@@ -7,6 +7,9 @@ import {startDemoServer} from './support/demo-server.mjs';
 const engines={chromium,firefox,webkit};
 const names=(process.env.E2E_BROWSERS||'chromium,firefox,webkit').split(',');
 const {server,origin}=await startDemoServer(Number(process.env.ROLE_MODULES_PORT||5191));
+// The demo points Supabase at the fictional host demo.invalid; WebKit reports
+// the unreachable provider-settings request as a page error. It is not ours.
+const ownError=message=>!/demo\.invalid/.test(message);
 const isStaffChunk=url=>/\/src\/js\/staff-modules\.js|\/assets\/staff-modules-/.test(url);
 try{
  for(const name of names){
@@ -15,7 +18,7 @@ try{
    // 1. A student never downloads staff code.
    {
     const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[],staff=[];
-    page.on('pageerror',e=>errors.push(e.message));
+    page.on('pageerror',e=>{if(ownError(e.message))errors.push(e.message);});
     page.on('request',r=>{if(isStaffChunk(r.url()))staff.push(r.url());});
     await page.goto(origin+'/__demo?as=student#menu');
     await page.waitForFunction(()=>window.demo?.ready&&document.body.dataset.activeRole==='customer');
@@ -30,7 +33,7 @@ try{
    // 2. A bartender gets working staff controllers on first paint.
    {
     const page=await browser.newPage({viewport:{width:1440,height:900}});const errors=[];
-    page.on('pageerror',e=>errors.push(e.message));
+    page.on('pageerror',e=>{if(ownError(e.message))errors.push(e.message);});
     await page.goto(origin+'/__demo?as=bartender#cash-workspace');
     await page.waitForFunction(()=>window.demo?.ready&&document.body.dataset.activeRole==='bartender');
     assert.equal(await page.evaluate(()=>window.demo.roleModules.loaded),true);
