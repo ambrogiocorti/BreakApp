@@ -68,6 +68,9 @@ try{
    await page.getByRole('button',{name:'← Tutti i gruppi'}).click();
    await page.evaluate(()=>window.fixture.setGuest());
    await page.waitForFunction(()=>document.getElementById('groups-create-disclosure').hidden);
+   await page.evaluate(()=>{window.fixture.emptyGroups=true});
+   await page.getByRole('button',{name:'Aggiorna',exact:true}).click();
+   await page.getByText('Non hai ancora gruppi. Partecipa con un invito.',{exact:true}).waitFor();
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
    assert.ok(overflow<=3,'horizontal overflow: '+overflow);
    assert.deepEqual(errors,[]);
