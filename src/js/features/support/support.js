@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {ticketLabel,reopenLabel,paymentLabel} from '../../core/status-labels.js';
 import {formatEuro} from '../catalog/utils.js';
 const imageTypes=Object.freeze({'image/jpeg':'jpg','image/png':'png','image/webp':'webp'});
@@ -178,7 +179,7 @@ export function initializeSupportCenter(client) {
             const button=element('button',label,'button button-outline button-small');
             button.type='button';
             button.addEventListener('click',async()=>{
-              if(!confirm((approve?'Approvare':'Rifiutare')+' la riapertura?'))return;
+              if(!await confirmDialog((approve?'Approvare':'Rifiutare')+' la riapertura?'))return;
               button.disabled=true;
               const {error:err}=await client.rpc('review_support_reopen',{
                 p_request_id:request.id,p_approve:approve,p_reason:''
@@ -294,7 +295,7 @@ export function initializeSupportCenter(client) {
   document.getElementById('support-admin-save').addEventListener('click',async()=>{
     if(!current||!adminSchools.has(current.school_id))return;
     const t=current,selected=document.getElementById('support-admin-state').value;
-    if(!confirm('Confermi il nuovo stato del ticket: '+selected+'?'))return;
+    if(!await confirmDialog('Confermi il nuovo stato del ticket: '+selected+'?'))return;
     const {error}=await client.rpc('set_support_ticket_status',{
       p_ticket_id:t.id,p_status:selected,p_reason:''
     });

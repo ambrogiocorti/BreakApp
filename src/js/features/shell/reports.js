@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {workbookBytes,csvTable,pdfBytes,downloadReport} from './report-files.js';
 const $=id=>document.getElementById(id);
 const money=c=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(c)/100);
@@ -69,7 +70,7 @@ export function initializeReports(client){
  announcement.addEventListener('input',()=>{announcementKey=null;});
  announcement.addEventListener('submit',async event=>{
   event.preventDefault();if(!valid()||!announcement.reportValidity())return;
-  if(!confirm('Inviare questo annuncio agli utenti attivi di questa scuola?'))return;
+  if(!await confirmDialog('Inviare questo annuncio agli utenti attivi di questa scuola?'))return;
   const token=epoch,school=ctx.schoolId,button=announcement.querySelector('button');button.disabled=true;
   announcementKey||=crypto.randomUUID();
   const {error}=await client.rpc('publish_school_announcement',{p_school:school,

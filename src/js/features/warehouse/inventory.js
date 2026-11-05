@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 const byId=id=>document.getElementById(id);
 const el=(tag,cls='',value='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=value;return n;};
 export function initializeWarehouseInventory(client){
@@ -74,7 +75,7 @@ export function initializeWarehouseInventory(client){
          service_date:day,capacity:value};
        let result;
        if(p.stock&&value!==null){
-         const reason=prompt('Motivo della conta/rettifica (almeno 10 caratteri). Se mancano prodotti prenotati, partirà il flusso sostituzioni secondo priorità di ritiro:');
+         const reason=await promptDialog('Motivo della conta/rettifica (almeno 10 caratteri). Se mancano prodotti prenotati, partirà il flusso sostituzioni secondo priorità di ritiro:');
          if(!reason||reason.trim().length<10){button.disabled=false;report('Rettifica non registrata: motivazione obbligatoria.',true);return;}
          result=await client.rpc('reconcile_physical_stock',{p_stock:p.stock.id,p_capacity:value,p_reason:reason.trim()});
        }else result=p.stock

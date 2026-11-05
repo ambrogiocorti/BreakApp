@@ -1,0 +1,179 @@
+/* Admin, warehouse, platform, cash, service, support, offline, workflows. */
+
+/* Overviews --------------------------------------------------------- */
+.overview-section { gap: var(--space-4); }
+.overview-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.overview-period { font-size: var(--text-md); color: var(--ink-2); font-weight: 600; }
+.overview-period::first-letter { text-transform: uppercase; }
+.overview-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
+.metric-card { display: grid; gap: var(--space-1); }
+.metric-label { font-size: var(--text-sm); color: var(--ink-3); font-weight: 650; }
+.metric-card small { font-size: var(--text-xs); color: var(--ink-3); }
+.dashboard-skeleton { min-height: 96px; border-radius: var(--radius-lg); background: var(--surface-sunken); }
+.dashboard-feedback { color: var(--ink-3); }
+.service-list-item { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3) !important; font-size: var(--text-md); }
+.service-list-item > strong { font-variant-numeric: tabular-nums; min-width: 3.5ch; }
+.service-list-item > span { color: var(--ink-2); }
+.row-amount { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--ink) !important; }
+.dashboard-order-status { display: grid; gap: var(--space-3); }
+.order-status-label { display: flex; justify-content: space-between; font-size: var(--text-md); }
+.order-status-label strong { font-variant-numeric: tabular-nums; }
+.order-status-track { height: 6px; margin-top: var(--space-1); border-radius: 3px; background: var(--surface-sunken); overflow: hidden; }
+.order-status-value { height: 100%; background: var(--lavagna); border-radius: inherit; }
+.shortcut-list { display: grid; border-top: 1px solid var(--line); }
+.shortcut-list a { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-h); border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; font-weight: 600; font-size: var(--text-md); }
+.shortcut-list a:last-child { border-bottom: 0; }
+.shortcut-list a:hover { color: var(--lavagna); }
+.shortcut-list a > [data-icon]:last-child, .shortcut-list a > .ui-icon:last-child { margin-left: auto; color: var(--ink-3); }
+.shortcut-list .ui-icon { width: 18px; height: 18px; }
+
+/* Platform -------------------------------------------------------------- */
+.school-roster { display: grid; }
+.school-roster-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-3); min-height: 56px; border-bottom: 1px solid var(--line); }
+.school-roster-row:last-child { border-bottom: 0; }
+.school-roster-detail { display: grid; min-width: 0; }
+.school-roster-detail small { color: var(--ink-3); font-size: var(--text-sm); }
+.status-badge { display: inline-flex; align-items: center; gap: .35em; min-height: 24px; padding: 0 .6em; border-radius: var(--radius-pill); background: var(--success-soft); color: var(--success); font-size: var(--text-xs); font-weight: 700; white-space: nowrap; }
+.status-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.status-badge.is-paused { background: var(--warning-soft); color: var(--warning); }
+.school-manage { display: inline-flex; align-items: center; gap: 2px; min-height: var(--control-h-sm); padding: 0 var(--space-2); border-radius: var(--radius-sm); color: var(--lavagna); font-weight: 650; font-size: var(--text-sm); text-decoration: none; }
+.school-manage:hover { background: var(--lavagna-soft); }
+.school-manage .ui-icon { width: 16px; height: 16px; }
+.network-brief { display: grid; gap: var(--space-3); }
+.network-brief-head { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.network-brief-head strong { font-family: var(--font-display); font-size: var(--text-3xl); line-height: 1; }
+.network-brief-head span { color: var(--ink-2); font-size: var(--text-md); }
+.network-meter { height: 8px; border-radius: 4px; background: var(--surface-sunken); overflow: hidden; }
+.network-meter-fill { display: block; height: 100%; background: var(--lavagna); border-radius: inherit; }
+.network-breakdown { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.network-breakdown-item { display: grid; font-size: var(--text-sm); color: var(--ink-3); }
+.network-breakdown-item strong { font-size: var(--text-lg); color: var(--ink); font-variant-numeric: tabular-nums; }
+.directory-toolbar { align-items: center; }
+.directory-toolbar .button-primary { margin-left: auto; }
+.directory-count { margin-top: calc(-1 * var(--space-2)); }
+.table-panel { padding: 0; overflow-x: auto; }
+.table-panel .empty-state { margin: var(--space-4); }
+.school-table th:first-child, .school-table td:first-child { padding-left: var(--space-5); }
+.school-table td { vertical-align: middle; }
+.school-name { display: flex; align-items: center; gap: var(--space-3); }
+.school-name > div { display: grid; }
+.school-name small { color: var(--ink-3); }
+.school-monogram { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--radius); background: var(--lavagna-soft); color: var(--lavagna); font-weight: 700; font-size: var(--text-sm); }
+.school-row-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); justify-content: flex-end; }
+.school-state-button { min-height: var(--control-h-sm); padding: 0 var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); font-size: var(--text-sm); font-weight: 650; }
+.school-state-button:hover { background: var(--surface-hover); }
+@media (max-width: 719px) { .school-bars-column { display: none; } .school-table th:first-child, .school-table td:first-child { padding-left: var(--space-3); } }
+.platform-pilot-tools { display: grid; gap: var(--space-4); }
+.pilot-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
+.pilot-grid:focus-visible { outline-offset: 4px; }
+.pilot-readiness { font-size: var(--text-md); }
+.pilot-readiness ul { margin: 0; display: grid; gap: var(--space-1); }
+.allergen-options, .pilot-allergen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 var(--space-3); }
+.allergen-option { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; font-weight: 500; color: var(--ink); }
+
+/* Workflow center / onboarding (rendered by controllers) ------------------ */
+.workflow-center { display: grid; gap: var(--space-4); align-content: start; }
+.workflow-center > h2:first-child { display: none; }
+.workflow-center > .order-actions { padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.workflow-center > .order-actions select { width: auto; min-width: 12rem; }
+.workflow-center > form { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
+.workflow-center > form input { width: 6rem; }
+.workflow-center > p[role="status"]:empty { display: none; }
+.workflow-center > p[role="status"][data-type="error"] { color: var(--danger); font-weight: 600; }
+.service-list, .completion-panels { display: grid; gap: var(--space-3); }
+.service-list > h3, .completion-panels > h3 { font-size: var(--text-lg); margin-top: var(--space-2); }
+.service-list > p, .completion-panels > p { color: var(--ink-3); font-size: var(--text-md); }
+.completion-panels .order-card form, .workflow-center .order-card form { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: end; }
+.completion-panels .order-card form > button { justify-self: start; }
+.workflow-center .order-card > button, .completion-panels .order-card > button { justify-self: start; }
+.workflow-center .order-card:has(> button) { grid-template-columns: 1fr; }
+.onboarding-layout { grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1024px) { .onboarding-layout { grid-template-columns: minmax(0, 1fr) 20rem; } }
+.onboarding-wide { grid-column: 1 / -1; }
+.onboarding-note { display: grid; gap: var(--space-3); align-content: start; padding: var(--space-5); border-radius: var(--radius-lg); background: var(--surface-sunken); font-size: var(--text-md); }
+.onboarding-note > .ui-icon { display: none; }
+.onboarding-note ol { margin: 0; display: grid; gap: var(--space-2); color: var(--ink-2); }
+
+/* Catalog -------------------------------------------------------------- */
+.catalog-columns { display: grid; gap: var(--space-4); align-items: start; }
+@media (min-width: 1024px) { .catalog-columns { grid-template-columns: 20rem minmax(0, 1fr); } }
+.catalog-item { display: grid !important; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-1) var(--space-3) !important; align-items: center; }
+.catalog-item > :not(.catalog-product-thumbnail) { grid-column: 2; }
+.catalog-item:not(:has(.catalog-product-thumbnail)) { grid-template-columns: minmax(0, 1fr); }
+.catalog-item:not(:has(.catalog-product-thumbnail)) > * { grid-column: 1; }
+.catalog-product-thumbnail { grid-row: 1 / span 3; width: 56px; height: 56px; object-fit: cover; border-radius: var(--radius); }
+.catalog-item-description { display: grid; gap: 2px; min-width: 0; }
+.catalog-item-meta { font-size: var(--text-sm); color: var(--ink-3); }
+.catalog-item-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.catalog-empty { color: var(--ink-3); font-size: var(--text-md); }
+.product-preview img { max-width: 160px; border-radius: var(--radius); }
+.setup-grid, .service-admin-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
+
+/* Warehouse ------------------------------------------------------------ */
+.inventory-ledger { padding: 0; gap: 0; }
+.inventory-head { display: grid; grid-template-columns: minmax(0, 1fr) 6rem minmax(14rem, 18rem); gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--line); font-size: var(--text-sm); font-weight: 650; color: var(--ink-3); }
+.warehouse-items { display: grid; }
+.warehouse-row { display: grid; grid-template-columns: minmax(0, 1fr) 6rem minmax(14rem, 18rem); gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--line); }
+.warehouse-row:last-child { border-bottom: 0; }
+.warehouse-product { display: grid; min-width: 0; }
+.warehouse-product strong { font-size: var(--text-base); }
+.warehouse-product span, .warehouse-product small { font-size: var(--text-sm); color: var(--ink-3); }
+.warehouse-row > span, .warehouse-row > strong { font-variant-numeric: tabular-nums; }
+.warehouse-row-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.warehouse-quantity { display: block; }
+.warehouse-quantity input { width: 6rem; }
+.warehouse-unlimited { display: inline-flex !important; min-height: var(--control-h-sm) !important; font-size: var(--text-sm); }
+.warehouse-empty { padding: var(--space-6) var(--space-5); color: var(--ink-3); }
+@media (max-width: 719px) {
+  .inventory-head { display: none; }
+  .warehouse-row { grid-template-columns: minmax(0, 1fr) auto; padding: var(--space-3) var(--space-4); }
+  .warehouse-row-controls { grid-column: 1 / -1; }
+}
+
+/* Cash, service, reports --------------------------------------------- */
+.cash-status { display: grid; gap: var(--space-2); }
+.cash-current { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 650; }
+.cash-current:empty, #cash-unassigned:empty { display: none; }
+.cash-forms { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); align-items: start; }
+.cash-forms h2 { font-size: var(--text-base); }
+.ledger > * { font-variant-numeric: tabular-nums; }
+.service-state { display: grid; gap: var(--space-1); padding: var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--surface); font-size: var(--text-md); }
+.service-state:empty { display: none; }
+.service-state[data-paused="true"] { border-color: color-mix(in srgb, var(--warning) 40%, var(--line)); background: var(--warning-soft); }
+.service-impact { display: grid; gap: var(--space-2); font-size: var(--text-md); }
+.service-impact:empty { display: none; }
+.filter-bar { align-items: end; }
+.filter-bar .field { flex: 0 1 11rem; }
+.rank-list { display: grid; }
+.rank-list > * { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); font-size: var(--text-md); }
+.rank-list > *:last-child { border-bottom: 0; }
+
+/* Support -------------------------------------------------------------- */
+.support-grid { display: grid; gap: var(--space-4); align-items: start; }
+@media (min-width: 1024px) {
+  .support-grid { grid-template-columns: 22rem minmax(0, 1fr); }
+  .support-new { grid-column: 1; }
+  .support-conversation { grid-column: 2; grid-row: 1 / span 2; }
+}
+.support-thread { display: grid; gap: var(--space-3); max-height: 60dvh; overflow: auto; }
+.support-thread > article { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-radius: var(--radius); background: var(--surface-sunken); font-size: var(--text-md); }
+.support-thread img { max-width: min(100%, 320px); border-radius: var(--radius); }
+.support-thread a { font-size: var(--text-sm); }
+
+/* Offline ---------------------------------------------------------------- */
+.offline-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: start; }
+.offline-status:empty { display: none; }
+.offline-lease { font-size: var(--text-md); color: var(--ink-2); }
+.offline-queue-actions { justify-content: space-between; }
+.review-section { gap: var(--space-4); }
+
+/* Warehouse controls on one line: quantity, unlimited, save. */
+.warehouse-quantity { display: flex !important; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.warehouse-quantity input { width: 6.5rem; }
+.warehouse-row-controls { flex-wrap: nowrap; }
+@media (max-width: 719px) { .warehouse-row-controls { flex-wrap: wrap; } }
+
+/* Workflow center: controller-made buttons are never stretched. */
+.workflow-center button, .completion-panels button { justify-self: start; }
+.completion-panels > button, .service-list > button { width: auto; }
+.completion-panels .order-card form > label:has(> select), .completion-panels .order-card form > label:has(> input) { min-width: 0; }

@@ -7,8 +7,8 @@ const [html,orders,menu,base,workspace,migration]=await Promise.all([
   readFile('index.html','utf8'),
   readFile('src/js/features/orders/orders.js','utf8'),
   readFile('src/js/features/menu/menu.js','utf8'),
-  readFile('src/css/base.css','utf8'),
-  readFile('src/css/workspace.css','utf8'),
+  readFile('src/css/components.css','utf8'),
+  readFile('src/css/staff.css','utf8'),
   readFile('supabase/migrations/20261103102822_enable_rls_scoped_orders_realtime.sql','utf8')
 ]);
 
@@ -62,25 +62,27 @@ test('dossier: compact quick-add and allergen filter never claim a certified saf
   assert.equal(filterPublicMenu(cats,prods).length,2);
 });
 
-test('dossier: component isolation and theme tokens restore operative cards',()=>{
-  assert.doesNotMatch(workspace,/^\.pilot-card\{padding:0;border:0;border-radius:0;/m);
-  assert.match(workspace,/#platform-configuration \.pilot-grid>\.pilot-card/);
-  assert.match(workspace,/\.staff-board-lane\{/);
-  assert.match(workspace,/#dashboard-recent-orders \.service-list-item\{flex-direction:row/);
-  assert.match(base,/--on-accent/);
-  assert.match(base,/\.brand-symbol \{ display: inline-flex/);
-  assert.match(base,/\.menu-product-add\{/);
+test('dossier: shared components and theme tokens keep operative cards readable',async()=>{
+  const tokens=await readFile('src/css/tokens.css','utf8');
+  const shellCss=await readFile('src/css/shell.css','utf8');
+  const customer=await readFile('src/css/customer.css','utf8');
+  assert.match(workspace,/\.staff-board-lane \{/);
+  assert.match(workspace,/\.staff-board\[data-view="active"\] \{ grid-template-columns: repeat\(3/);
+  assert.match(tokens,/--lavagna-ink/);
+  assert.match(shellCss,/\.brand-symbol \{/);
+  assert.match(customer,/\.menu-product-add \{/);
+  assert.match(base,/\.button-primary \{/);
   assert.match(html,/ordini per fascia/i);
 });
 
-test('dossier: horizontal workspace index preserves every role entitlement',async()=>{
+test('dossier: grouped navigation preserves every role entitlement',async()=>{
   const workspaceJs=await readFile('src/js/features/shell/workspace.js','utf8');
   const icons=await readFile('src/js/core/icons.js','utf8');
   assert.match(workspaceJs,/const NAV_GROUPS=Object\.freeze/);
   for(const name of ['OGGI','OFFERTA','FINANZE','BANCO','OPERAZIONI'])
     assert.ok(workspaceJs.includes("'"+name+"'"),'Missing nav group '+name);
-  assert.match(workspaceJs,/indexNav\.append\(link\)/);
-  assert.match(workspaceJs,/index\.hidden=available\.length<=5/);
+  assert.match(workspaceJs,/current\.append\(linkOf\(screen\)\)/);
+  assert.match(workspaceJs,/const rest=available\.filter/);
   assert.match(workspaceJs,/\['cash-workspace','Cassa','Receipt'\]/);
   assert.match(icons,/Receipt:/);
   assert.match(icons,/CloudOff:/);

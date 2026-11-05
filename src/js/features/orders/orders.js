@@ -1,18 +1,22 @@
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
-import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals } from './staff-board.js';
+import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
 import { accuratePosition } from '../../core/geolocation.js';
+import { confirmDialog, toast } from '../../core/dialog.js';
+import { friendlyError } from '../../core/errors.js';
+import { showLocation, locationProblem } from '../../core/location-ui.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
 };
 const report=(node,msg,error=false)=>{
-  node.textContent=msg; node.dataset.type=error?'error':'information';
+  node.textContent=error?friendlyError(msg):msg; node.dataset.type=error?'error':'information';
 };
+const badge=(text,tone)=>{const node=elem('span',text,'status');node.dataset.tone=tone;return node;};
 function positionOnce(signal) {
-  return accuratePosition({signal,onProgress:accuracy=>report(
-    document.querySelector('#order-checkout-feedback'),
-    'Posizione approssimativa (±'+accuracy+' m). Attendi, cerchiamo una misura più precisa…')});
+  return accuratePosition({signal,onProgress:accuracy=>showLocation(
+    document.querySelector('#order-location'),'improving',
+    {detail:'Precisione attuale: circa ±'+accuracy+' m (serve entro 100 m).'})});
 }
 export function initializeOrders(client) {
   if (!client) return;
@@ -96,9 +100,9 @@ export function initializeOrders(client) {
         .on('postgres_changes',{...config,event:'UPDATE'},queueStaffRefresh)
         .subscribe(status=>{
           if(user?.id!==identity)return;
-          if(status==='SUBSCRIBED')staffLiveStatus.textContent='Aggiornamento in tempo reale attivo';
-          else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status))
-            staffLiveStatus.textContent='Connessione in tempo reale non disponibile · aggiornamento periodico attivo';
+          if(status==='SUBSCRIBED'){staffLiveStatus.textContent='In tempo reale';staffLiveStatus.dataset.state='live';}
+          else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){
+            staffLiveStatus.textContent='Tempo reale non disponibile · aggiornamento ogni 15 s';staffLiveStatus.dataset.state='error';}
         });
       staffChannels.push(channel);
     }
@@ -200,21 +204,23 @@ export function initializeOrders(client) {
   couponLabel.append(coupon);
   couponDisclosure.append(elem('summary','Hai un codice sconto?'),couponLabel);
   checkoutReview.parentElement.insertBefore(couponDisclosure,checkoutReview);
-  const favorite=elem('button','Salva/rimuovi preferito','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
+  const favorite=elem('button','Aggiungi ai preferiti','button button-outline button-small');favorite.type='button';productDialog.append(favorite);
   const favoriteStatus=elem('p');favoriteStatus.setAttribute('role','status');productDialog.append(favoriteStatus);
-  const favoritesBox=elem('article','','order-card');section.append(favoritesBox);
+  const favoritesBox=elem('section','','panel favorites-card');favoritesBox.setAttribute('aria-label','Preferiti');section.append(favoritesBox);
   async function loadFavorites(){
     if(!user){favoritesBox.replaceChildren();return;}
     const uid=user.id,r=await client.from('customer_favorites').select('product_id,products(id,name,bar_id,price_cents)').eq('user_id',uid);
-    if(user?.id!==uid)return;favoritesBox.replaceChildren(elem('h3','I tuoi preferiti'));
-    if(r.error){favoritesBox.append(elem('p',r.error.message));return;}
-    if(!r.data?.length)favoritesBox.append(elem('p','Salva i prodotti dal menu per ritrovarli qui.'));
+    if(user?.id!==uid)return;favoritesBox.replaceChildren(elem('h2','Preferiti'));
+    const chips=elem('div');favoritesBox.append(chips);
+    if(r.error){favoritesBox.append(elem('p',friendlyError(r.error),'help'));return;}
+    if(!r.data?.length){favoritesBox.hidden=true;return;}
+    favoritesBox.hidden=false;
     for(const row of r.data||[]){const p=row.products;if(!p)continue;
       const b=elem('button',p.name+' · '+formatEuro(p.price_cents),'button button-outline button-small');b.type='button';
       b.addEventListener('click',()=>{
         if(context.barId!==p.bar_id)return report(feedback,'Seleziona nel menu il bar del prodotto '+p.name+'.',true);
         window.dispatchEvent(new CustomEvent('breakapp:product-open',{detail:{id:p.id}}));
-      });favoritesBox.append(b);
+      });chips.append(b);
     }
   }
   favorite.addEventListener('click',async()=>{
@@ -222,7 +228,7 @@ export function initializeOrders(client) {
     try{
       const current=await client.from('customer_favorites').select('product_id').eq('user_id',uid).eq('product_id',pid).maybeSingle();if(current.error)throw current.error;
       const r=current.data?await client.from('customer_favorites').delete().eq('user_id',uid).eq('product_id',pid):await client.from('customer_favorites').insert({user_id:uid,product_id:pid});
-      if(r.error)throw r.error;report(favoriteStatus,current.data?'Prodotto rimosso dai preferiti.':'Prodotto aggiunto ai preferiti.');await loadFavorites();
+      if(r.error)throw r.error;report(favoriteStatus,current.data?'Rimosso dai preferiti.':'Aggiunto ai preferiti.');favorite.textContent=current.data?'Aggiungi ai preferiti':'Togli dai preferiti';await loadFavorites();
     }catch(error){report(favoriteStatus,error.message,true);}finally{favorite.disabled=false;}
   });
 
@@ -236,31 +242,41 @@ export function initializeOrders(client) {
       cartBar.hidden=false;
     } catch(err){ cart=[];cartBar.hidden=true;report(cartMessage,err.message,true); }
   }
-  function changeCart(next){cart=next;requestKey=null;showCartBar();renderCart();}
+  function announceCart(){
+    window.dispatchEvent(new CustomEvent('breakapp:cart-changed',{detail:{barId:context.barId,
+      quantities:Object.fromEntries(cart.map(x=>[x.product_id,x.quantity]))}}));
+  }
+  function changeCart(next){cart=next;requestKey=null;showCartBar();renderCart();announceCart();}
   function renderCart(){
     cartLines.replaceChildren();
     const proceed=document.querySelector('#cart-checkout');
     proceed.disabled=true;
-    if (!cart.length){cartLines.append(elem('p','Il tuo carrello è vuoto.'));return;}
+    if (!cart.length){cartLines.append(elem('p','Il carrello è vuoto. Aggiungi qualcosa dal menu.'));report(cartMessage,'');return;}
     try {
       const sum=total();
       sum.lines.forEach(line=>{
-        const row=elem('div','','order-row');
-        row.append(elem('strong',line.name),elem('span',formatEuro(line.subtotalCents)));
-        const actions=elem('div','','order-actions');
+        const row=elem('div','','cart-line');
+        row.append(elem('strong',line.name,'cart-line-name'),
+          elem('span',formatEuro(line.subtotalCents),'cart-line-price'),
+          elem('span',line.quantity>1?formatEuro(Math.round(line.subtotalCents/line.quantity))+' l’uno':'','cart-line-unit'));
+        const actions=elem('div','','stepper');
+        const quantity=elem('output',String(line.quantity));quantity.setAttribute('aria-label','Quantità di '+line.name);
         for(const [label,n] of [['−',line.quantity-1],['+',line.quantity+1]]){
-          const button=elem('button',label,'button button-outline button-small');
-          button.type='button';button.setAttribute('aria-label',label==='+'?'Aumenta quantità':'Riduci quantità');
-          button.addEventListener('click',()=>{try{changeCart(cartSetQuantity(cart,line.product_id,n));}catch(err){report(cartMessage,err.message,true);}});
+          const button=elem('button',label);
+          button.type='button';button.setAttribute('aria-label',(label==='+'?'Aggiungi uno: ':n===0?'Togli dal carrello: ':'Togli uno: ')+line.name);
+          button.addEventListener('click',()=>{try{changeCart(cartSetQuantity(cart,line.product_id,n));cartLines.querySelector('.cart-line:nth-child('+(sum.lines.indexOf(line)+1)+') button:'+(label==='+'?'last-of-type':'first-of-type'))?.focus();}catch(err){report(cartMessage,err.message,true);}});
           actions.append(button);
+          if(label==='−')actions.append(quantity);
         }
         row.append(actions);cartLines.append(row);
       });
-      cartLines.append(elem('strong',`Totale indicativo: ${formatEuro(sum.totalCents)}`));
+      const totalRow=elem('div','','cart-total');
+      const label=elem('span','Totale');label.append(elem('small','Confermato dal bar alla prenotazione'));
+      totalRow.append(label,elem('strong',formatEuro(sum.totalCents)));
+      cartLines.append(totalRow);
       proceed.disabled=!enabled || !windows.length;
-      report(cartMessage,enabled
-        ? 'Il server ricalcola prezzi e scorte alla conferma.'
-        : 'Prenotazioni in attesa di attivazione sul database.');
+      if(enabled)report(cartMessage,'');
+      else if(!cartMessage.textContent||cartMessage.dataset.type!=='error')report(cartMessage,'Le prenotazioni per questo bar non sono ancora attive.',true);
     } catch(err){report(cartMessage,err.message,true);}
   }
   window.addEventListener('breakapp:catalog-ready',event=>{
@@ -284,8 +300,14 @@ export function initializeOrders(client) {
       if(!cart.some(x=>x.product_id===id)&&cart.length>=100)
         throw new Error('Il carrello contiene già il numero massimo di prodotti.');
       changeCart(cartAdd(cart,id,1));
-      report(status,product.name+' aggiunto al carrello. Il totale definitivo sarà confermato alla prenotazione.');
+      toast(product.name+' nel carrello');
     }catch(error){report(status,error?.message||'Impossibile aggiungere il prodotto.',true);}
+  });
+  window.addEventListener('breakapp:quick-set',event=>{
+    const id=event.detail?.id,barId=event.detail?.barId,quantity=Number(event.detail?.quantity);
+    if(!user||!id||barId!==context.barId||!Number.isSafeInteger(quantity))return;
+    try{changeCart(cartSetQuantity(cart,id,quantity));}
+    catch(error){report(document.querySelector('#menu-status'),error?.message||'Quantità non aggiornata.',true);}
   });
   window.addEventListener('breakapp:product-open',event=>{
     if(!user)return;
@@ -293,11 +315,12 @@ export function initializeOrders(client) {
     product=context.products.find(p=>p.id===event.detail.id);
     if(!product)return;
     document.querySelector('#product-name').textContent=product.name;
-    document.querySelector('#product-description').textContent=product.description||'Ingredienti e allergeni non ancora pubblicati.';
+    const description=document.querySelector('#product-description');
+    description.textContent=product.description||'';description.hidden=!product.description;
     document.querySelector('#product-price').textContent=formatEuro(product.price_cents);
     document.querySelector('#product-ingredients').textContent=product.ingredients
-      ? 'Ingredienti: '+product.ingredients
-      : 'Ingredienti non pubblicati. Verifica direttamente con il bar.';
+      ? product.ingredients
+      : 'Non pubblicati. Chiedi al bar.';
     const allergenNames={
       gluten:'Glutine',crustaceans:'Crostacei',eggs:'Uova',fish:'Pesce',
       peanuts:'Arachidi',soy:'Soia',milk:'Latte',nuts:'Frutta a guscio',
@@ -305,8 +328,10 @@ export function initializeOrders(client) {
       lupin:'Lupini',molluscs:'Molluschi'
     };
     document.querySelector('#product-allergens').textContent=product.allergens?.length
-      ? 'Allergeni dichiarati: '+product.allergens.map(x=>allergenNames[x]||x).join(', ')
-      : 'Allergeni non dichiarati. Chiedi conferma al bar.';
+      ? product.allergens.map(x=>allergenNames[x]||x).join(', ')+'. Possibili tracce: chiedi al bar.'
+      : 'Non dichiarati. Chiedi conferma al bar.';
+    const inCart=cart.find(x=>x.product_id===product.id)?.quantity||0;
+    document.querySelector('#product-add').textContent=inCart?'Aggiungi (nel carrello: '+inCart+')':'Aggiungi al carrello';
     const image=document.querySelector('#product-image');
     if(product.image_path){
       image.src=client.storage.from('breakapp-product-images').getPublicUrl(product.image_path).data.publicUrl;
@@ -357,8 +382,8 @@ export function initializeOrders(client) {
     });
     windows=paused?[]:valid;
     enabled=!paused && windows.length>0;
-    windows.forEach(w=>slotSelect.add(new Option(
-      w.service_date+' · '+w.starts_at.slice(0,5)+'-'+w.ends_at.slice(0,5),w.id)));
+    windows.forEach(w=>slotSelect.add(new Option(windowLabel(w),w.id)));
+    renderSlotOptions();
     if(paused){
       banner.hidden=false;
       banner.textContent='Nuove prenotazioni temporaneamente sospese. Motivo: '+
@@ -374,18 +399,46 @@ export function initializeOrders(client) {
   window.addEventListener('breakapp:service-changed',event=>{
     if(event.detail?.barId===context.barId && user)void fetchWindows();
   });
+  // Visible slot picker; the native select stays the source of truth.
+  const slotOptions=elem('div','','slot-options');slotOptions.setAttribute('role','radiogroup');
+  slotOptions.setAttribute('aria-label','Fascia di ritiro');
+  slotSelect.after(slotOptions);slotSelect.classList.add('is-enhanced');slotSelect.tabIndex=-1;slotSelect.setAttribute('aria-hidden','true');
+  function renderSlotOptions(){
+    slotOptions.replaceChildren();
+    let day='';
+    for(const w of windows){
+      const [when,time]=windowLabel(w).split(' · ');
+      if(when!==day){day=when;slotOptions.append(elem('p',when,'slot-day'));}
+      const option=elem('label','','slot-option');
+      const radio=document.createElement('input');radio.type='radio';radio.name='order-window-choice';radio.value=w.id;
+      radio.checked=slotSelect.value===w.id;
+      radio.addEventListener('change',()=>{if(radio.checked){slotSelect.value=w.id;report(checkoutFeedback,'');}});
+      option.append(radio,elem('strong',time));
+      option.setAttribute('aria-label',when+', '+time);
+      slotOptions.append(option);
+    }
+  }
   function drawStep(){
     stepLabel.textContent=step===2?'Passaggio 1 di 2':'Passaggio 2 di 2';
+    document.querySelector('#stepper-title').textContent=step===2?'Quando ritiri?':'Controlla e conferma';
     [...stepper.querySelectorAll('[data-step]')].forEach(x=>x.hidden=Number(x.dataset.step)!==step);
+    couponDisclosure.hidden=step!==4;
     orderBack.hidden=step===2;orderNext.hidden=step===4;orderSubmit.hidden=step!==4;
+    if(step===2)renderSlotOptions();
     if(step===4){
       const selected=windows.find(w=>w.id===slotSelect.value);
       const s=total();
-      checkoutReview.replaceChildren(
-        elem('p',`Prodotti: ${s.count} · ${formatEuro(s.totalCents)} (indicativo)`),
-        elem('p',`Ritiro: ${selected?slotLabel({pickup_windows:selected}):'Non selezionato'}`),
-        elem('p','Pagamento al banco: contanti o POS esterno.')
-      );
+      const lines=elem('ul','','review-list');
+      for(const line of s.lines){const li=elem('li');li.append(elem('span',line.quantity+'× '+line.name),elem('span',formatEuro(line.subtotalCents)));lines.append(li);}
+      const facts=elem('dl','','review-facts');
+      for(const [term,value] of [['Ritiro',selected?windowLabel(selected):'Non selezionato'],['Pagamento','Al banco, in contanti o POS']]){
+        const row=elem('div');row.append(elem('dt',term),elem('dd',value));facts.append(row);
+      }
+      const totalRow=elem('div','','review-total');
+      const label=elem('span','Totale');label.append(elem('small','Il bar conferma prezzi e disponibilità'));
+      totalRow.append(label,elem('strong',formatEuro(s.totalCents)));
+      checkoutReview.replaceChildren(lines,facts,totalRow);
+      showLocation(document.querySelector('#order-location'),'idle');
     }
   }
   document.querySelector('#cart-checkout').addEventListener('click',()=>{
@@ -400,11 +453,16 @@ export function initializeOrders(client) {
   stepper.addEventListener('close',()=>{locationAbort?.abort();locationAbort=null;});
   orderSubmit.addEventListener('click',async()=>{
     if(!user||!cart.length||!slotSelect.value||!enabled)return;
-    orderSubmit.disabled=true;orderBack.disabled=true;report(checkoutFeedback,'Verifica della posizione in corso…');
+    orderSubmit.disabled=true;orderBack.disabled=true;report(checkoutFeedback,'');
+    const where=document.querySelector('#order-location');
+    showLocation(where,'pending');
     const controller=new AbortController();locationAbort=controller;
     try {
-      const loc=await positionOnce(controller.signal);
+      let loc;
+      try{loc=await positionOnce(controller.signal);}
+      catch(error){const key=error.name!=='AbortError'&&locationProblem(error);if(key){showLocation(where,key,{detail:error.message});return;}throw error;}
       if(!stepper.open)return;
+      showLocation(where,'ok',{detail:'Invio della prenotazione…'});
       requestKey??=crypto.randomUUID();
       const {data,error}=await client.rpc('submit_promoted_order',{
         p_bar:context.barId,p_window:slotSelect.value,p_items:toRpcItems(cart),
@@ -412,12 +470,12 @@ export function initializeOrders(client) {
         p_longitude:loc.coords.longitude,p_accuracy:loc.coords.accuracy,
         p_observed:new Date(loc.timestamp).toISOString()
       });
-      if(error)throw error;
-      if(!data)throw new Error('Conferma non ricevuta: controlla lo storico prima di riprovare.');
+      if(error){const key=locationProblem(error);if(key){showLocation(where,key);report(checkoutFeedback,'');return;}throw error;}
+      if(!data)throw new Error('Conferma non ricevuta: controlla i tuoi ordini prima di riprovare.');
       changeCart([]);requestKey=null;coupon.value='';stepper.close();
       await loadOrders();location.hash='orders';
-      report(feedback,'Ordine creato correttamente sul server.');
-    } catch(err){if(err.name!=='AbortError')report(checkoutFeedback,err.message||'Ordine non riuscito.',true);}
+      report(feedback,'Prenotazione confermata. Mostra il QR al bar quando l’ordine è pronto.');
+    } catch(err){if(err.name!=='AbortError'){showLocation(where,'idle');report(checkoutFeedback,err.message||'Ordine non riuscito.',true);}}
     finally{if(locationAbort===controller)locationAbort=null;orderSubmit.disabled=false;orderBack.disabled=false;}
   });
   async function loadOrders(){
@@ -429,34 +487,50 @@ export function initializeOrders(client) {
       .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(50);
     if(error){report(feedback,'Ordini non disponibili: '+error.message,true);return;}
     history.replaceChildren();
+    const STEPS=[['confirmed','Confermato'],['preparing','Preparazione'],['ready','Pronto'],['delivered','Ritirato']];
     for(const o of data||[]){
-      const box=elem('article','','order-card');
-      box.append(elem('h3',`Ordine #${o.display_no} · ${orderStatusLabel(o.status)}`),
-        elem('p',`Ritiro: ${slotLabel(o)}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da pagare'}`));
-      const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
-      const reorder=elem('button','Riordina','button button-outline button-small');reorder.type='button';
-      reorder.addEventListener('click',()=>{
-        if(context.barId!==o.bar_id)return report(feedback,'Seleziona prima nel menu il bar di questo ordine.',true);
-        const next=(o.order_items||[]).map(i=>({product_id:i.product_id,quantity:i.quantity}));
-        try{cartSummary(next,context.products);changeCart(next);location.hash='menu';renderCart();cartDialog.showModal();}catch(error){report(feedback,error.message,true);}
-      });box.append(reorder);
-      if(!['cancelled','delivered','no_show'].includes(o.status) && o.pickup_token){
-        const ticket=elem('button','Mostra QR di ritiro','button button-outline button-small');
+      const box=elem('article','','order-card customer-order');
+      box.dataset.status=o.status;
+      const head=elem('header','','order-card-head');
+      head.append(elem('h3',`Ordine #${o.display_no}`),badge(orderStatusLabel(o.status),orderStatusTone(o.status)));
+      box.append(head);
+      const position=STEPS.findIndex(([key])=>key===o.status);
+      if(position>=0){
+        const progress=elem('ol','','order-progress');progress.setAttribute('aria-label','Avanzamento dell’ordine');
+        STEPS.forEach(([,label],index)=>{
+          const li=elem('li',label);li.dataset.done=String(index<position||(index===position&&o.status==='delivered'));
+          if(index===position&&o.status!=='delivered')li.setAttribute('aria-current','step');
+          progress.append(li);
+        });
+        box.append(progress);
+      }
+      const pay=paymentState(o);
+      const meta=elem('p','','order-meta');
+      meta.append(elem('span','Ritiro '+slotLabel(o)),elem('strong',formatEuro(o.total_cents)),badge(pay.label,pay.tone));
+      box.append(meta);
+      const ul=elem('ul','','order-items');
+      (o.order_items||[]).forEach(x=>{const li=elem('li');li.append(elem('b',x.quantity+'× '),document.createTextNode(x.product_name));ul.append(li);});
+      box.append(ul);
+      const primary=elem('div','','order-actions');
+      const secondary=elem('div','','order-actions');
+      const open=!['cancelled','delivered','no_show'].includes(o.status);
+      if(open && o.pickup_token){
+        const ticket=elem('button','Mostra QR di ritiro','button button-primary');
         ticket.type='button';
         ticket.addEventListener('click',()=>{
           window.dispatchEvent(new CustomEvent('breakapp:pickup-ticket',{
             detail:{pickupToken:o.pickup_token,displayNo:o.display_no}
           }));
         });
-        box.append(ticket);
+        primary.append(ticket);
       }
-      if(!['cancelled','delivered','no_show'].includes(o.status)&&
-        o.payment_status==='due'&&o.total_cents>0){
-        const stripe=elem('button','Paga online (ambiente di prova)','button button-primary button-small');
+      if(open&&o.payment_status==='due'&&o.total_cents>0){
+        const stripe=elem('button','Paga online','button button-outline');
         stripe.type='button';
         stripe.addEventListener('click',async()=>{
-          if(!confirm('Aprire Stripe Checkout in modalità test per '+formatEuro(o.total_cents)+'?')){
+          if(!await confirmDialog({title:'Pagare online '+formatEuro(o.total_cents)+'?',
+            message:'Si apre la pagina di pagamento Stripe. In questa versione di prova Stripe è in modalità test: non viene addebitato denaro reale.',
+            confirmLabel:'Vai al pagamento'})){
             return;
           }
           stripe.disabled=true;
@@ -474,39 +548,49 @@ export function initializeOrders(client) {
             }
             window.location.assign(data.checkout_url);
           }catch(err){
-            report(feedback,'Pagamento test non avviato: '+(err.message||'Stripe non configurato'),true);
+            report(feedback,'Pagamento non avviato: '+friendlyError(err,'il pagamento online non è disponibile.'),true);
             stripe.disabled=false;
           }
         });
-        box.append(stripe);
+        primary.append(stripe);
       }
+      const reorder=elem('button','Riordina','button button-outline button-small');reorder.type='button';
+      reorder.addEventListener('click',()=>{
+        if(context.barId!==o.bar_id)return report(feedback,'Seleziona prima nel menu il bar di questo ordine.',true);
+        const next=(o.order_items||[]).map(i=>({product_id:i.product_id,quantity:i.quantity}));
+        try{cartSummary(next,context.products);changeCart(next);location.hash='menu';renderCart();cartDialog.showModal();}catch(error){report(feedback,error.message,true);}
+      });
       if(o.status==='confirmed'&&o.payment_status==='due'){
-        const cancel=elem('button','Annulla ordine','button button-outline button-small');
+        const cancel=elem('button','Annulla ordine','button button-danger-outline button-small');
+        cancel.type='button';
         cancel.addEventListener('click',async()=>{
-          if(!confirm('Annullare definitivamente questo ordine?'))return;
+          if(!await confirmDialog({title:'Annullare l’ordine #'+o.display_no+'?',message:'L’annullamento è definitivo.',confirmLabel:'Annulla ordine',cancelLabel:'Indietro',danger:true}))return;
           cancel.disabled=true;
           const result=await client.rpc('cancel_individual_order',{p_order_id:o.id});
           if(result.error){report(feedback,result.error.message,true);cancel.disabled=false;return;}
           await loadOrders();
-        });box.append(cancel);
+        });secondary.append(cancel);
       }
-      const help=elem('button','Richiedi assistenza','button button-outline button-small');
+      const help=elem('button','Richiedi assistenza','button button-ghost button-small');
       help.type='button';
       help.addEventListener('click',()=>{
         window.dispatchEvent(new CustomEvent('breakapp:support-order',{
           detail:{schoolId:o.school_id,orderId:o.id}
         }));
       });
-      const controls=elem('div','','order-actions');
-      // QR is the primary action at the counter; secondary actions stay together.
-      for(const button of [...box.querySelectorAll('button')]){
-        if(button.textContent.includes('QR di ritiro'))button.classList.add('button-primary');
-        controls.append(button);
-      }
-      box.append(controls);
+      secondary.prepend(reorder);secondary.append(help);
+      if(primary.childElementCount)box.append(primary);
+      if(open){
+        const more=elem('details','','order-more');more.append(elem('summary','Altre azioni'),secondary);box.append(more);
+      }else box.append(secondary);
       history.append(box);
     }
-    if(!history.childElementCount)history.append(elem('p','Nessun ordine effettuato.'));
+    if(!history.childElementCount){
+      const empty=elem('div','','empty-state');
+      const link=elem('a','Apri il menu','button button-primary');link.href='#menu';
+      empty.append(elem('strong','Nessun ordine'),elem('p','Le prenotazioni che fai dal menu compaiono qui, con il QR per il ritiro.'),link);
+      history.append(empty);
+    }
     const noticeArea=document.querySelector('#customer-service-notices');
     if(noticeArea){
       const n=await client.from('customer_notifications')
@@ -514,19 +598,20 @@ export function initializeOrders(client) {
         .eq('user_id',user.id).order('created_at',{ascending:false}).limit(15);
       noticeArea.replaceChildren();
       if(!n.error && n.data?.length){
-        const h=elem('h3','Avvisi relativi ai tuoi ordini');
+        const h=elem('h3','Avvisi sui tuoi ordini');
         noticeArea.append(h);
         n.data.forEach(row=>{
           const card=elem('div','','service-notice');
-          card.append(elem('strong',new Date(row.created_at).toLocaleString('it-IT')),
+          card.append(elem('strong',new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(row.created_at))),
             elem('p',row.message));noticeArea.append(card);
         });
       }
     }
-    report(feedback,`Ordini caricati: ${data?.length||0}.`);
+    if(feedback.dataset.type!=='error'&&/^Caricamento/.test(feedback.textContent))report(feedback,'');
   }
-  function action(box,label,callback){
-    const button=elem('button',label,'button button-outline button-small');
+  function action(box,label,callback,{primary=false}={}){
+    const button=elem('button',label,primary?'button button-primary':'button button-outline button-small');
+    button.type='button';
     button.addEventListener('click',async()=>{
       button.disabled=true;
       try {
@@ -579,9 +664,10 @@ export function initializeOrders(client) {
     if(omitted>0)
       report(staffFeedback,'ATTENZIONE: '+omitted+
         ' ordini non sono ancora visibili in questo elenco. Non considerare completa la lista: consulta i report e avvisa l’Admin; riduci la fascia e aggiorna.',true);
-    else report(staffFeedback,'Banco aggiornato alle '+
-      new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
-        .format(new Date())+' · '+orders.length+' ordini nel filtro corrente.');
+    else{
+      report(staffFeedback,'');
+      staffLiveStatus.title='Ultimo aggiornamento alle '+new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
+    }
     await loadCashRefunds();
   }
   async function loadCashRefunds(){
@@ -613,10 +699,13 @@ export function initializeOrders(client) {
   }
   function drawCashRefunds(){
     cashRefundList.replaceChildren();
+    const panel=document.querySelector('#staff-cash-refunds-panel');
     if(!cashRefunds.length){
       cashRefundList.append(elem('p','Nessuna restituzione al banco da registrare.'));
+      if(panel)panel.hidden=!cashRefundFeedback.textContent;
       return;
     }
+    if(panel)panel.hidden=false;
     for(const obligation of cashRefunds){
       const order=staffOrders.find(x=>x.id===obligation.order_id);
       const title=order?'Ordine #'+order.display_no:
@@ -666,6 +755,32 @@ export function initializeOrders(client) {
       staffProduction.append(row);
     }
   }
+  const laneTabs=document.querySelector('#staff-lane-tabs');
+  // On phones the production summary starts collapsed above the queue.
+  if(matchMedia('(max-width: 1279px)').matches)document.querySelector('#staff-production-panel')?.removeAttribute('open');
+  let selectedLane='pending';
+  function drawLaneTabs(stages){
+    laneTabs.replaceChildren();
+    const visible=stages.filter(stage=>staffVisibilityFilter.value==='all'||(staffVisibilityFilter.value==='closed')===(stage.key==='closed'));
+    if(!visible.some(stage=>stage.key===selectedLane))selectedLane=visible[0]?.key||'pending';
+    staffList.dataset.lane=selectedLane;
+    laneTabs.hidden=visible.length<2;
+    for(const stage of visible){
+      const tab=elem('button','');tab.type='button';tab.setAttribute('role','tab');
+      tab.id='staff-lane-tab-'+stage.key;
+      tab.setAttribute('aria-selected',String(stage.key===selectedLane));
+      tab.tabIndex=stage.key===selectedLane?0:-1;
+      tab.append(document.createTextNode(stage.label),elem('span',String(stage.orders.length),'count-pill'));
+      tab.addEventListener('click',()=>{selectedLane=stage.key;drawStaff();document.getElementById(tab.id)?.focus();});
+      tab.addEventListener('keydown',event=>{
+        if(!['ArrowLeft','ArrowRight'].includes(event.key))return;
+        const index=visible.indexOf(stage)+(event.key==='ArrowRight'?1:-1);
+        const next=visible[(index+visible.length)%visible.length];
+        selectedLane=next.key;drawStaff();document.getElementById('staff-lane-tab-'+next.key)?.focus();
+      });
+      laneTabs.append(tab);
+    }
+  }
   function drawStaff(){
     staffList.replaceChildren();
     staffList.dataset.view=staffVisibilityFilter.value;
@@ -676,6 +791,7 @@ export function initializeOrders(client) {
       visibility:staffVisibilityFilter.value,
       search:document.querySelector('#staff-search').value.trim()
     });
+    drawLaneTabs(stages);
     let shown=0;
     for(const stage of stages){
       if(staffVisibilityFilter.value==='active'&&stage.key==='closed')continue;
@@ -683,6 +799,7 @@ export function initializeOrders(client) {
       const lane=elem('section','','staff-board-lane');
       lane.dataset.stage=stage.key;
       lane.setAttribute('aria-label',stage.label);
+      lane.setAttribute('role','tabpanel');lane.setAttribute('aria-labelledby','staff-lane-tab-'+stage.key);
       const head=elem('div','','staff-lane-header');
       head.append(elem('h3',stage.label),elem('span',String(stage.orders.length),'staff-count'));
       lane.append(head);
@@ -691,50 +808,59 @@ export function initializeOrders(client) {
         shown++;
         const box=elem('article','','order-card staff-order-card');
         box.dataset.status=o.status;
-      box.append(elem('h4',`Ordine #${o.display_no}`),
-        elem('span',orderStatusLabel(o.status),'staff-status staff-status--'+o.status),
-        elem('p',`Ritiro: ${slotLabel(o)}`),
-        elem('p',`${formatEuro(o.total_cents)} · ${o.payment_status==='paid'?'Pagato':o.payment_status==='refunded'?'Rimborsato':o.payment_status==='refund_pending'?'Rimborso in elaborazione':['cancelled','no_show'].includes(o.status)?'Nessun incasso da rimborsare':'Da incassare'}`));
-      const ul=elem('ul');(o.order_items||[]).forEach(x=>ul.append(elem('li',`${x.quantity} × ${x.product_name}`)));box.append(ul);
-      const actions=elem('div','','order-actions');
-      if(o.status==='confirmed'){
-        action(actions,'Prepara',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'preparing'}));
-        action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}));
-      }
-      if(o.status==='preparing')action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}));
-      if(o.status==='ready'&&o.payment_status==='due'){
-        for(const [label,method] of [['Incassa contanti','cash'],['POS esterno','external_pos']]){
-          action(actions,label,async()=>{
-            const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});if(balance.error)return balance;
-            if(!await decideStaffAction(`Hai incassato realmente ${formatEuro(balance.data.due_cents)} tramite ${label}? Conferma soltanto dopo aver verificato l'incasso.`))return null;
-            return client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
-          });
+        const pay=paymentState(o,{staff:true});
+        box.dataset.payment=pay.tone;
+        const top=elem('div','','ticket-head');
+        top.append(elem('h4',`#${o.display_no}`,'ticket-no'),elem('span',slotLabel(o),'ticket-slot'));
+        box.append(top);
+        box.setAttribute('aria-label','Ordine '+o.display_no);
+        const ul=elem('ul','','ticket-items');
+        (o.order_items||[]).forEach(x=>{const li=elem('li');li.append(elem('b',x.quantity+'×'),document.createTextNode(' '+x.product_name));ul.append(li);});
+        box.append(ul);
+        const foot=elem('div','','ticket-foot');
+        foot.append(elem('strong',formatEuro(o.total_cents),'ticket-total'),badge(pay.label,pay.tone));
+        // Lanes already name the state; only the mixed "closed" lane repeats it.
+        if(stage.key==='closed')foot.append(elem('span',orderStatusLabel(o.status),'staff-status staff-status--'+o.status));
+        box.append(foot);
+        const actions=elem('div','','order-actions');
+        if(o.status==='confirmed'){
+          action(actions,'Prepara',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'preparing'}),{primary:true});
+          action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}));
         }
-      }
-      if(o.status==='ready'&&o.payment_status==='paid'){
-        action(actions,'Consegna',async()=>{
-          if(!await decideStaffAction('Confermi di avere consegnato tutti i prodotti di questo ordine?'))return null;
-          return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
-        });
-      }
-      if(o.payment_status==='paid'&&['delivered','no_show'].includes(o.status)){
-        const refund=elem('button','Rimborsa','button button-outline button-small');
-        refund.type='button';
-        refund.setAttribute('aria-label','Rimborsa ordine numero '+o.display_no);
-        refund.addEventListener('click',()=>{
-          if(!user||!staffSchools.includes(o.school_id))return;
-          selectedRefund=o;
-          refundForm.reset();
-          refundFeedback.textContent='';
-          refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents)+
-            ' · '+(o.payment_method==='stripe'?'Pagamento online Stripe':o.payment_method==='external_pos'?'POS esterno':'Pagamento al banco')+
-            '. Verrà rimborsato solo il credito residuo effettivamente incassato.';
-          refundDialog.showModal();
-          refundReason.focus();
-        });
-        actions.append(refund);
-      }
-        box.append(actions);
+        if(o.status==='preparing')action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}),{primary:true});
+        if(o.status==='ready'&&o.payment_status==='due'){
+          for(const [label,method] of [['Incassa contanti','cash'],['POS esterno','external_pos']]){
+            action(actions,label,async()=>{
+              const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});if(balance.error)return balance;
+              if(!await decideStaffAction(`Hai incassato realmente ${formatEuro(balance.data.due_cents)} tramite ${label}? Conferma soltanto dopo aver verificato l'incasso.`))return null;
+              return client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
+            },{primary:method==='cash'});
+          }
+        }
+        if(o.status==='ready'&&o.payment_status==='paid'){
+          action(actions,'Consegna',async()=>{
+            if(!await decideStaffAction('Confermi di avere consegnato tutti i prodotti di questo ordine?'))return null;
+            return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
+          },{primary:true});
+        }
+        if(o.payment_status==='paid'&&['delivered','no_show'].includes(o.status)){
+          const refund=elem('button','Rimborsa','button button-outline button-small');
+          refund.type='button';
+          refund.setAttribute('aria-label','Rimborsa ordine numero '+o.display_no);
+          refund.addEventListener('click',()=>{
+            if(!user||!staffSchools.includes(o.school_id))return;
+            selectedRefund=o;
+            refundForm.reset();
+            refundFeedback.textContent='';
+            refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents)+
+              ' · '+(o.payment_method==='stripe'?'Pagamento online Stripe':o.payment_method==='external_pos'?'POS esterno':'Pagamento al banco')+
+              '. Verrà rimborsato solo il credito residuo effettivamente incassato.';
+            refundDialog.showModal();
+            refundReason.focus();
+          });
+          actions.append(refund);
+        }
+        if(actions.childElementCount)box.append(actions);
         list.append(box);
       }
       if(!stage.orders.length)list.append(elem('p','Nessun ordine in questo stato.','staff-empty'));

@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import { WEEKDAY_LABELS,parseWeeklyPeriods,formatWeeklyPeriods } from './calendar-core.js';
 
 const byId=id=>document.getElementById(id);
@@ -54,7 +55,7 @@ export function initializeBarService(client) {
         const button=make('button','Riapri intervallo','button button-outline button-small');
         button.type='button';
         button.addEventListener('click',async()=>{
-          if(!confirm('Riaprire questo intervallo? Gli ordini annullati NON saranno ripristinati.'))return;
+          if(!await confirmDialog('Riaprire questo intervallo? Gli ordini annullati NON saranno ripristinati.'))return;
           button.disabled=true;
           report('Riapertura in corso…');
           const {error}=await client.rpc('reopen_bar_interval',{p_closure_id:c.id});
@@ -207,7 +208,7 @@ export function initializeBarService(client) {
   });
   resumeButton.addEventListener('click',async()=>{
     const bar=currentBar();if(!bar)return;
-    if(!confirm('Riprendere l’accettazione di nuove prenotazioni?'))return;
+    if(!await confirmDialog('Riprendere l’accettazione di nuove prenotazioni?'))return;
     resumeButton.disabled=true;
     const {error}=await client.rpc('set_bar_booking_pause',{
       p_bar_id:bar.id,p_paused:false,p_reason:''
@@ -251,7 +252,7 @@ export function initializeBarService(client) {
     event.preventDefault();
     const f=closureParams();
     if(previewKey!==JSON.stringify(f))return report('Ricalcola l’anteprima prima di confermare.',true);
-    if(!confirm('Confermi la chiusura? Gli ordini non pagati interessati saranno annullati. Gli ordini già annullati non torneranno attivi alla riapertura.'))return;
+    if(!await confirmDialog('Confermi la chiusura? Gli ordini non pagati interessati saranno annullati. Gli ordini già annullati non torneranno attivi alla riapertura.'))return;
     closeButton.disabled=true;report('Creazione chiusura e gestione ordini…');
     const {error}=await client.rpc('close_bar_interval',f);
     if(error){invalidatePreview();return report(error.message,true);}

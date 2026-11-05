@@ -1,0 +1,10 @@
+/* BreakApp stylesheet entry. Order matters: tokens → base → components → shell → pages. */
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './shell.css';
+@import './access.css';
+@import './customer.css';
+@import './groups.css';
+@import './staff.css';
+@import './admin.css';

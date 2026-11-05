@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5177';
-const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/base.css"><link rel="stylesheet" href="/src/css/login.css"></head><body><main class="container"><article class="auth-card"><div id="signed-out-view"><div id="login-panel"><button id="guest-open" hidden>Continua come ospite</button></div></div><div id="signed-in-view" hidden></div></article></main>
+const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body><main class="container"><article class="auth-card"><div id="signed-out-view"><div id="login-panel"><button id="guest-open" hidden>Entra come ospite</button></div></div><div id="signed-in-view" hidden></div></article></main>
 <script type="module">
 import {initializeGuestAccess} from '/src/js/features/auth/guest.js';
 const guest={id:'guest-original',email:'hidden@guest.breakapp.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{guest:true}},proof={id:'email-identity',email:'me@test.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{}};
@@ -28,7 +28,7 @@ try{
   for(const viewport of[{width:1440,height:900},{width:390,height:844}]){
    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route(origin+'/fixture',r=>r.fulfill({contentType:'text/html',body:fixture}));await page.goto(origin+'/fixture');await page.waitForFunction(()=>window.fixture?.ready);
-   await page.getByRole('button',{name:'Continua come ospite',exact:true}).click();
+   await page.getByRole('button',{name:'Entra come ospite',exact:true}).click();
    await page.getByRole('button',{name:'Recupera accesso ospite',exact:true}).click();
    await page.getByLabel('Email già verificata per recuperare l’accesso').waitFor();
    await page.getByRole('button',{name:'← Torna all’accesso ospite',exact:true}).click();

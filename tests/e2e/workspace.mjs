@@ -11,6 +11,10 @@ try{
   browser=await engine.launch({headless:true});
   for(const viewport of [{width:1440,height:1000},{width:768,height:1024},{width:390,height:844}]){
    let page=await browser.newPage({viewport});const errors=[];page.on('pageerror',error=>errors.push(error.message));
+   // Diagnostics: if the page ends up scrolled, report what moved it.
+   await page.addInitScript(()=>{const log=window.__scrollLog=[];const who=el=>el?(el.id?'#'+el.id:el.tagName+(el.className?'.'+String(el.className).split(' ')[0]:'')):'-';
+    for(const[obj,key]of[[Element.prototype,'focus'],[Element.prototype,'scrollIntoView'],[window,'scrollTo'],[window,'scroll'],[window,'scrollBy']]){const orig=obj[key];obj[key]=function(...a){const r=orig.apply(this,a);log.push(key+' '+who(this===window?null:this)+' '+JSON.stringify(a[0]??null)+' y='+scrollY);return r;};}
+    addEventListener('scroll',()=>log.push('scroll y='+scrollY+' active='+who(document.activeElement)+' h='+document.documentElement.scrollHeight),{passive:true});});
    await page.goto(origin+'/__workspace-qa');
    await page.getByRole('heading',{name:'Panoramica',exact:true}).waitFor();
    await page.locator('#platform-metrics .metric-card').first().waitFor();
@@ -21,9 +25,7 @@ try{
     const box=id=>{const r=document.querySelector(id)?.getBoundingClientRect();return r?{x:r.x,y:r.y,w:r.width,h:r.height}:null;};
     return {header:box('.site-header'),strip:box('#workspace-sidebar'),
      navigation:box('#app-desktop-nav'),main:box('.app-main'),
-     stage:box('#platform-overview .control-layout'),
-     activity:box('#platform-overview .control-activity'),
-     ledger:box('#platform-overview .control-side'),
+     metrics:box('#platform-metrics'),
      mobile:box('#app-mobile-nav'),roster:document.querySelectorAll('#platform-school-list .school-roster-row').length,
      ring:document.querySelectorAll('#platform-network svg').length,
      overflow:document.documentElement.scrollWidth-innerWidth};
@@ -32,32 +34,27 @@ try{
    assert.equal(geometry.ring,0,'legacy decorative network ring still present');
    assert.ok(geometry.overflow<=3,'horizontal overflow '+JSON.stringify(geometry));
    if(viewport.width>1023){
-    assert.ok(Math.abs(geometry.strip.y-72)<=2,'top workspace strip not installed');
-    assert.ok(geometry.strip.w>viewport.width-4,'sidebar still consuming a side column');
-    assert.ok(geometry.main.x<5,'main workspace not full width');
-    assert.ok(geometry.activity.x<geometry.ledger.x,'control room has lost asymmetric columns');
+    // Desktop: fixed sidebar on the left, content to its right.
+    assert.ok(geometry.strip.x<2&&geometry.strip.y<2,'sidebar not pinned to the left edge');
+    assert.ok(Math.abs(geometry.strip.h-viewport.height)<=2,'sidebar is not full height');
+    assert.ok(geometry.main.x>=geometry.strip.w-2,'main content overlaps the sidebar');
    }else{
     assert.ok(geometry.main.x<5,'mobile workspace not full width');
-    assert.ok(geometry.mobile.y>viewport.height-105,'mobile service dock is missing');
+    assert.ok(geometry.mobile.y>viewport.height-105,'mobile tab bar is missing');
+    assert.equal(await page.locator('#workspace-sidebar').isVisible(),false,'drawer must start closed');
    }
-
    assert.equal(await page.locator('#platform-pilot-tools').isVisible(),false);
    assert.equal(await page.locator('#platform-overview').isVisible(),true);
    assert.equal(await page.getByRole('heading',{level:1}).count(),1);
    assert.equal(await page.locator('body').getAttribute('data-active-route'),'platform-overview');
-   if(viewport.width<=760){
-    // The accessible h1 remains in the document but the duplicated mobile
-    // header must not steal the first screen from the actual indicators.
-    const fold=await page.evaluate(()=>({header:document.querySelector('#workspace-page-head').getBoundingClientRect().height,ledger:document.querySelector('#platform-overview .control-side').getBoundingClientRect().top}));
-    assert.ok(fold.header<=1,'duplicate mobile page heading occupies space');
-    assert.ok(fold.ledger<viewport.height-150,'network indicators are still below the mobile fold: '+JSON.stringify(fold));
-   }
-   const layout=await page.evaluate(()=>({main:document.querySelector('.app-main').scrollTop,window:scrollY}));
+   // The real indicators must be in the first screen on every viewport.
+   assert.ok(geometry.metrics.y<viewport.height-150,'indicators below the fold: '+JSON.stringify(geometry.metrics));
+   const layout=await page.evaluate(()=>({main:document.querySelector('.app-main').scrollTop,window:scrollY,log:(window.__scrollLog||[]).slice(-20)}));
    assert.equal(layout.main,0,JSON.stringify(layout));
    assert.equal(layout.window,0,JSON.stringify(layout));
    if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/overview-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
    if(viewport.width>1023)assert.equal(await page.locator('#workspace-sidebar').isVisible(),true);
-   await page.getByRole('link',{name:'Vedi tutte'}).click();
+   await page.getByRole('link',{name:'Tutte',exact:true}).click();
    await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
    assert.equal(await page.locator('body').getAttribute('data-active-route'),'platform-schools');
    await page.reload();
@@ -72,7 +69,7 @@ try{
    await page.locator('#platform-school-filter').selectOption('paused');
    assert.equal(await page.locator('#platform-directory-list tbody tr').count(),1);
    await page.getByRole('button',{name:'Riattiva Istituto Ada Lovelace',exact:true}).click();
-   await page.getByRole('dialog').getByLabel('Motivazione',{exact:true}).fill('Servizio nuovamente disponibile');
+   await page.getByRole('dialog').getByLabel('Motivo',{exact:true}).fill('Servizio nuovamente disponibile');
    await page.getByRole('button',{name:'Riattiva scuola',exact:true}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='platform_set_school_active'&&c.args.p_active===true));
    await page.getByText('Nessun risultato',{exact:true}).waitFor();
@@ -80,33 +77,36 @@ try{
    await page.getByRole('link',{name:'Gestisci Liceo Leonardo',exact:true}).click();
    await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
    await page.waitForFunction(()=>document.getElementById('pilot-school').value==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
-   await page.getByRole('button',{name:'Completa attivazione Stripe TEST',exact:true}).click();
+   await page.getByRole('tab',{name:'Pagamenti',exact:true}).click();
+   await page.getByRole('button',{name:'Completa l’attivazione Stripe di test',exact:true}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='stripe-connect-onboarding'&&c.args.body.school_id==='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'));
    await page.getByText(/Nessun merchant Stripe TEST associato/).waitFor();
    await page.evaluate(()=>window.fixture.pauseSchool('cccccccc-cccc-4ccc-8ccc-cccccccccccc'));
    await page.getByRole('option',{name:'Istituto Ada Lovelace · sospesa'}).waitFor({state:'attached'});
    await page.locator('#pilot-school').selectOption('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
    assert.equal(await page.locator('#pilot-stripe-feedback').textContent(),'');
-   await page.getByRole('button',{name:'Completa attivazione Stripe TEST',exact:true}).click();
+   await page.getByRole('tab',{name:'Pagamenti',exact:true}).click();
+   await page.getByRole('button',{name:'Completa l’attivazione Stripe di test',exact:true}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='stripe-connect-onboarding'&&c.args.body.school_id==='cccccccc-cccc-4ccc-8ccc-cccccccccccc'));
    await page.locator('#pilot-school').selectOption('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
    // Exercise same-document SPA history through the DOM History API. A driver
    // document-navigation lifecycle is not part of this application transition.
    await page.evaluate(()=>history.back());await page.getByRole('heading',{name:'Scuole',exact:true}).waitFor();
    await page.evaluate(()=>history.forward());await page.getByRole('heading',{name:'Configurazione',exact:true}).waitFor();
+   await page.getByRole('tab',{name:'Catalogo',exact:true}).click();
    assert.equal(await page.getByRole('tabpanel',{name:'Catalogo',exact:true}).isVisible(),true);
    await page.getByRole('tab',{name:'Personale',exact:true}).click();
-   await page.getByRole('heading',{name:'Personale della scuola'}).waitFor();
-   await page.getByLabel('Email persona').fill('collega@example.invalid');
+   await page.getByRole('heading',{name:'Personale',exact:true}).waitFor();
+   await page.locator('#pilot-staff-email').fill('collega@example.invalid');
    await page.getByRole('tab',{name:'Personale',exact:true}).press('ArrowRight');
-   await page.getByRole('heading',{name:'Orari settimanali'}).waitFor();
+   await page.getByRole('heading',{name:'Orari della settimana'}).waitFor();
    await page.getByRole('tab',{name:'Orari e ritiri',exact:true}).press('ArrowLeft');
-   assert.equal(await page.getByLabel('Email persona').inputValue(),'collega@example.invalid');
+   assert.equal(await page.locator('#pilot-staff-email').inputValue(),'collega@example.invalid');
    assert.equal(await page.getByRole('tabpanel',{name:'Catalogo',exact:true}).isVisible(),false);
    if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/configuration-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
    if(viewport.width<1024){
     await page.getByRole('button',{name:'Altro',exact:true}).click();
-    await page.locator('#workspace-more-items').getByRole('link',{name:'Nuova scuola',exact:true}).click();
+    await page.locator('#workspace-sidebar').getByRole('link',{name:'Nuova scuola',exact:true}).click();
    }else await page.locator('#app-desktop-nav').getByRole('link',{name:'Nuova scuola',exact:true}).click();
    await page.locator('.onboarding-layout').waitFor();
    assert.equal(await page.locator('#workflow-center').isVisible(),true);

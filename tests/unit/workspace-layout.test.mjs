@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
-const css=readFileSync(new URL('../../src/css/workspace.css',import.meta.url),'utf8');
+const css=readFileSync(new URL('../../src/css/shell.css',import.meta.url),'utf8');
 const shell=readFileSync(new URL('../../src/js/features/shell/workspace.js',import.meta.url),'utf8');
 
-test('desktop has fixed full-height sidebar with independent routed content',()=>{
+test('desktop has a fixed full-height sidebar; phones use a drawer',()=>{
  assert.match(html,/id="workspace-sidebar"/);
  assert.match(html,/id="workspace-page-head"/);
- assert.match(css,/\.workspace-sidebar\{display:flex!important;position:fixed/);
- assert.match(css,/\.app-main\{position:fixed;/);
- assert.match(css,/section:not\(\.is-route-active\)\{/);
+ assert.match(css,/\.workspace-sidebar \{\n  position: fixed;/);
+ assert.match(css,/body\[data-drawer="open"\] \.workspace-sidebar/);
+ assert.match(css,/section:not\(\.is-route-active\)/);
 });
 test('role navigation is generated; no static student-only nav remains',()=>{
  assert.match(html,/id="app-desktop-nav"[^>]*><\/nav>/);

@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {orderStatusLabel} from '../orders/staff-board.js';
 const $=id=>document.getElementById(id);
 const make=(tag,value='',cls='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=value;return n;};
@@ -55,7 +56,7 @@ export function initializeGroupService(client){
     new Date(data.pickup_lease_until).toLocaleTimeString('it-IT'),'catalog-help'));
   }
   async function action(label,rpc,args){
-   if(!confirm(label))return;
+   if(!await confirmDialog(label))return;
    for(const button of active.querySelectorAll('button'))button.disabled=true;
    const {data:result,error:changeError}=await client.rpc(rpc,args);
    if(changeError){say(changeError.message,true);

@@ -1,5 +1,8 @@
 // The server enforces the same 100 m accuracy limit and the school's radius.
 // Keep listening briefly: the first position from a phone is often approximate.
+// Each error carries a `code` so the interface can explain what to do; the
+// checks themselves are unchanged and the server still decides.
+const geoError=(message,code,extra={})=>Object.assign(new Error(message),{code,...extra});
 export function accuratePosition({
   geolocation=globalThis.navigator?.geolocation,
   timeoutMs=20000,
@@ -9,7 +12,7 @@ export function accuratePosition({
 }={}) {
   return new Promise((resolve,reject)=>{
     if(!geolocation?.watchPosition){
-      reject(new Error('La posizione non è disponibile su questo dispositivo o browser.'));
+      reject(geoError('La posizione non è disponibile su questo dispositivo o browser.','unsupported'));
       return;
     }
     let watchId=null,settled=false,bestAccuracy=Infinity,lastError=null,invalidClock=false,stalePosition=false;
@@ -25,15 +28,15 @@ export function accuratePosition({
     };
     const timeout=()=>{
       if(Number.isFinite(bestAccuracy)){
-        finish(new Error('Posizione ancora imprecisa (circa ±'+Math.ceil(bestAccuracy)+' m). Serve una precisione entro 100 m: attiva la posizione precisa e riprova vicino a una finestra o all’aperto.'));
+        finish(geoError('Posizione ancora imprecisa (circa ±'+Math.ceil(bestAccuracy)+' m). Serve una precisione entro 100 m: attiva la posizione precisa e riprova vicino a una finestra o all’aperto.','accuracy',{accuracy:Math.ceil(bestAccuracy)}));
       }else if(invalidClock){
-        finish(new Error('La posizione riporta un orario non valido. Controlla data e ora automatiche del dispositivo oppure riprova con un altro browser.'));
+        finish(geoError('La posizione riporta un orario non valido. Controlla data e ora automatiche del dispositivo oppure riprova con un altro browser.','clock'));
       }else if(stalePosition){
-        finish(new Error('La posizione ricevuta non è recente. Attiva la localizzazione e riprova.'));
+        finish(geoError('La posizione ricevuta non è recente. Attiva la localizzazione e riprova.','stale'));
       }else if(lastError?.code===2){
-        finish(new Error('Non riusciamo a rilevare la posizione. Attiva i servizi di localizzazione e riprova vicino a una finestra o all’aperto.'));
+        finish(geoError('Non riusciamo a rilevare la posizione. Attiva i servizi di localizzazione e riprova vicino a una finestra o all’aperto.','unavailable'));
       }else{
-        finish(new Error('La posizione non è arrivata in tempo. Controlla la localizzazione del dispositivo e riprova vicino a una finestra o all’aperto.'));
+        finish(geoError('La posizione non è arrivata in tempo. Controlla la localizzazione del dispositivo e riprova vicino a una finestra o all’aperto.','timeout'));
       }
     };
     if(signal?.aborted){abort();return;}
@@ -56,12 +59,12 @@ export function accuratePosition({
       },error=>{
         if(settled)return;
         lastError=error;
-        if(error.code===1)finish(new Error('Per confermare, consenti la posizione nelle impostazioni del browser e del dispositivo.'));
+        if(error.code===1)finish(geoError('Per confermare, consenti la posizione nelle impostazioni del browser e del dispositivo.','permission'));
       },{enableHighAccuracy:true,maximumAge:0,timeout:timeoutMs});
       // A test double may invoke its callback synchronously; never leak its watch.
       if(settled&&watchId!==null)geolocation.clearWatch(watchId);
     }catch{
-      finish(new Error('Impossibile avviare la localizzazione. Controlla le impostazioni del browser e riprova.'));
+      finish(geoError('Impossibile avviare la localizzazione. Controlla le impostazioni del browser e riprova.','unsupported'));
     }
   });
 }

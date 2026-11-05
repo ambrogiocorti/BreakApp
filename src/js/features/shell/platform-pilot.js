@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import { parseWeeklyPeriods, formatWeeklyPeriods, WEEKDAY_LABELS } from '../operations/calendar-core.js';
 import { parseEuroToCents, formatEuro } from '../catalog/utils.js';
 import {membershipLabel} from '../../core/status-labels.js';
@@ -131,7 +132,7 @@ export function initializePlatformPilot(client){
      const remove=textNode('button','Revoca','button button-outline button-small');
      remove.type='button';
      remove.addEventListener('click',async()=>{
-       if(!confirm('Revocare il ruolo '+(roles[member.role]||member.role)+
+       if(!await confirmDialog('Revocare il ruolo '+(roles[member.role]||member.role)+
          ' a '+member.email+' per '+current.name+'?'))return;
        remove.disabled=true;
        const {error:e}=await client.rpc('platform_revoke_school_staff',{

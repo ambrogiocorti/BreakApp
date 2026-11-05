@@ -7,10 +7,11 @@ const make=(tag,text,cls='')=>{const n=document.createElement(tag);n.textContent
 const money=cents=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(cents/100);
 const ORDER_LABELS={pending_approval:'Da approvare',approval_queued:'In coda',approval_active:'Da approvare',awaiting_reschedule:'Da riprogrammare',confirmed:'Confermato',preparing:'In preparazione',ready:'Pronto al ritiro',delivered:'Consegnato',cancelled:'Annullato',no_show:'Non ritirato'};
 const PAYMENT_LABELS={due:'Da pagare',paid:'Pagato',pending:'In attesa',refund_pending:'Rimborso in corso',refunded:'Rimborsato'};
-export function metric(label,value,note,iconName='LayoutDashboard'){
- const box=make('article','','metric-card'),heading=make('div','','metric-label'),pictogram=make('span','','metric-icon');
- pictogram.append(icon(iconName));heading.append(make('p',label),pictogram);
- box.append(heading,make('strong',String(value)),make('span',note));return box;
+// A metric shows one real number with its meaning. No icons or trends:
+// nothing here is invented or decorative.
+export function metric(label,value,note){
+ const box=make('article','','metric-card');
+ box.append(make('p',label,'metric-label'),make('strong',String(value)),make('small',note));return box;
 }
 export function initializeWorkspaceDashboards(client) {
  if(!client)return;
@@ -61,10 +62,10 @@ export function initializeWorkspaceDashboards(client) {
    recent.replaceChildren();
    for(const o of os.slice(0,6)){
     const row=make('div','','service-list-item');
-    row.append(make('strong','Ordine #'+o.display_no),make('span',(ORDER_LABELS[o.status]||orderStatusLabel(o.status))+' · '+money(o.total_cents)+' · '+(PAYMENT_LABELS[o.payment_status]||paymentLabel(o.payment_status))));
+    row.append(make('strong','#'+o.display_no),make('span',(ORDER_LABELS[o.status]||orderStatusLabel(o.status))+' · '+(PAYMENT_LABELS[o.payment_status]||paymentLabel(o.payment_status))),make('span',money(o.total_cents),'row-amount'));
     recent.append(row);
    }
-   if(!os.length){const empty=make('div','','empty-state');empty.append(icon('ClipboardList'),make('strong','Nessun ordine, per ora'),make('p','I nuovi ordini della scuola compariranno qui.'));recent.append(empty);}
+   if(!os.length){const empty=make('div','','empty-state');empty.append(make('strong','Nessun ordine'),make('p','Gli ordini della scuola compariranno qui.'));recent.append(empty);}
    distribution.replaceChildren();
    for(const status of ['confirmed','preparing','ready']){
     const count=os.filter(o=>o.status===status).length,box=make('div',''),label=make('div','','order-status-label'),track=make('div','','order-status-track'),value=make('div','','order-status-value');
