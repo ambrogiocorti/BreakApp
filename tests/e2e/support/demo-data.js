@@ -155,6 +155,8 @@ export function demoState(as = 'student') {
       unassigned_cents: 0 },
     school_financial_report: null, list_school_offline_events: [], get_my_notification_preferences: null,
     platform_list_school_staff: [{ user_id: USER, email: 'giulia.rossi@example.invalid', role_code: 'bartender' }],
+    list_school_staff: { members: [{ user_id: USER, email: 'giulia.rossi@example.invalid', role: 'bartender', status: 'active' }],
+      invites: [{ id: 'dddddddd-0000-4000-8000-000000000001', email: 'marco.bianchi@example.invalid', role: 'warehouse_manager', created_at: new Date(Date.now() - 86400000).toISOString(), can_edit: true }] },
     my_support_group_references: [], my_guest_email_recovery_status: false
   };
   const ctxKey = role === 'platform_admin' ? 'platform:platform_admin' : SCHOOL + ':' + role;

@@ -1051,7 +1051,7 @@
           <div class="pilot-grid" id="pilot-panel-people" role="tabpanel" aria-labelledby="pilot-tab-people" tabindex="0" hidden>
             <section class="panel" aria-labelledby="pilot-staff-title">
               <div class="panel-head"><h3 id="pilot-staff-title">Personale</h3></div>
-              <p class="help">La persona deve avere già un account BreakApp con email verificata. Nessuna credenziale viene condivisa.</p>
+              <p class="help">Puoi aggiungere anche chi non ha ancora fatto il primo accesso: verrà collegato alla scuola quando entra con questa email. Gli studenti si registrano da soli. Nessuna credenziale viene condivisa.</p>
               <form id="pilot-staff-form" class="form-grid">
                 <div class="field"><label for="pilot-staff-email">Email</label><input id="pilot-staff-email" type="email" autocomplete="off" required placeholder="persona@scuola.it" /></div>
                 <div class="field"><label for="pilot-staff-role">Ruolo</label>
@@ -1060,9 +1060,10 @@
                     <option value="bartender">Barista</option>
                     <option value="warehouse_manager">Magazziniere</option>
                   </select></div>
-                <div class="field-wide"><button class="button button-primary" type="submit">Assegna ruolo</button></div>
+                <div class="field-wide"><button class="button button-primary" type="submit">Aggiungi</button></div>
               </form>
-              <div id="pilot-staff-list" class="row-list"></div>
+              <div id="pilot-staff-notice" class="alert staff-invite-notice" role="status" hidden></div>
+              <div id="pilot-staff-list" class="row-list staff-list"></div>
             </section>
           </div>
           <div class="pilot-grid" id="pilot-panel-service" role="tabpanel" aria-labelledby="pilot-tab-service" tabindex="0" hidden>
