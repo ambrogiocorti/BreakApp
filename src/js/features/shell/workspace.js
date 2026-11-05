@@ -15,6 +15,17 @@ function holdTop(stillActive,reset){
  releaseTop=stop;
 }
 const USER_SCROLL=['wheel','touchstart','keydown','pointerdown'];
+// WebKit scrolls to the URL fragment when the page finishes loading. Each
+// route is also a section id, so a hash pushed during startup made Safari jump
+// past the page heading. Until the load completes, the hash waits.
+let pendingHash=null;
+function setRouteHash(route){
+ if(document.readyState!=='complete'){
+  if(pendingHash===null)addEventListener('load',()=>{const r=pendingHash;pendingHash=null;if(r&&location.hash!=='#'+r)history.pushState(null,'','#'+r);},{once:true});
+  pendingHash=route;return;
+ }
+ if(location.hash!=='#'+route)history.pushState(null,'','#'+route);
+}
 
 const LABELS = Object.freeze({
  customer:'Cliente',bartender:'Barista',
@@ -339,7 +350,7 @@ export function initializeWorkspace(client){
    // Presentation-only route marker for responsive page layouts. Permission
    // checks continue to use the verified context and allowedRoute above.
    document.body.dataset.activeRoute=route;
-   if(history && location.hash!=='#'+route)window.history.pushState(null,'','#'+route);
+   if(history)setRouteHash(route);
    updateSectionVisibility();
    renderLinks();
    const name=SCREENS[active.role]?.find(([id])=>id===route)?.[1]||
