@@ -61,7 +61,10 @@ export function initializeGroupDrafts(client){
   const {data,error}=await client.rpc('list_my_group_drafts');
   if(error)throw error;
   list.replaceChildren();
-  if(!Array.isArray(data)||!data.length)list.append(el('p','Non hai ancora gruppi. Creane uno o partecipa con un invito.'));
+  if(!Array.isArray(data)||!data.length){
+   const guest=Boolean(user?.app_metadata?.guest||user?.is_anonymous);
+   list.append(el('p',guest?'Non hai ancora gruppi. Partecipa con un invito.':'Non hai ancora gruppi. Creane uno o partecipa con un invito.'));
+  }
   for(const g of data||[]){
    const card=el('div','','group-draft-row');
    card.append(el('strong',g.title),el('small',
@@ -467,7 +470,8 @@ export function initializeGroupDrafts(client){
  function session(next){
   const changed=user?.id!==next?.id;user=next;
   panel.hidden=!user;
-  byId('groups-create-disclosure').hidden=Boolean(user?.app_metadata?.guest||user?.is_anonymous);
+  const guest=Boolean(user?.app_metadata?.guest||user?.is_anonymous);
+  byId('groups-create-disclosure').hidden=guest;panel.classList.toggle('group-guest',guest);
   if(!user){version++;detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;list.replaceChildren();return;}
   if(changed)void reload();
   if(changed&&location.search.includes('invite=')){
