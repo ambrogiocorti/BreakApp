@@ -197,6 +197,7 @@ export function initializeWorkspace(client){
  const pageSection=document.getElementById('workspace-page-section');
  const profileSelect=document.getElementById('workspace-profile-context-select');
  const profileSwitcher=document.getElementById('workspace-profile-switcher');
+ const contextBox=sidebar?.querySelector('.workspace-context');
  const routeSections=[...root.children].filter(x=>x.tagName==='SECTION'&&x.id);
  const breadcrumb=document.getElementById('workspace-breadcrumb');
  const contextName=document.getElementById('workspace-context-name');
@@ -473,12 +474,16 @@ export function initializeWorkspace(client){
    const previous=active?.key;
    const selected=contexts.find(x=>x.key===previous)||chooseInitialContext(contexts,safelyStored());
    sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
-   // A sole Super Admin context must not offer a meaningless role switcher.
-   profileSwitcher.hidden=contexts.length<2;
-   select.disabled=contexts.length<2;
-   select.hidden=contexts.length<2;
-   if(contextName)contextName.hidden=contexts.length>1;
-   profileSelect.disabled=contexts.length<2;
+   // Every account belongs to one school with one role (a Super Admin works
+   // from the platform screens, which pick the school themselves). No
+   // school/role switcher is shown anywhere: the header says where you are.
+   const canSwitch=false;
+   profileSwitcher.hidden=!canSwitch;
+   select.disabled=!canSwitch;
+   select.hidden=!canSwitch;
+   if(contextBox)contextBox.hidden=!canSwitch;
+   if(contextName)contextName.hidden=canSwitch;
+   profileSelect.disabled=!canSwitch;
    if(breadcrumb)breadcrumb.hidden=false;
    if(accountLink)accountLink.hidden=false;
    document.body.dataset.workspace='true';ready=true;

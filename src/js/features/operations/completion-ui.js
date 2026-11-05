@@ -2,6 +2,7 @@ import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {readClassNames} from './class-import.js';
 import {icon} from '../../core/icons.js';
 import {orderStatusLabel} from '../orders/staff-board.js';
+import {renderSchoolStaffPanel} from './school-staff.js';
 import {changeKindLabel,changeStateLabel,paymentLabel} from '../../core/status-labels.js';
 const node=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 function input(form,label,type='text',value=''){
@@ -111,8 +112,7 @@ export function initializeCompletionUI(client){
     submit(classes,'Importa classi',async()=>rpc('import_school_classes',{p_school:context.schoolId,p_names:await readClassNames(file.files[0])}),act);
     const required=formCard(extra,'Classe per gli ospiti'),requireClass=select(required,'Richiedi una classe importata',[['false','Facoltativa'],['true','Obbligatoria']]);requireClass.value=String(Boolean(settings.data?.[0]?.require_guest_class));
     submit(required,'Salva requisito classe',()=>rpc('set_guest_class_policy',{p_school:context.schoolId,p_required:requireClass.value==='true'}),act);
-    const people=formCard(extra,'Assegna personale'),email=input(people,'Email verificata','email'),role=select(people,'Ruolo',[['bartender','Barista'],['warehouse_manager','Magazziniere']]);
-    submit(people,'Assegna ruolo',()=>rpc('school_assign_staff',{p_school:context.schoolId,p_email:email.value,p_role:role.value}),act);
+    renderSchoolStaffPanel(extra,{client,schoolId:context.schoolId});
    }
   }catch(error){if(v===epoch)extra.append(node('p','Impossibile aggiornare: '+error.message));}
  });

@@ -1,7 +1,7 @@
 import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import { parseWeeklyPeriods, formatWeeklyPeriods, WEEKDAY_LABELS } from '../operations/calendar-core.js';
 import { parseEuroToCents, formatEuro } from '../catalog/utils.js';
-import {membershipLabel} from '../../core/status-labels.js';
+import {createStaffDirectory} from '../operations/school-staff.js';
 
 const $=id=>document.getElementById(id);
 const textNode=(tag,text='',cls='')=>{const x=document.createElement(tag);x.textContent=text;x.className=cls;return x;};
@@ -22,6 +22,8 @@ export function initializePlatformPilot(client){
   staffList=$('pilot-staff-list'),hoursList=$('pilot-hours-list'),
   windowsList=$('pilot-windows-list'),stockSummary=$('pilot-stock-summary'),
   readiness=$('pilot-readiness');
+ const staffDirectory=createStaffDirectory({client,list:staffList,notice:$('pilot-staff-notice'),
+  say:(msg,error=false)=>say(msg,error),platform:true,onChange:()=>refresh()});
  let allowed=false,schools=[],bars=[],products=[],categories=[],staff=[],hours=[],windows=[],stocks=[],token=0;
  let currentUser=null,authEpoch=0;
  let requestedSchool=null,refreshEpoch=0;
@@ -116,34 +118,11 @@ export function initializePlatformPilot(client){
  }
  async function fetchSchoolStaff(expectedToken){
    const current=school();
-   if(!current)return [];
-   const {data,error}=await client.rpc('platform_list_school_staff',{p_school_id:current.id});
-   if(expectedToken!==token||!allowed)return [];
-   if(error)throw error;
-   staff=Array.isArray(data)?data:[];
-   staffList.replaceChildren();
-   if(!staff.length)staffList.append(textNode('p','Nessun operatore scolastico assegnato.'));
-   for(const member of staff){
-     const row=textNode('div','','pilot-staff-row');
-     const info=textNode('div','','pilot-staff-info');
-     const roles={school_admin:'Admin scuola',bartender:'Barista',warehouse_manager:'Magazziniere'};
-     info.append(textNode('strong',member.email),
-       textNode('span',(roles[member.role]||'Ruolo da verificare')+' · '+membershipLabel(member.status)));
-     const remove=textNode('button','Revoca','button button-outline button-small');
-     remove.type='button';
-     remove.addEventListener('click',async()=>{
-       if(!await confirmDialog('Revocare il ruolo '+(roles[member.role]||member.role)+
-         ' a '+member.email+' per '+current.name+'?'))return;
-       remove.disabled=true;
-       const {error:e}=await client.rpc('platform_revoke_school_staff',{
-         p_school_id:current.id,p_user_id:member.user_id,p_role:member.role
-       });
-       if(e){say(e.message,true);remove.disabled=false;return;}
-       say('Ruolo revocato sul server.');await refresh();
-     });
-     row.append(info,remove);staffList.append(row);
-   }
-   return staff;
+   if(!current){staffDirectory.reset();return null;}
+   const data=await staffDirectory.load(current.id);
+   if(expectedToken!==token||!allowed)return null;
+   staff=[...(data?.members||[])];
+   return data;
  }
  function renderHours(){
    hoursList.replaceChildren();
@@ -377,14 +356,10 @@ export function initializePlatformPilot(client){
  });
   $('pilot-staff-form').addEventListener('submit',event=>{
    event.preventDefault();void run(event.currentTarget,async()=>{
-     const {error}=await client.rpc('platform_assign_school_staff',{
-       p_school_id:schoolSelect.value,
-       p_email:$('pilot-staff-email').value.trim(),
-       p_role:$('pilot-staff-role').value
-     });
-     if(error)throw error;
+     const result=await staffDirectory.invite(schoolSelect.value,$('pilot-staff-email').value.trim(),$('pilot-staff-role').value);
      $('pilot-staff-email').value='';
-     say('Ruolo assegnato e registrato sul database. Il nuovo operatore può accedere con il proprio account.');
+     say(result.status==='assigned'?'Ruolo assegnato: la persona può accedere con il proprio account.':
+      'Persona aggiunta: verrà collegata alla scuola al primo accesso.');
    });
  });
  $('pilot-hours-form').addEventListener('submit',event=>{

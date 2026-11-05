@@ -7,6 +7,7 @@ import { initializeAdminCatalog } from '../catalog/catalog.js';
 import { initializeAdminMfa } from './mfa.js';
 import { initializeAdminOrderSetup } from '../orders/admin-setup.js';
 import {oauthRequest,readOAuthProviders,oauthReturnError,registerWithPassword} from './sign-in.js';
+import {renderStaffClaimForm} from '../operations/school-staff.js';
 
 function setFeedback(element, message, isError = false) {
   element.textContent = message;
@@ -154,6 +155,10 @@ export function initializeAuth(config,clientFactory=createClient) {
       window.dispatchEvent(new Event('breakapp:access-updated'));
       const platform=await client.rpc('has_current_platform_admin_role');
       if(requestId!==accessRequestId)return;
+      // Chi è stato aggiunto dal personale della scuola ma non è ancora
+      // collegato può inserire qui il codice di attivazione ricevuto.
+      if(access.memberships.length===0&&!user.app_metadata?.guest&&!(!platform.error&&platform.data===true))
+        renderStaffClaimForm(schoolList,{client,onClaimed:()=>refreshSchoolAccess(user)});
       if(getAdminSchools(access).length || (!platform.error&&platform.data===true))
         void mfa.show();
     } catch (error) {

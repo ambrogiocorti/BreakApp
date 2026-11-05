@@ -35,3 +35,9 @@ test('dashboard and inventory are distinct real feature modules',()=>{
  assert.match(inventory,/client\.from\('daily_stock'\)/);
  assert.match(inventory,/\.select\('id'\)\.single\(\)/);
 });
+test('no school/role switcher is shown to anyone',()=>{
+ assert.match(shell,/const canSwitch=false;/);
+ assert.match(shell,/profileSwitcher\.hidden=!canSwitch;/);
+ assert.match(shell,/select\.hidden=!canSwitch;/);
+ assert.match(shell,/contextBox\.hidden=!canSwitch;/);
+});

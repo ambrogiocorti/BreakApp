@@ -177,3 +177,21 @@
 .workflow-center button, .completion-panels button { justify-self: start; }
 .completion-panels > button, .service-list > button { width: auto; }
 .completion-panels .order-card form > label:has(> select), .completion-panels .order-card form > label:has(> input) { min-width: 0; }
+
+/* Personale della scuola: in servizio e in attesa del primo accesso. */
+.staff-list > .staff-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); }
+.staff-row-info { display: grid; gap: 2px; min-width: 0; }
+.staff-row-info strong { overflow-wrap: anywhere; }
+.staff-row-info span { font-size: var(--text-sm); color: var(--ink-3); }
+.staff-list > .staff-row > .button-row { margin-top: 0; justify-content: flex-end; }
+.staff-list > .staff-row:has(> .staff-invite-edit) { grid-template-columns: minmax(0, 1fr); }
+.staff-invite-edit { align-items: end; }
+.staff-invite-code { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; letter-spacing: 0.08em; color: var(--ink); }
+.staff-claim-form { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.staff-claim-form > label { font-weight: 600; color: var(--ink-2); }
+.staff-claim-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.staff-claim-row input { flex: 1 1 12rem; min-width: 0; text-transform: uppercase; }
+@media (max-width: 520px) {
+  .staff-list > .staff-row { grid-template-columns: minmax(0, 1fr); }
+  .staff-list > .staff-row > .button-row { justify-content: flex-start; }
+}
