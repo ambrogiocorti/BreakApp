@@ -38,3 +38,10 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - Admin scuola (con 2FA) e Barista possono richiedere un rimborso individuale concluso dalla scheda ordine; l'UUID resta un riferimento tecnico non visibile all'operatore. Autorizzazioni e motivazione sono validate lato PostgreSQL.
 - I pagamenti Stripe sono rimborsati ai pagatori effettivi e risultano completati soltanto dopo conferma del provider/webhook; contanti e POS esterno richiedono un'uscita fisica registrata con turno aperto, conferma e motivazione. Il software non esegue storni su POS esterni.
 - L'elenco operativo mostra soltanto le restituzioni pendenti e applica controllo di scuola/ruolo; l'anonimo non può invocare la nuova RPC. Il collaudo E2E con carta di test, webhook e rimborso resta una verifica bloccante per la vendita.
+
+## 5 novembre 2026 — Codice caricato per ruolo
+
+- I controller usati solo da personale e amministratori (servizio, scorte, panoramiche, configurazione piattaforma, ritiro gruppi, terminale e revisione offline, cassa, report) sono in un file separato, `src/js/staff-modules.js`. Un cliente non lo scarica: il file principale passa da circa 140 a circa 114 KB compressi.
+- Menu, ordini e Banco, QR, richieste, assistenza e gruppi restano nel file principale perché li usa anche il cliente.
+- Il cambio di contesto verso un ruolo del personale si applica solo quando i controller sono attivi, così ricevono gli stessi eventi di prima. Se il file non arriva, le sezioni riservate restano chiuse e si apre il Profilo con un messaggio. Il controllo degli accessi resta sul server e nel contesto verificato: caricare il codice non concede permessi.
+- Un dispositivo che ha aperto almeno una volta un ruolo del personale scarica il file a ogni avvio online, perché il service worker lo conservi per il terminale offline. Su un dispositivo mai usato dal personale il terminale offline non parte senza rete: va aperto una volta online.

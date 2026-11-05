@@ -185,7 +185,7 @@ export function chooseInitialContext(contexts,stored) {
   .map(role=>contexts.find(c=>c.role===role&&c.verified))
   .find(Boolean)||contexts[0];
 }
-export function initializeWorkspace(client){
+export function initializeWorkspace(client,{prepareRole=null}={}){
  if(!client)return;
  const sidebar=DOM.sidebar(),nav=DOM.nav(),mobile=DOM.mobile(),select=DOM.select(),
   heading=DOM.pageHead(),root=document.querySelector('#main-content');
@@ -378,7 +378,37 @@ export function initializeWorkspace(client){
      detail:{route,schoolId:active.schoolId,role:active.role}
    }));
  }
- function setContext(context,{restoreRoute=false}={}){
+ // Staff and admin controllers are loaded on demand (see role-modules.js).
+ // A context is applied only once its controllers are listening, so they
+ // receive the same workspace-context and route-changed events as before.
+ let contextRequest=0;
+ function setContext(context,options={}){
+   const request=++contextRequest,token=epoch;
+   let pending=null;
+   try{pending=prepareRole?.(context.role)||null;}
+   catch{pending=Promise.reject(new Error('role modules unavailable'));}
+   if(!pending){applyContext(context,options);return;}
+   const status=document.getElementById('school-access-status');
+   pending.then(()=>{
+     if(request===contextRequest&&token===epoch)applyContext(context,options);
+   },()=>{
+     if(request!==contextRequest||token!==epoch)return;
+     // Fail closed: never show staff sections without their controllers.
+     const message=navigator.onLine?
+       'Non è stato possibile aprire gli strumenti del personale. Ricarica la pagina e riprova.':
+       'Gli strumenti del personale non sono disponibili senza rete su questo dispositivo. Aprili una volta online, poi riprova.';
+     if(status)status.textContent=message;
+     if(active){select.value=active.key;profileSelect.value=active.key;subtitle.textContent=message;return;}
+     // Nothing open yet: show the profile, where the message, «Aggiorna» and
+     // the role switcher are, instead of an empty page.
+     select.value=context.key;profileSelect.value=context.key;
+     route='accesso';document.body.dataset.activeRoute=route;
+     updateSectionVisibility();renderLinks();
+     title.textContent='Profilo';subtitle.textContent=message;
+     document.title='Profilo · BreakApp';
+   });
+ }
+ function applyContext(context,{restoreRoute=false}={}){
    active=context;
    const brandHome=document.querySelector('.site-header .brand');
    if(brandHome)brandHome.href='#'+fallback();
