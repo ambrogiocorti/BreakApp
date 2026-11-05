@@ -474,10 +474,10 @@ export function initializeWorkspace(client){
    const previous=active?.key;
    const selected=contexts.find(x=>x.key===previous)||chooseInitialContext(contexts,safelyStored());
    sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
-   // Every account belongs to one school with one role; only a Super Admin
-   // can hold several contexts. Nobody else sees a school/role switcher: the
-   // header already says where they are working (school · role).
-   const canSwitch=isPlatform&&contexts.length>1;
+   // Every account belongs to one school with one role (a Super Admin works
+   // from the platform screens, which pick the school themselves). No
+   // school/role switcher is shown anywhere: the header says where you are.
+   const canSwitch=false;
    profileSwitcher.hidden=!canSwitch;
    select.disabled=!canSwitch;
    select.hidden=!canSwitch;
