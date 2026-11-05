@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5176';
-let fixture=readFileSync('index.html','utf8').replace(/<script[\s\S]*?<\/script>/gi,'').replace('</head>','<link rel="stylesheet" href="/src/css/base.css"></head>');
+let fixture=readFileSync('index.html','utf8').replace(/<script[\s\S]*?<\/script>/gi,'').replace('</head>','<link rel="stylesheet" href="/src/css/app.css"></head>');
 fixture=fixture.replace('</body>',`<script type="module">
 import {initializeSupportCenter} from '/src/js/features/support/support.js';
 const user={id:'member'},tickets=[],messages=[];window.fixture={calls:[]};
@@ -23,12 +23,12 @@ initializeSupportCenter(client);window.fixture.ready=true;
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5176','--strictPort'],{stdio:'ignore',env:{...process.env,GITHUB_PAGES_BASE:'/'}});let browser;
 try{
  for(let i=0;i<50;i++){try{if((await fetch(origin)).ok)break;}catch{}await delay(200);}
- for(const[name,engine]of Object.entries({chromium,firefox,webkit})){
+ for(const[name,engine]of Object.entries({chromium,firefox,webkit}).filter(([n])=>!process.env.E2E_BROWSERS||process.env.E2E_BROWSERS.split(',').includes(n))){
   browser=await engine.launch({headless:true});
   for(const viewport of[{width:1440,height:900},{width:390,height:844}]){
    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route(origin+'/fixture',r=>r.fulfill({contentType:'text/html',body:fixture}));await page.goto(origin+'/fixture');
-   await page.waitForFunction(()=>window.fixture?.ready);await page.locator('#support-group-reference').selectOption('group-1');
+   await page.waitForFunction(()=>window.fixture?.ready);await page.locator('#support-new-panel > summary').click();await page.locator('#support-group-reference').selectOption('group-1');
    assert.equal(await page.locator('#support-group-line').isDisabled(),true);
    await page.locator('#support-subject').fill('Problema del gruppo');await page.locator('#support-message').fill('Richiesta visibile a tutti i membri');
    await page.locator('#support-create-button').click();await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='open_group_support_ticket'&&c.args.p_visibility==='group'&&c.args.p_line===null));

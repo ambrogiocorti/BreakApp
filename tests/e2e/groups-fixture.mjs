@@ -1,10 +1,15 @@
 import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const start=app.indexOf('<section id="groups"');
-const end=app.indexOf('</section>',start)+'</section>'.length;
+// Find the matching </section>: the groups page contains nested sections.
+let end=start,depth=0;
+for(const match of app.slice(start).matchAll(/<section\b|<\/section>/g)){
+ depth+=match[0]==='</section>'?-1:1;
+ if(depth===0){end=start+match.index+'</section>'.length;break;}
+}
 const markup=app.slice(start,end);
 const script=`
-import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';import '/src/css/customer-experience.css';
+import '/src/css/app.css';
 import {initializeGroupDrafts} from '/src/js/features/groups/groups.js';
 const school='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',bar='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',group='cccccccc-cccc-4ccc-8ccc-cccccccccccc',user='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const fixture=window.fixture={calls:[],user:{id:user,email:'studente@example.invalid'},callbacks:[],emptyGroups:false,

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5180',app=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const script=`
-import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';import '/src/css/login.css';
+import '/src/css/app.css';
 import {initializeAuth} from '/src/js/features/auth/auth.js';
 import {initializeGuestAccess} from '/src/js/features/auth/guest.js';
 import {initializeTheme} from '/src/js/core/theme.js';
@@ -40,7 +40,7 @@ try{
    });
    assert.ok(geometry.scroll<=geometry.height+2,'Login requires scrolling: '+JSON.stringify(geometry));
    assert.ok(geometry.controls.every(r=>r.top>=0&&r.bottom<=geometry.height+1),'Login controls outside viewport: '+JSON.stringify(geometry));
-   await page.getByRole('button',{name:'Continua come ospite',exact:true}).click();
+   await page.getByRole('button',{name:'Entra come ospite',exact:true}).click();
    await page.getByRole('heading',{name:'Accesso ospite',exact:true}).waitFor();
    assert.equal(await page.getByLabel('Indirizzo email',{exact:true}).isVisible(),false);
    const guestGeometry=await page.evaluate(()=>({height:innerHeight,scroll:document.documentElement.scrollHeight}));
@@ -59,9 +59,9 @@ try{
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='oauth'&&c.args.provider==='azure'&&c.args.options.scopes==='email'));
    const callbacks=await page.evaluate(()=>window.fixture.calls.filter(c=>c.name==='oauth').map(c=>c.args.options.redirectTo));assert.deepEqual(callbacks,[origin+'/',origin+'/']);
    await page.getByLabel('Indirizzo email',{exact:true}).fill('normal@example.invalid');await page.getByLabel('Password',{exact:true}).fill('fixture-pass');
-   await page.getByRole('button',{name:'Registrati',exact:true}).click();await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='signup'));
+   await page.getByRole('button',{name:'Crea un account',exact:true}).click();await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='signup'));
    assert.equal(await page.locator('#signed-out-view').isVisible(),true);
-   await page.getByLabel('Indirizzo email',{exact:true}).fill('demo@admin.breakapp.it');await page.getByRole('button',{name:'Registrati',exact:true}).click();
+   await page.getByLabel('Indirizzo email',{exact:true}).fill('demo@admin.breakapp.it');await page.getByRole('button',{name:'Crea un account',exact:true}).click();
    await page.locator('#signed-in-view').waitFor();
    assert.deepEqual(await page.evaluate(()=>window.fixture.calls.filter(c=>['admin-registration','password'].includes(c.name)).map(c=>c.name)),['admin-registration','password']);
    assert.equal(await page.locator('#mfa-backup-button').count(),0);
@@ -70,9 +70,9 @@ try{
    assert.equal(await page.evaluate(()=>window.fixture.verified),true);assert.equal(await page.locator('#mfa-enroll-button').isVisible(),false);
    await page.evaluate(()=>document.getElementById('mfa-enroll-button').click());await page.getByText(/Il fattore esistente deve essere rimosso/).waitFor();
    assert.equal(await page.evaluate(()=>window.fixture.calls.filter(c=>c.name==='enroll').length),0);
-   await page.evaluate(()=>window.fixture.pending());await page.getByRole('button',{name:'Attiva 2FA con QR',exact:true}).click();
+   await page.evaluate(()=>window.fixture.pending());await page.getByRole('button',{name:'Attiva la verifica con QR',exact:true}).click();
    await page.locator('#mfa-qr-panel').waitFor();assert.deepEqual(await page.evaluate(()=>window.fixture.calls.filter(c=>['unenroll','enroll'].includes(c.name)).map(c=>c.name)),['unenroll','enroll']);
-   await page.getByLabel('Codice temporaneo (6 cifre)').fill('123456');await page.getByRole('button',{name:'Verifica codice',exact:true}).click();await page.waitForFunction(()=>window.fixture.verified===true);
+   await page.getByLabel('Codice a 6 cifre').fill('123456');await page.getByRole('button',{name:'Verifica',exact:true}).click();await page.waitForFunction(()=>window.fixture.verified===true);
    assert.equal(await page.locator('#mfa-qr').getAttribute('src'),null);assert.equal(await page.locator('#mfa-backup-button').count(),0);
    const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert.ok(width.scroll<=width.viewport+3,JSON.stringify(width));assert.deepEqual(errors,[]);
    console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'Google/Microsoft PKCE, signup domain policy, primary-only MFA and enrollment recovery'}));await page.close();

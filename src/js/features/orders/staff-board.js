@@ -38,11 +38,7 @@ export function slotLabel(order) {
   const date=pickup.service_date;
   const parts=/^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if(!parts)return 'Ritiro '+date+' · '+pickup.starts_at.slice(0,5);
-  const value=new Date(Date.UTC(+parts[1],+parts[2]-1,+parts[3],12));
-  const display=new Intl.DateTimeFormat('it-IT',{
-    weekday:'short',day:'numeric',month:'short',timeZone:'UTC'
-  }).format(value);
-  return display+' · '+pickup.starts_at.slice(0,5);
+  return windowLabel({service_date:date,starts_at:pickup.starts_at});
 }
 export function availableSlots(orders) {
   const m=new Map();
@@ -90,4 +86,31 @@ export function productionTotals(orders,{slot='all'}={}) {
   }
   return [...totals.values()].sort((a,b)=>
     b.quantity-a.quantity||a.name.localeCompare(b.name,'it-IT'));
+}
+const ROME_DAY=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'});
+/** Human label for a pickup window: "Oggi · 10:00–10:15", "Domani · …", "gio 6 nov · …". */
+export function windowLabel(window,now=new Date()){
+  if(!window?.service_date||!window?.starts_at)return 'Fascia non disponibile';
+  const parts=/^(\d{4})-(\d{2})-(\d{2})$/.exec(window.service_date);
+  const time=window.starts_at.slice(0,5)+(window.ends_at?'–'+window.ends_at.slice(0,5):'');
+  if(!parts)return window.service_date+' · '+time;
+  const today=ROME_DAY.format(now);
+  const tomorrow=ROME_DAY.format(new Date(now.getTime()+86400000));
+  if(window.service_date===today)return 'Oggi · '+time;
+  if(window.service_date===tomorrow)return 'Domani · '+time;
+  const day=new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'})
+    .format(new Date(Date.UTC(+parts[1],+parts[2]-1,+parts[3],12)));
+  return day+' · '+time;
+}
+/** Visual tone of an order status. Labels stay textual: colour is never the only cue. */
+export function orderStatusTone(status){
+  return ({confirmed:'info',preparing:'warning',ready:'success',delivered:'neutral',no_show:'danger',cancelled:'neutral'})[status]||'neutral';
+}
+/** Short payment wording for a ticket or a customer card. */
+export function paymentState(order,{staff=false}={}){
+  if(order.payment_status==='paid')return {label:'Pagato',tone:'success'};
+  if(order.payment_status==='refunded')return {label:'Rimborsato',tone:'neutral'};
+  if(order.payment_status==='refund_pending')return {label:'Rimborso in elaborazione',tone:'info'};
+  if(['cancelled','no_show'].includes(order.status))return {label:'Nessun incasso',tone:'neutral'};
+  return {label:staff?'Da incassare':'Da pagare',tone:'warning'};
 }

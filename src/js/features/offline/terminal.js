@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {formatEuro} from '../catalog/utils.js';
 import {validateOfflinePin,pinSalt,deriveOfflineKey,sealOffline,unsealOffline,
  openOfflineDB,readDevice,saveDevice,appendPending,deletePending,readPending,readConfiguredOperators} from './vault.js';
@@ -91,7 +92,7 @@ export function initializeOfflineTerminal(client){
   const amount=Number(o.due_cents??(o.payment_status==='paid'?0:o.total_cents));
   if(!Number.isSafeInteger(amount)||amount<0||amount>1000000)
    return info('Totale non valido.',true);
-  if(!confirm(amount
+  if(!await confirmDialog(amount
    ?'Hai ricevuto fisicamente '+formatEuro(amount)+' in contanti e consegnato l’ordine '+o.display_no+'?'
    :'Hai verificato il QR e consegnato fisicamente l’ordine già pagato '+o.display_no+'?'))return;
   const pending=await readPending(db,contextKey());
@@ -318,7 +319,7 @@ export function initializeOfflineTerminal(client){
   const amount=saleSum(),barId=barInput.value;
   if(!Number.isSafeInteger(amount)||amount<=0||amount>1000000)
    return info('Totale non valido.',true);
-  if(!confirm('Confermi di avere già incassato '+formatEuro(amount)+
+  if(!await confirmDialog('Confermi di avere già incassato '+formatEuro(amount)+
     ' in contanti? Il server registrerà ora la vendita.'))return;
   onlineCashKey ||=crypto.randomUUID();
   const button=$('offline-entry-online');button.disabled=true;
@@ -350,7 +351,7 @@ export function initializeOfflineTerminal(client){
        throw new Error('Totale contanti non consentito.');
      const note=$('offline-entry-note').value.trim();
      if(/[<>{}]/.test(note))throw new Error('Caratteri non consentiti nella nota.');
-     if(!confirm('Confermi di avere realmente incassato '+formatEuro(amount)+
+     if(!await confirmDialog('Confermi di avere realmente incassato '+formatEuro(amount)+
         ' in contanti? La vendita potrà richiedere riconciliazione.'))return;
      const eventId=crypto.randomUUID();
      const sessionId=currentCashSession(barInput.value);

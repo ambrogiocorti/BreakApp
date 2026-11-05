@@ -42,7 +42,7 @@ export function initializeAuth(config,clientFactory=createClient) {
     environment.dataset.type = 'warning';
     controls.forEach((button) => { button.disabled = true; });
     form.querySelectorAll('input').forEach((input) => { input.disabled = true; });
-    setFeedback(feedback, 'Le operazioni di accesso saranno disponibili dopo la configurazione di Supabase.');
+    setFeedback(feedback, 'L’accesso non è ancora configurato su questa versione dell’app.');
     return null;
   }
 
@@ -89,7 +89,7 @@ export function initializeAuth(config,clientFactory=createClient) {
   function renderSchoolAccess({ memberships, bars }) {
     schoolList.replaceChildren();
     if (memberships.length === 0) {
-      accessSummary.textContent = 'Il tuo account non risulta ancora associato a una scuola attiva. Verifica l’assegnazione in Supabase.';
+      accessSummary.textContent = 'Il tuo account non è ancora associato a una scuola attiva. Chiedi all’Admin della tua scuola di aggiungerti.';
       return;
     }
 

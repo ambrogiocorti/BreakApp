@@ -1,7 +1,7 @@
 import { chromium, firefox, webkit } from 'playwright';
 const site=process.env.SMOKE_URL||'http://127.0.0.1:4173/BreakApp/';
 const errors=[];
-for (const [name,engine] of Object.entries({chromium,firefox,webkit})) {
+for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n])=>!process.env.E2E_BROWSERS||process.env.E2E_BROWSERS.split(',').includes(n))) {
   const browser=await engine.launch({headless:true});
   for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
     const page=await browser.newPage({viewport});

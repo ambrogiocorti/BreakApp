@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {parseEuroToCents} from '../catalog/utils.js';
 const $=id=>document.getElementById(id);
 const el=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
@@ -87,13 +88,13 @@ export function initializeCashWorkspace(client,terminal){
   ['cash-close-form','close','cash-counted','cash-close-reason'],['cash-adjust-form','adjustment','cash-adjust-amount','cash-adjust-reason']]){
   const form=$(id);
   form.addEventListener('input',()=>{delete form.dataset.requestKey;});
-  form.addEventListener('submit',event=>{
+  form.addEventListener('submit',async event=>{
    event.preventDefault();if(!form.reportValidity())return;
    try{
     const selected=action||$('cash-action').value,raw=$(amountId).value.trim();
     const amount=(selected==='adjustment'&&raw.startsWith('-')?-1:1)*parseEuroToCents(selected==='adjustment'?raw.replace(/^-/,''):raw);
     if(selected==='adjustment'&&!navigator.onLine)throw Error('Rettifiche Admin disponibili solo online con 2FA.');
-    if(selected==='close'&&!confirm('Confermi il conteggio fisico di '+money(amount)+'? La chiusura sarà immutabile.'))return;
+    if(selected==='close'&&!await confirmDialog('Confermi il conteggio fisico di '+money(amount)+'? La chiusura sarà immutabile.'))return;
     if(selected==='open')form.dataset.sessionId||=crypto.randomUUID();
     const sessionId=selected==='open'?form.dataset.sessionId:selected==='adjustment'?$('cash-adjust-session').value:current()?.id;
     void operate(form,selected,amount,reasonId?$(reasonId).value.trim():'',sessionId);

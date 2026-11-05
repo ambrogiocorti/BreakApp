@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 const site='http://127.0.0.1:5174';
 const markup=readFileSync('index.html','utf8').match(/<dialog id="notifications-dialog"[\s\S]*?<\/dialog>/)?.[0];
 assert.ok(markup);
-const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/base.css"></head><body>
+const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body>
 <button id="notifications-toggle" hidden>Notifiche <span id="notifications-unread" hidden></span></button>${markup}
 <script type="module">
 import {initializeInAppNotifications} from '/src/js/features/notifications/notifications.js';
@@ -52,7 +52,7 @@ try{
   await delay(200);
  }
  assert.ok(available,'Notification test server did not start');
- for(const[name,engine]of Object.entries({chromium,firefox,webkit})){
+ for(const[name,engine]of Object.entries({chromium,firefox,webkit}).filter(([n])=>!process.env.E2E_BROWSERS||process.env.E2E_BROWSERS.split(',').includes(n))){
   browser=await engine.launch({headless:true});
   for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
    const page=await browser.newPage({viewport});
@@ -62,6 +62,7 @@ try{
    await page.locator('#notifications-toggle').waitFor({state:'visible'});
    await page.locator('#notifications-toggle').click();
    await page.waitForFunction(()=>window.fixture.calls.some(x=>x.name==='get_my_notification_preferences'));
+   await page.locator('.notice-settings > summary').click();
    assert.equal(await page.locator('#notice-push-groups').isChecked(),true);
    await page.locator('#notice-push-groups').uncheck();
    await page.locator('#notice-push-announcements').uncheck();

@@ -11,7 +11,7 @@ export function initializePlatformDashboard(client,metric){
  const authorized=()=>Boolean(user&&context?.role==='platform_admin'&&context.verified);
  $('platform-date').textContent=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());
  function empty(parent,title,note,action=false){
-  const box=make('div','','empty-state');box.append(icon('Building2'),make('strong',title),make('p',note));
+  const box=make('div','','empty-state');box.append(make('strong',title),make('p',note));
   if(action){const link=make('a','Aggiungi la prima scuola','button button-primary button-small');link.href='#workflow-center';box.append(link);}parent.replaceChildren(box);
  }
  function manageLink(s){
@@ -40,15 +40,13 @@ export function initializePlatformDashboard(client,metric){
  }
  function roster(rows){
   const list=make('div','','school-roster');
-  rows.forEach((school,i)=>{
+  rows.forEach(school=>{
    const linked=bars.filter(bar=>bar.school_id===school.id);
    const item=make('div','','school-roster-row');
-   const serial=make('span',String(i+1).padStart(2,'0'),'school-roster-index');
-   serial.setAttribute('aria-hidden','true');
    const detail=make('div','','school-roster-detail');
    detail.append(make('strong',school.name),make('small',linked.length+(linked.length===1?' bar collegato':' bar collegati')));
    const state=make('span',school.is_active?'Attiva':'Sospesa','status-badge'+(school.is_active?'':' is-paused'));
-   item.append(serial,detail,state);
+   item.append(detail,state);
    if(school.is_active)item.append(manageLink(school));
    list.append(item);
   });
@@ -64,7 +62,7 @@ export function initializePlatformDashboard(client,metric){
  }
  function render(){
   const active=schools.filter(s=>s.is_active),paused=schools.length-active.length,activeIds=new Set(active.map(s=>s.id)),activeBars=bars.filter(b=>b.is_active&&activeIds.has(b.school_id));
-  metrics.replaceChildren(metric('Scuole collegate',schools.length,'Nella tua piattaforma','Building2'),metric('Scuole attive',active.length,'Con accesso abilitato','Check'),metric('Bar attivi',activeBars.length,'Nelle scuole attive','UtensilsCrossed'),metric('Scuole sospese',paused,'Con accesso sospeso','Pause'));
+  metrics.replaceChildren(metric('Scuole collegate',schools.length,'In totale'),metric('Scuole attive',active.length,'Con accesso abilitato'),metric('Bar attivi',activeBars.length,'Nelle scuole attive'),metric('Scuole sospese',paused,'Con accesso sospeso'));
   $('platform-school-count').textContent=String(schools.length);
   if(schools.length)preview.replaceChildren(roster(schools.slice(0,5)));
   else empty(preview,'La rete è pronta a partire','Aggiungi la prima scuola per iniziare a gestire il servizio.',true);

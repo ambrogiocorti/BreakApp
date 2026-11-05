@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
 const script=`
-import '/src/css/base.css';import '/src/css/workspace.css';import '/src/css/groups.css';import '/src/css/studio.css';import '/src/css/service-desk.css';import '/src/css/login.css';import '/src/css/customer-experience.css';
+import '/src/css/app.css';
 import {initializeOrders} from '/src/js/features/orders/orders.js';
 const user={id:'fixture-user',email:'studente@example.invalid'},school='school-a',bar='bar-a';
 const fixture=window.fixture={calls:[],callbacks:[],cleared:[],user,watch:null};

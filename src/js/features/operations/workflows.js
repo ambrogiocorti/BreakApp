@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {formatEuro} from '../catalog/utils.js';
 import {approvalLabel} from '../../core/status-labels.js';
 const make=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
@@ -46,11 +47,11 @@ export function initializeOrderWorkflows(client){
     if(a.lease_until&&a.state==='active')box.append(make('p','Scade alle '+new Date(a.lease_until).toLocaleTimeString('it-IT')));
     if(staff&&a.state==='active'){
      box.append(button('Approva',b=>act(b,()=>rpc('decide_order_approval',{p_request:a.id,p_approve:true,p_reason:''}))),
-      button('Rifiuta',b=>act(b,async()=>{const reason=prompt('Motivazione facoltativa del rifiuto');if(reason===null)return;
+      button('Rifiuta',b=>act(b,async()=>{const reason=await promptDialog('Motivazione facoltativa del rifiuto');if(reason===null)return;
        await rpc('decide_order_approval',{p_request:a.id,p_approve:false,p_reason:reason});})));
     }
     if(a.owner_id===user.id&&['queued','active','awaiting_reschedule'].includes(a.state)){
-     box.append(button('Annulla richiesta',b=>act(b,async()=>{if(confirm('Annullare la richiesta ed avviare gli eventuali rimborsi?'))await rpc('respond_approval_schedule',{p_request:a.id,p_window:null,p_cancel:true});})));
+     box.append(button('Annulla richiesta',b=>act(b,async()=>{if(await confirmDialog('Annullare la richiesta ed avviare gli eventuali rimborsi?'))await rpc('respond_approval_schedule',{p_request:a.id,p_window:null,p_cancel:true});})));
      if(a.state==='awaiting_reschedule'){
       box.append(make('p','Scegli entro '+new Date(a.response_until).toLocaleString('it-IT')));
       const select=make('select');select.setAttribute('aria-label','Nuova fascia della richiesta');

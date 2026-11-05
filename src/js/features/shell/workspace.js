@@ -6,47 +6,58 @@ const LABELS = Object.freeze({
  warehouse_manager:'Magazziniere',school_admin:'Admin scuola',
  platform_admin:'Super Admin'
 });
+// [route, label, icon, short label for the phone tab bar]
 const SCREENS = Object.freeze({
  customer:[
-  ['menu','Menu','UtensilsCrossed'],['orders','I miei ordini','ClipboardList'],
+  ['menu','Menu','UtensilsCrossed'],['orders','I miei ordini','ClipboardList','Ordini'],
   ['groups','Gruppi','UsersRound'],
-  ['workflow-center','Richieste e modifiche','ClipboardList'],
+  ['workflow-center','Richieste e modifiche','ShieldCheck','Richieste'],
+  ['support-center','Assistenza','MessageSquareText'],
   ['accesso','Profilo','UserRound']
  ],
  bartender:[
-  ['staff-orders-section','Ordini da preparare','ClipboardList'],
+  ['staff-orders-section','Banco','ClipboardList'],
   ['workflow-center','Richieste','ShieldCheck'],
-  ['bar-operations','Servizio e orari','CalendarDays'],
-  ['cash-workspace','Cassa e turni','Receipt'],
-  ['offline-terminal','Terminale offline','CloudOff'],
+  ['bar-operations','Servizio e orari','CalendarDays','Servizio'],
+  ['cash-workspace','Cassa e turni','Receipt','Cassa'],
+  ['offline-terminal','Terminale offline','CloudOff','Offline'],
   ['support-center','Assistenza','MessageSquareText'],
   ['accesso','Profilo','UserRound']
  ],
  warehouse_manager:[
-  ['warehouse-inventory','Scorte giornaliere','Boxes'],
+  ['warehouse-inventory','Scorte giornaliere','Boxes','Scorte'],
+  ['support-center','Assistenza','MessageSquareText'],
   ['accesso','Profilo','UserRound']
  ],
  school_admin:[
-   ['admin-overview','Panoramica','LayoutDashboard'],
+   ['admin-overview','Panoramica','LayoutDashboard','Oggi'],
    ['staff-orders-section','Ordini','ClipboardList'],
    ['workflow-center','Richieste','ShieldCheck'],
    ['support-center','Assistenza','MessageSquareText'],
    ['admin-catalog','Catalogo','ShoppingBag'],
    ['warehouse-inventory','Magazzino','Boxes'],
-   ['bar-operations','Orari e servizio','CalendarDays'],
-   ['admin-order-setup','Impostazioni bar','SlidersHorizontal'],
+   ['bar-operations','Orari e servizio','CalendarDays','Orari'],
+   ['admin-order-setup','Impostazioni bar','SlidersHorizontal','Impostazioni'],
    ['cash-workspace','Cassa','Receipt'],
    ['school-reports','Report','LayoutDashboard'],
-   ['offline-review','Revisione offline','CloudOff'],
-   ['accesso','Profilo e sicurezza','UserRound']
+   ['offline-review','Revisione offline','CloudOff','Offline'],
+   ['accesso','Profilo e sicurezza','UserRound','Profilo']
   ],
  platform_admin:[
   ['platform-overview','Panoramica','LayoutDashboard'],
   ['platform-schools','Scuole','Building2'],
-  ['platform-configuration','Configurazione','SlidersHorizontal'],
+  ['platform-configuration','Configurazione','SlidersHorizontal','Configura'],
   ['workflow-center','Nuova scuola','Plus'],
-  ['accesso','Profilo e sicurezza','UserRound']
+  ['accesso','Profilo e sicurezza','UserRound','Profilo']
  ]
+});
+// What stays in the phone tab bar; everything else lives behind «Altro».
+const MOBILE_PRIMARY=Object.freeze({
+ customer:['menu','orders','groups','accesso'],
+ bartender:['staff-orders-section','cash-workspace','bar-operations'],
+ warehouse_manager:['warehouse-inventory','accesso'],
+ school_admin:['admin-overview','staff-orders-section','admin-catalog'],
+ platform_admin:['platform-overview','platform-schools','platform-configuration']
 });
 const NAV_GROUPS=Object.freeze({
  platform_admin:{
@@ -55,11 +66,11 @@ const NAV_GROUPS=Object.freeze({
   'workflow-center':'RETE SCOLASTICA','accesso':'ACCOUNT'
  },
  customer:{
-  'menu':'SCOPRI','orders':'IL TUO INTERVALLO','groups':'IL TUO INTERVALLO',
-  'workflow-center':'IL TUO INTERVALLO','accesso':'ACCOUNT'
+  'menu':'IL TUO INTERVALLO','orders':'IL TUO INTERVALLO','groups':'IL TUO INTERVALLO',
+  'workflow-center':'AIUTO','support-center':'AIUTO','accesso':'ACCOUNT'
  },
  warehouse_manager:{
-  'warehouse-inventory':'INVENTARIO','accesso':'ACCOUNT'
+  'warehouse-inventory':'INVENTARIO','support-center':'ACCOUNT','accesso':'ACCOUNT'
  },
  school_admin:{
   'admin-overview':'OGGI','staff-orders-section':'OGGI','workflow-center':'OGGI',
@@ -74,22 +85,28 @@ const NAV_GROUPS=Object.freeze({
   'accesso':'ACCOUNT'
  }
 });
+const groupTitle=name=>name.charAt(0)+name.slice(1).toLocaleLowerCase('it-IT');
+// One short sentence under the page title: what the page is for, not a slogan.
 const PAGE_NOTES=Object.freeze({
- 'platform-overview':'Uno sguardo alla rete delle tue scuole.',
- 'platform-schools':'Tutte le scuole, i bar e il loro stato, in un unico posto.',
- 'platform-configuration':'Scegli una scuola e organizza il suo servizio.',
- 'admin-overview':'Ordini, catalogo e servizio: la giornata a colpo d’occhio.',
- 'workflow-center':'Gestisci le richieste che richiedono la tua attenzione.',
- 'menu':'Il catalogo della tua scuola, organizzato per il tuo intervallo.',
- 'orders':'Prenotazioni, pagamenti e stato del ritiro.',
- 'groups':'Ordina con i tuoi compagni, senza perdere il controllo delle quote.',
- 'staff-orders-section':'La coda di lavoro, le priorità e i ritiri del bar.',
- 'warehouse-inventory':'Disponibilità e quantità, aggiornate per ciascuna giornata.',
- 'admin-catalog':'Prodotti, categorie e informazioni per la vendita.',
- 'cash-workspace':'Incassi, resi e turni del servizio.',
- 'school-reports':'Dati e riepiloghi della gestione scolastica.',
- 'offline-terminal':'Continuità operativa anche nelle interruzioni di rete.',
- 'accesso':'Account, scuole associate e sicurezza.'
+ 'platform-overview':'Scuole collegate, bar attivi e configurazioni da completare.',
+ 'platform-schools':'Scuole, bar e stato del servizio.',
+ 'platform-configuration':'Catalogo, personale, orari, scorte e pagamenti di un bar.',
+ 'admin-overview':'Ordini e servizio di oggi.',
+ 'workflow-center':'Approvazioni, modifiche e rimborsi da seguire.',
+ 'menu':'',
+ 'orders':'Prenotazioni, pagamenti e QR per il ritiro.',
+ 'groups':'Un ordine unico per la classe, con quote separate.',
+ 'staff-orders-section':'',
+ 'warehouse-inventory':'Disponibilità per giorno e per bar.',
+ 'admin-catalog':'Categorie, prodotti, prezzi, ingredienti e allergeni.',
+ 'admin-order-setup':'Posizione della scuola, regole, fasce e scorte.',
+ 'bar-operations':'Pausa, orari settimanali e chiusure.',
+ 'cash-workspace':'Apertura, movimenti e chiusura del turno.',
+ 'school-reports':'Riepiloghi per periodo ed esportazioni.',
+ 'offline-terminal':'Vendite e ritiri quando manca la rete.',
+ 'offline-review':'Operazioni registrate senza rete da verificare.',
+ 'support-center':'Richieste, risposte e segnalazioni.',
+ 'accesso':'Account, scuole e sicurezza.'
 });
 const DOM={
  nav:()=>document.getElementById('app-desktop-nav'),
@@ -163,22 +180,38 @@ export function initializeWorkspace(client){
  const notificationsToggle=document.getElementById('notifications-toggle');
  if(notificationsToggle){notificationsToggle.firstChild?.remove();notificationsToggle.prepend(icon('Bell'));}
  document.getElementById('workspace-signout').prepend(icon('LogOut'));
- const moreContainer=create('div','workspace-more');
- moreContainer.hidden=true;
- moreContainer.id='workspace-more-items';
- moreContainer.setAttribute('aria-label','Altre sezioni');
- document.body.append(moreContainer);
- const index=document.getElementById('workspace-index');
- const indexNav=document.getElementById('workspace-index-nav');
- index.addEventListener('keydown',event=>{
-  if(event.key==='Escape'&&index.open){
-   index.open=false;
-   index.querySelector('summary')?.focus();
-   event.preventDefault();
-  }
- });
- document.addEventListener('pointerdown',event=>{
-  if(index.open&&!index.contains(event.target))index.open=false;
+ const scrim=document.getElementById('workspace-scrim');
+ const drawerClose=document.getElementById('workspace-drawer-close');
+ const desktop=matchMedia('(min-width: 1024px)');
+ let drawerReturn=null;
+ function drawerOpen(){return document.body.dataset.drawer==='open';}
+ function openDrawer(){
+  if(desktop.matches||sidebar.hidden)return;
+  drawerReturn=document.activeElement;
+  document.body.dataset.drawer='open';scrim.hidden=false;
+  mobile.querySelector('.workspace-more-button')?.setAttribute('aria-expanded','true');
+  sidebar.setAttribute('role','dialog');sidebar.setAttribute('aria-modal','true');
+  requestAnimationFrame(()=>(sidebar.querySelector('[aria-current="page"]')||drawerClose)?.focus());
+ }
+ function closeDrawer({restore=true}={}){
+  if(!drawerOpen())return;
+  delete document.body.dataset.drawer;scrim.hidden=true;
+  sidebar.removeAttribute('role');sidebar.removeAttribute('aria-modal');
+  mobile.querySelector('.workspace-more-button')?.setAttribute('aria-expanded','false');
+  if(restore&&drawerReturn?.isConnected)drawerReturn.focus();
+  drawerReturn=null;
+ }
+ drawerClose.addEventListener('click',()=>closeDrawer());
+ scrim.addEventListener('click',()=>closeDrawer());
+ desktop.addEventListener('change',()=>closeDrawer({restore:false}));
+ sidebar.addEventListener('keydown',event=>{
+  if(!drawerOpen())return;
+  if(event.key==='Escape'){event.preventDefault();closeDrawer();return;}
+  if(event.key!=='Tab')return;
+  const focusable=[...sidebar.querySelectorAll('a[href],button:not([disabled]),select:not([disabled])')].filter(x=>x.offsetParent!==null);
+  const first=focusable[0],last=focusable.at(-1);
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
  });
  let user=null,contexts=[],active=null,route='',epoch=0,ready=false;
  const storageKey='breakapp:last-workspace-context';
@@ -232,52 +265,53 @@ export function initializeWorkspace(client){
    return available[0]?.[0]||'accesso';
  }
  function renderLinks(){
-   nav.replaceChildren();mobile.replaceChildren();moreContainer.replaceChildren();
-   indexNav.replaceChildren();index.open=false;
-   const available=active?.verified?SCREENS[active?.role]||[]:[['accesso','Profilo e sicurezza','UserRound']];
+   nav.replaceChildren();mobile.replaceChildren();
+   const available=active?.verified?SCREENS[active?.role]||[]:[['accesso','Profilo e sicurezza','UserRound','Profilo']];
    function linkOf(screen,compact=false){
-     const [id,label,iconName]=screen;
+     const [id,label,iconName,short]=screen;
      const a=create('a',compact?'workspace-link mobile-link':'workspace-link');
      a.href='#'+id;a.dataset.route=id;
      const pictogram=create('span','workspace-link-icon');pictogram.append(icon(iconName));
-     a.append(pictogram,create(compact?'small':'span','workspace-link-label',label));
+     a.append(pictogram,create('span','workspace-link-label',compact?short||label:label));
+     if(compact&&short&&short!==label)a.setAttribute('aria-label',label);
      if(id===route)a.setAttribute('aria-current','page');
      return a;
    }
-   const primary=available.slice(0,5);
-   if(!primary.some(([id])=>id===route)){
-     const selected=available.find(([id])=>id===route);
-     if(selected)primary[primary.length-1]=selected;
-   }
-   for(const screen of primary)nav.append(linkOf(screen));
-   index.hidden=available.length<=5;
-   if(!index.hidden){
-     for(const screen of available){
-       const link=linkOf(screen);
-       link.addEventListener('click',()=>{index.open=false;});
-       indexNav.append(link);
+   // Sidebar (desktop) and drawer (phone): every section, grouped by purpose.
+   const groups=NAV_GROUPS[active?.role]||{};
+   let current=null;
+   for(const screen of available){
+     const name=active?.verified?groups[screen[0]]||'ALTRO':'ACCOUNT';
+     if(!current||current.dataset.group!==name){
+       current=create('div','nav-group');current.dataset.group=name;
+       const heading=create('p','nav-group-label',groupTitle(name));
+       heading.id='nav-group-'+name.toLowerCase().replace(/[^a-z]+/g,'-');
+       current.setAttribute('role','group');current.setAttribute('aria-labelledby',heading.id);
+       current.append(heading);nav.append(current);
      }
+     current.append(linkOf(screen));
    }
-   const compact=available.length>4?[...available.slice(0,3)]:available;
-   compact.forEach(screen=>mobile.append(linkOf(screen,true)));
-   if(available.length>4){
+   // Phone tab bar: the few daily sections, then «Altro» opens the drawer.
+   const preferred=MOBILE_PRIMARY[active?.role]||[];
+   const primary=active?.verified?available.filter(([id])=>preferred.includes(id)):available;
+   primary.forEach(screen=>mobile.append(linkOf(screen,true)));
+   const rest=available.filter(screen=>!primary.includes(screen));
+   if(rest.length){
      const more=create('button','workspace-link workspace-more-button');
-     more.type='button';more.setAttribute('aria-controls','workspace-more-items');
-     more.setAttribute('aria-expanded','false');
+     more.type='button';more.setAttribute('aria-controls','workspace-sidebar');
+     more.setAttribute('aria-expanded',String(drawerOpen()));
+     more.setAttribute('aria-haspopup','dialog');
      const moreIcon=create('span','workspace-link-icon');moreIcon.append(icon('More'));
-     more.append(moreIcon,create('small','workspace-link-label','Altro'));
-     more.addEventListener('click',()=>{
-       moreContainer.hidden=!moreContainer.hidden;
-       more.setAttribute('aria-expanded',String(!moreContainer.hidden));
-     });
+     more.append(moreIcon,create('span','workspace-link-label','Altro'));
+     more.addEventListener('click',()=>drawerOpen()?closeDrawer():openDrawer());
+     if(rest.some(([id])=>id===route))more.setAttribute('aria-current','page');
      mobile.append(more);
-     for(const screen of available.slice(3))moreContainer.append(linkOf(screen));
-     if(available.slice(3).some(([id])=>id===route))more.setAttribute('aria-current','page');
    }
  }
  function switchRoute(next,{history=true}={}){
    if(!active)return;
-   const moveFocus=Boolean(document.activeElement?.closest('#app-desktop-nav,#app-mobile-nav,#workspace-more-items,.app-main section'));
+   const moveFocus=Boolean(document.activeElement?.closest('#app-desktop-nav,#app-mobile-nav,.app-main section'));
+   closeDrawer({restore:false});
    const requested=next||fallback();
    const target=allowedRoute(active.role,requested) && active.verified?requested:
      requested==='accesso'?'accesso':fallback();
@@ -293,17 +327,16 @@ export function initializeWorkspace(client){
    if(history && location.hash!=='#'+route)window.history.pushState(null,'','#'+route);
    updateSectionVisibility();
    renderLinks();
-   moreContainer.hidden=true;
-   const name=route==='support-center'?'Centro assistenza':
-     SCREENS[active.role]?.find(([id])=>id===route)?.[1]||'Profilo';
+   const name=SCREENS[active.role]?.find(([id])=>id===route)?.[1]||
+     (route==='support-center'?'Assistenza':'Profilo');
    title.textContent=name;
    subtitle.textContent=active.verified?
      active.role==='platform_admin'&&route==='workflow-center'?'Il primo passo per un nuovo bar scolastico.':
-     PAGE_NOTES[route]||active.schoolName:
+     PAGE_NOTES[route]??active.schoolName:
      'Completa la verifica a due fattori per accedere alle funzioni riservate.';
-   pageSection.textContent=active.role==='platform_admin'?'Gestione piattaforma':active.schoolName;
+   pageSection.textContent=active.role==='platform_admin'?'Piattaforma':active.schoolName;
    roleLabel.textContent=LABELS[active.role];
-   if(breadcrumb)breadcrumb.textContent=LABELS[active.role]+' / '+name;
+   if(breadcrumb)breadcrumb.textContent=(active.role==='platform_admin'?LABELS[active.role]:active.schoolName+' · '+LABELS[active.role]);
    document.title=name+' · BreakApp';
    if(moveFocus)title.focus({preventScroll:true});
    const resetScroll=()=>{
@@ -368,7 +401,7 @@ export function initializeWorkspace(client){
    if(breadcrumb)breadcrumb.hidden=true;
    if(accountLink)accountLink.hidden=true;
    profileSwitcher.hidden=true;
-   moreContainer.hidden=true;index.open=false;index.hidden=true;indexNav.replaceChildren();
+   closeDrawer({restore:false});
    routeSections.forEach(s=>s.classList.remove('is-route-active'));
  }
  async function refreshSession(userNext){
@@ -458,17 +491,6 @@ export function initializeWorkspace(client){
      if(!destination||routeSections.some(section=>section.id===destination)){
        event.preventDefault();switchRoute(destination||fallback());
      }
-   }
-   if(!moreContainer.hidden && !moreContainer.contains(event.target) &&
-      !mobile.contains(event.target)){
-     moreContainer.hidden=true;
-     mobile.querySelector('.workspace-more-button')?.setAttribute('aria-expanded','false');
-   }
- });
- window.addEventListener('keydown',event=>{
-   if(event.key==='Escape'&&!moreContainer.hidden){
-     moreContainer.hidden=true;
-     const more=mobile.querySelector('.workspace-more-button');more?.setAttribute('aria-expanded','false');more?.focus();
    }
  });
  const onAuth=(_event,session)=>queueMicrotask(()=>{

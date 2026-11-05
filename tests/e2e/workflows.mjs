@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5175';
-const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/base.css"></head><body><main id="main-content"></main>
+const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body><main id="main-content"></main>
 <script type="module">
 import {initializeOrderWorkflows} from '/src/js/features/operations/workflows.js';
 import {initializeCompletionUI} from '/src/js/features/operations/completion-ui.js';
@@ -33,7 +33,7 @@ const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','1
 let browser;
 try{
  for(let i=0;i<50;i++){try{if((await fetch(origin)).ok)break;}catch{}await delay(200);}
- for(const[name,engine]of Object.entries({chromium,firefox,webkit})){
+ for(const[name,engine]of Object.entries({chromium,firefox,webkit}).filter(([n])=>!process.env.E2E_BROWSERS||process.env.E2E_BROWSERS.split(',').includes(n))){
   browser=await engine.launch({headless:true});
   for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));

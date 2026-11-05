@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import { formatEuro } from '../catalog/utils.js';
 import { makePickupQrValue, parsePickupQrValue, parseOrderDisplayNumber } from './qr-utils.js';
 import { orderStatusLabel } from './staff-board.js';
@@ -105,7 +106,7 @@ export function initializePickupQr(client) {
     }
     const actions=el('div','', 'order-actions');
     async function execute(label,query){
-      if(!confirm(label))return;
+      if(!await confirmDialog(label))return;
       const buttons=[...actions.querySelectorAll('button')];
       buttons.forEach(button=>{button.disabled=true;});
       report('Registrazione dell’operazione sul server…');

@@ -1,10 +1,15 @@
 import {accuratePosition} from '../../core/geolocation.js';
+import {windowLabel} from '../orders/staff-board.js';
+import {confirmDialog} from '../../core/dialog.js';
+import {friendlyError} from '../../core/errors.js';
+import {showLocation,locationProblem} from '../../core/location-ui.js';
 
 const el=(tag,value='',css='')=>{const n=document.createElement(tag);n.className=css;n.textContent=value;return n;};
 const byId=id=>document.getElementById(id);
 const money=c=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(c/100);
 const dateRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const groupStatus=status=>({draft:'Bozza',confirmed:'Confermato',preparing:'In preparazione',ready:'Pronto al ritiro',delivered:'Consegnato',no_show:'Non ritirato',approval_pending:'In attesa di approvazione',approval_queued:'In coda per approvazione',approval_active:'In approvazione',awaiting_reschedule:'In attesa di una nuova fascia',expired:'Scaduto',cancelled:'Annullato'})[status]||'Stato da verificare';
+const groupTone=status=>({draft:'brand',confirmed:'info',preparing:'warning',ready:'success',delivered:'neutral',cancelled:'neutral',expired:'neutral',no_show:'danger'})[status]||'warning';
 const memberStatus=status=>({accepted:'Iscritto',pending:'In attesa',rejected:'Rifiutato',left:'Uscito'})[status]||'Stato da verificare';
 const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato'})[status]||'Stato da verificare';
 function inviteId(input){
@@ -29,8 +34,17 @@ export function initializeGroupDrafts(client){
   membersPanel=byId('group-members'),cartForm=byId('group-cart-form');
  let user=null,schools=[],bars=[],windows=[],products=[],detail=null,version=0,createdKey=null,activeSchoolId=null;
  const report=(message,error=false)=>{
-  feedback.textContent=message;feedback.dataset.type=error?'error':'information';
+  feedback.textContent=error?friendlyError(message):message;feedback.dataset.type=error?'error':'information';
  };
+ const locate=async(container,onProgress)=>{
+  showLocation(container,'pending');
+  try{
+   const result=await coordinates(accuracy=>{showLocation(container,'improving',{detail:'Precisione attuale: circa ±'+accuracy+' m (serve entro 100 m).'});onProgress?.(accuracy);});
+   showLocation(container,'ok',{detail:'Ora il server controlla che tu sia entro il raggio della scuola.'});
+   return result;
+  }catch(error){const key=locationProblem(error);if(key)showLocation(container,key,{detail:error.message});throw error;}
+ };
+ const serverLocation=(container,error)=>{const key=locationProblem(error);if(key==='far'||key==='server_accuracy'||key==='not_configured')showLocation(container,key);else showLocation(container,'idle');};
  function options(select,values){
   const old=select.value;select.replaceChildren();
   for(const [id,name] of values)select.add(new Option(name,id));
@@ -41,8 +55,8 @@ export function initializeGroupDrafts(client){
   await selectBar();
  }
  async function selectBar(){
-  options(windowSelect,windows.filter(w=>w.bar_id===bar.value).map(w=>[w.id,
-   w.service_date+' · '+w.starts_at.slice(0,5)+'–'+w.ends_at.slice(0,5)]));
+  options(windowSelect,windows.filter(w=>w.bar_id===bar.value).map(w=>[w.id,windowLabel(w)]));
+  if(!windowSelect.options.length)windowSelect.add(new Option('Nessuna fascia disponibile',''));
  }
  async function schoolsAndWindows(){
   const [a,b,w]=await Promise.all([
@@ -67,12 +81,14 @@ export function initializeGroupDrafts(client){
   }
   for(const g of data||[]){
    const card=el('div','','group-draft-row');
-   card.append(el('strong',g.title),el('small',
-     (g.coordinator?'Coordinatore':'Partecipante')+' · '+memberStatus(g.my_status)+
-      ' · '+groupStatus(g.status)));
-   const open=el('button','Apri gruppo','button button-outline button-small');
-   open.type='button';open.addEventListener('click',()=>void showGroup(g.id,{focus:true}));
-   card.append(open);list.append(card);
+   const text=el('div','','group-draft-text');
+   text.append(el('strong',g.title),el('small',
+     (g.coordinator?'Coordini tu':'Partecipi')+(g.my_status==='accepted'?'':' · '+memberStatus(g.my_status))));
+   const state=el('span',groupStatus(g.status),'status');state.dataset.tone=groupTone(g.status);
+   const open=el('button','Apri','button button-outline button-small group-open');
+   open.type='button';open.setAttribute('aria-label','Apri il gruppo '+g.title);
+   open.addEventListener('click',()=>void showGroup(g.id,{focus:true}));
+   card.append(text,state,open);list.append(card);
   }
  }
  function renderLines(){
@@ -81,13 +97,59 @@ export function initializeGroupDrafts(client){
    const row=el('div','','group-product-row');
    const desc=el('div','','group-product-desc');
    desc.append(el('strong',p.name),el('span',money(p.price_cents)));
-   const qty=el('input');qty.type='number';qty.min='0';qty.max='1000';qty.step='1';
+   const qty=el('input');qty.type='number';qty.min='0';qty.max='1000';qty.step='1';qty.inputMode='numeric';
    qty.value=String(detail.my_items.find(x=>x.product_id===p.id)?.quantity||0);
    qty.dataset.productId=p.id;
    qty.setAttribute('aria-label','Quantità di '+p.name);
-   row.append(desc,qty);productsPanel.append(row);
+   const stepper=el('div','','stepper');
+   const step=(label,delta,name)=>{const b=el('button',label);b.type='button';b.setAttribute('aria-label',name+' '+p.name);
+    b.addEventListener('click',()=>{const next=Math.min(1000,Math.max(0,(Number(qty.value)||0)+delta));qty.value=String(next);mark();});return b;};
+   const mark=()=>{row.dataset.selected=String(Number(qty.value)>0);updateDraftTotal();};
+   qty.addEventListener('input',mark);
+   stepper.append(step('−',-1,'Togli uno:'),qty,step('+',1,'Aggiungi uno:'));
+   row.dataset.selected=String(Number(qty.value)>0);
+   row.append(desc,stepper);productsPanel.append(row);
   }
+  updateDraftTotal();
   if(!products.length)productsPanel.append(el('p','Nessun prodotto pubblicato per questo bar.'));
+ }
+ function updateDraftTotal(){
+  const total=byId('group-draft-total');if(!total)return;
+  let count=0,cents=0;
+  for(const n of productsPanel.querySelectorAll('input[data-product-id]')){
+   const q=Number(n.value);if(!Number.isSafeInteger(q)||q<1)continue;
+   const p=products.find(x=>x.id===n.dataset.productId);count+=q;cents+=q*Number(p?.price_cents||0);
+  }
+  const dirty=detail&&(()=>{try{return normalizeCart(cartItems())!==normalizeCart(savedCart());}catch{return true;}})();
+  total.replaceChildren(el('span',count?count+(count===1?' prodotto':' prodotti')+' · '+money(cents):'Nessun prodotto scelto'),
+   el('small',dirty?'Modifiche non ancora salvate':'Salvato'));
+  total.dataset.dirty=String(Boolean(dirty));
+ }
+ function renderReadySummary(){
+  const box=byId('group-ready-summary');box.replaceChildren();
+  const items=detail?.my_items||[];
+  box.hidden=!detail?.my_ready;
+  if(box.hidden)return;
+  box.append(el('p','Hai finito. Ecco cosa hai scelto:','group-ready-title'));
+  const ul=el('ul','','order-items');
+  for(const item of items){
+   const li=el('li');const name=item.product_name||products.find(p=>p.id===item.product_id)?.name||'Prodotto';
+   li.append(el('b',item.quantity+'× '),document.createTextNode(name));ul.append(li);
+  }
+  if(!items.length)ul.append(el('li','Nessun prodotto: partecipi senza ordinare.'));
+  box.append(ul);
+ }
+ function renderProgress(){
+  const box=byId('group-progress');box.replaceChildren();
+  const members=(Array.isArray(detail?.members)?detail.members:[]).filter(m=>m.status==='accepted');
+  box.hidden=detail?.status!=='draft'||!members.length;
+  if(box.hidden)return;
+  const ready=members.filter(m=>m.ready).length;
+  const bar=el('div','','group-progress-bar');bar.setAttribute('role','progressbar');
+  bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(members.length));bar.setAttribute('aria-valuenow',String(ready));
+  bar.setAttribute('aria-label','Partecipanti che hanno finito');
+  const fill=el('span');fill.style.width=Math.round(ready/members.length*100)+'%';bar.append(fill);
+  box.append(el('p',ready+' di '+members.length+(members.length===1?' partecipante ha':' partecipanti hanno')+' finito'),bar);
  }
  async function showGroup(id,{focus=false}={}){
   const seq=++version;
@@ -100,12 +162,15 @@ export function initializeGroupDrafts(client){
   overview.hidden=true;
   pageHeading.hidden=true;
   byId('group-detail-title').textContent=detail.title;
-  byId('group-detail-meta').textContent=
-   groupStatus(detail.status)+' · '+(detail.coordinator?'Coordinatore':'Partecipante')+
-   ' · '+memberStatus(detail.my_status);
+  const pickup=windows.find(w=>w.id===detail.pickup_window_id);
+  const meta=byId('group-detail-meta');meta.replaceChildren();
+  const state=el('span',groupStatus(detail.status),'status');state.dataset.tone=groupTone(detail.status);
+  meta.append(state,el('span',(detail.coordinator?'Coordini tu':'Partecipi')+(detail.my_status==='accepted'?'':' · '+memberStatus(detail.my_status))));
+  if(pickup)meta.append(el('span','Ritiro '+windowLabel(pickup)));
   byId('group-aggregate').replaceChildren(
-   el('strong','Totale gruppo'),
-   el('span',(detail.totals?.count||0)+' prodotti · '+money(Number(detail.totals?.total_cents||0)))
+   el('small','Totale del gruppo'),
+   el('strong',money(Number(detail.totals?.total_cents||0))),
+   el('span',(detail.totals?.count||0)+' prodotti')
   );
   const invite=byId('group-invite');
   invite.hidden=!detail.coordinator||!detail.invite_token;
@@ -139,8 +204,7 @@ export function initializeGroupDrafts(client){
     m=>m.status==='accepted'&&m.member_id!==user.id):[];
    options(byId('group-transfer-member'),candidates.map(m=>[m.member_id,'Partecipante '+m.member_id.slice(0,8)]));
    const possible=windows.filter(w=>w.bar_id===detail.bar_id);
-   options(byId('group-reschedule-window'),possible.map(w=>[w.id,
-     w.service_date+' · '+w.starts_at.slice(0,5)+'–'+w.ends_at.slice(0,5)]));
+   options(byId('group-reschedule-window'),possible.map(w=>[w.id,windowLabel(w)]));
    byId('group-reschedule-window').value=detail.pickup_window_id;
    byId('group-transfer').disabled=!candidates.length;
   }
@@ -152,7 +216,11 @@ export function initializeGroupDrafts(client){
   if(['confirmed','approval_pending'].includes(detail.status))await loadConfirmedGroup(detail.id,seq);
   const readyButton=byId('group-ready');
   readyButton.textContent=detail.my_ready?'Modifica il mio ordine':'Ho finito';
+  readyButton.className='button '+(detail.my_ready?'button-outline':'button-primary');
+  const personal=byId('group-personal-state');
+  personal.textContent=detail.my_ready?'Hai finito':'Da completare';personal.dataset.tone=detail.my_ready?'success':'warning';
   cartForm.hidden=!accepted||Boolean(detail.my_ready);
+  renderProgress();
   if(accepted){
    const p=await client.from('products')
     .select('id,name,price_cents,category_id,categories!inner(is_active)')
@@ -162,14 +230,20 @@ export function initializeGroupDrafts(client){
    if(p.error){report(p.error.message,true);return;}
    products=p.data||[];renderLines();
   }
+  renderReadySummary();
+  for(const id of ['group-confirm-location'])showLocation(byId(id),'idle');
   membersPanel.replaceChildren();
   const pending=(Array.isArray(detail.members)?detail.members:[]).filter(m=>m.status==='pending').length;
   byId('group-members-count').textContent=pending?' · '+pending+' in attesa':'';
   if(detail.coordinator && Array.isArray(detail.members)){
    for(const m of detail.members){
     const row=el('div','','group-member-row');
-    row.append(el('span',(m.member_id===user.id?'Tu':'Partecipante '+m.member_id.slice(0,8))+
-      ' · '+memberStatus(m.status)+' · '+(m.ready?'Pronto':'In composizione')+' · '+m.line_count+' prodotti'));
+    const who=el('div','','group-member-text');
+    who.append(el('strong',m.member_id===user.id?'Tu':'Partecipante '+m.member_id.slice(0,8)),
+      el('small',(m.status==='accepted'?'':memberStatus(m.status)+' · ')+m.line_count+(Number(m.line_count)===1?' prodotto':' prodotti')));
+    const badge=el('span',m.status!=='accepted'?memberStatus(m.status):m.ready?'Ha finito':'Sta scegliendo','status');
+    badge.dataset.tone=m.status==='pending'?'warning':m.status!=='accepted'?'neutral':m.ready?'success':'neutral';
+    row.append(who,badge);
     if(m.status==='pending'){
      for(const [label,approved] of [['Approva',true],['Rifiuta',false]]){
       const btn=el('button',label,'button button-outline button-small');btn.type='button';
@@ -220,12 +294,14 @@ export function initializeGroupDrafts(client){
   const button=joinForm.querySelector('button[type=submit]');button.disabled=true;
   try{
    const token=inviteId(byId('groups-invite-token').value);
-   report('Richiesta del consenso GPS…');
-   const pos=await coordinates(accuracy=>report('Posizione approssimativa (±'+accuracy+' m). Attendi, cerchiamo una misura più precisa…'));
+   report('');
+   const where=byId('groups-join-location');
+   const pos=await locate(where);
    const {data,error}=await client.rpc('join_group_draft',{p_invite_token:token,...pos});
-   if(error)throw error;
+   if(error){serverLocation(where,error);throw error;}
+   showLocation(where,'idle');
    await myGroups();await showGroup(data,{focus:true});
-  }catch(err){report(err.message,true);}
+  }catch(err){if(locationProblem(err))report('');else report(err.message,true);}
   finally{button.disabled=false;}
  });
  function cartItems(){
@@ -282,13 +358,14 @@ export function initializeGroupDrafts(client){
   const list=byId('group-payable-list');list.replaceChildren();
   if(error){report(error.message,true);return;}
   for(const line of data||[]){
-   const row=el('label','','group-member-row');
+   const row=el('label','','group-pay-row');
    const check=el('input');check.type='checkbox';check.value=line.line_id;
    check.dataset.amountCents=String(line.amount_cents);
    check.disabled=line.payment_state!=='available'||Number(line.amount_cents)<=0;
    const own=line.beneficiary_id?(' · '+(line.beneficiary_id===user.id?'Tu':'Partecipante '+line.beneficiary_id.slice(0,8))):'';
-   row.append(check,el('span',line.quantity+' × '+line.product_name+
-    ' · '+money(line.amount_cents)+' · '+paymentStatus(line.payment_state)+own));
+   const text=el('span','','group-pay-text');
+   text.append(el('strong',line.quantity+'× '+line.product_name),el('small',paymentStatus(line.payment_state)+own));
+   row.append(check,text,el('span',money(line.amount_cents),'group-pay-amount'));
    list.append(row);
   }
   if(!data?.length)list.append(el('p','Non ci sono ancora prodotti da pagare.'));
@@ -330,20 +407,19 @@ export function initializeGroupDrafts(client){
   if(seq!==version)return;
   if(summaryError)return report(summaryError.message,true);
   byId('group-confirmed-panel').hidden=false;
-  byId('group-confirmed-summary').replaceChildren(
-   el('strong','Stato: '+groupStatus(summary.status)),
-   el('p','Totale '+money(Number(summary.total_cents||0))+
-     ' · Pagato '+money(Number(summary.paid_cents||0))+
-     ' · Residuo '+money(Number(summary.due_cents||0))),
-   el('p','Ritiro unico dal coordinatore, dopo il saldo completo.')
-  );
+  const facts=el('dl','','group-facts');
+  for(const [term,value] of [['Stato',groupStatus(summary.status)],['Totale',money(Number(summary.total_cents||0))],['Pagato',money(Number(summary.paid_cents||0))],['Da pagare',money(Number(summary.due_cents||0))]]){
+   const row=el('div');row.append(el('dt',term),el('dd',value));facts.append(row);
+  }
+  byId('group-confirmed-summary').replaceChildren(facts,
+   el('p','Ritiro unico dal coordinatore, dopo il saldo completo.','help'));
   const box=byId('group-ticket-qr');box.replaceChildren();
   byId('group-ticket-token').textContent='';
   if(summary.coordinator&&summary.pickup_token){
    try{
     if(typeof window.QRCode!=='function')throw new Error('QR non disponibile');
     new window.QRCode(box,{text:'breakapp:group:'+summary.pickup_token,
-     width:225,height:225,colorDark:'#080f21',colorLight:'#ffffff',
+     width:225,height:225,colorDark:'#1c1917',colorLight:'#ffffff',
      correctLevel:window.QRCode.CorrectLevel.M});
    }catch{box.append(el('p','Mostra al Barista il codice UUID.'));}
    byId('group-ticket-token').textContent='Codice di ritiro: '+summary.pickup_token;
@@ -357,7 +433,7 @@ export function initializeGroupDrafts(client){
   if(!cartForm.hidden){
    try{
     if(normalizeCart(cartItems())!==normalizeCart(savedCart()))
-     return report('Hai quantità non salvate: premi «Ho finito» o «Salva il mio carrello» prima di confermare.',true);
+     return report('Hai quantità non salvate: premi «Salva» o «Ho finito» prima di confermare.',true);
    }catch(error){return report(error.message,true);}
   }
   const unready=byId('group-accept-unready').checked;
@@ -368,8 +444,11 @@ export function initializeGroupDrafts(client){
   const groupId=detail.id,requestVersion=version;
   finalConfirmKey ||=crypto.randomUUID();
   try{
-   report('Verifica GPS, disponibilità e scorte…');
-   const gps=await coordinates(accuracy=>report('Posizione approssimativa (±'+accuracy+' m). Attendi, cerchiamo una misura più precisa…'));
+   report('');
+   const where=byId('group-confirm-location');
+   let gps;
+   try{gps=await locate(where);}catch(error){if(error.code)return;throw error;}
+   report('Controllo di disponibilità e scorte…');
    if(version!==requestVersion||!detail||detail.id!==groupId||!detail.coordinator||detail.status!=='draft')return;
    if(!cartForm.hidden&&normalizeCart(cartItems())!==normalizeCart(savedCart()))
     throw new Error('Hai modificato il carrello durante la verifica: salvalo prima di confermare.');
@@ -377,16 +456,16 @@ export function initializeGroupDrafts(client){
     p_group_id:detail.id,p_request_key:finalConfirmKey,
     p_accept_unready:unready,...gps
    });
-   if(error)throw error;
+   if(error){serverLocation(where,error);throw error;}
    finalConfirmKey=null;
    await myGroups();await showGroup(detail.id);
-   report('Ordine gruppo confermato: '+order.slice(0,8)+'.');
-  }catch(err){report(err.message||'Conferma non riuscita.',true);}
+   report('Ordine del gruppo confermato.');
+  }catch(err){if(locationProblem(err))report('');else report(err.message||'Conferma non riuscita.',true);}
   finally{button.disabled=false;}
  });
  byId('group-cancel-confirmed').addEventListener('click',async()=>{
   const id=byId('group-cancel-confirmed').dataset.orderId;
-  if(!id||!confirm('Annullare l’intero ordine e liberare le scorte?'))return;
+  if(!id||!await confirmDialog({title:'Annullare l’intero ordine?',message:'I prodotti tornano disponibili e i pagamenti online vengono rimborsati secondo le regole del gruppo.',confirmLabel:'Annulla l’ordine',cancelLabel:'Indietro',danger:true}))return;
   const {error}=await client.rpc('cancel_confirmed_group_order',{p_group_order_id:id});
   if(error)return report(error.message,true);
   await myGroups();if(detail)await showGroup(detail.id);
@@ -414,7 +493,7 @@ export function initializeGroupDrafts(client){
   });
  });
  byId('group-rotate-invite').addEventListener('click',async()=>{
-  if(!detail||!detail.coordinator||!confirm('Il precedente link smetterà di funzionare. Continuare?'))return;
+  if(!detail||!detail.coordinator||!await confirmDialog({title:'Creare un nuovo link di invito?',message:'Il link attuale smetterà di funzionare.',confirmLabel:'Crea nuovo link'}))return;
   await mutateGroup('configure_group_draft',{
    p_group_id:detail.id,p_accepting:byId('group-accepting').checked,
    p_requires_approval:byId('group-approval').checked,
@@ -424,7 +503,7 @@ export function initializeGroupDrafts(client){
  });
  byId('group-transfer').addEventListener('click',async()=>{
   const target=byId('group-transfer-member').value;
-  if(!detail||!detail.coordinator||!target||!confirm('Trasferire subito il ruolo di coordinatore?'))return;
+  if(!detail||!detail.coordinator||!target||!await confirmDialog({title:'Passare il coordinamento?',message:'Il nuovo coordinatore gestirà conferma, ritiro e impostazioni del gruppo.',confirmLabel:'Passa il coordinamento'}))return;
   await mutateGroup('transfer_group_coordinator',{
    p_group_id:detail.id,p_new_coordinator:target
   },{success:'Coordinamento trasferito.'});
@@ -436,12 +515,12 @@ export function initializeGroupDrafts(client){
    {success:'Fascia di ritiro della bozza aggiornata.'});
  });
  byId('group-leave').addEventListener('click',async()=>{
-  if(!detail||!confirm('Uscire dal gruppo? Il tuo carrello non pagato verrà eliminato.'))return;
+  if(!detail||!await confirmDialog({title:'Uscire dal gruppo?',message:'I tuoi prodotti non pagati verranno tolti dal gruppo.',confirmLabel:'Esci dal gruppo',danger:true}))return;
   await mutateGroup('leave_group_draft',{p_group_id:detail.id},
    {close:true,success:'Hai lasciato il gruppo (oppure sciolto il gruppo se eri solo).'});
  });
  byId('group-cancel').addEventListener('click',async()=>{
-  if(!detail||!detail.coordinator||!confirm('Annullare l’intera bozza di gruppo?'))return;
+  if(!detail||!detail.coordinator||!await confirmDialog({title:'Annullare il gruppo?',message:'Il gruppo verrà chiuso per tutti i partecipanti.',confirmLabel:'Annulla il gruppo',cancelLabel:'Indietro',danger:true}))return;
   await mutateGroup('cancel_group_draft',{p_group_id:detail.id},
    {close:true,success:'Bozza di gruppo annullata.'});
  });

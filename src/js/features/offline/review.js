@@ -1,3 +1,4 @@
+import {confirmDialog,promptDialog} from '../../core/dialog.js';
 const $=id=>document.getElementById(id);
 const element=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
 const statusNames={quarantined:'In quarantena',approved:'Approvato per riconciliazione',rejected:'Rifiutato',applied:'Contabilizzato'};
@@ -50,7 +51,7 @@ export function initializeOfflineReview(client){
      button.addEventListener('click',async()=>{
       const why=reason.value.trim();
       if(why.length<10||why.length>500)return report('Inserisci una motivazione tra 10 e 500 caratteri.',true);
-      if(!confirm('Registrare questa decisione? Non viene contabilizzato alcun incasso.'))return;
+      if(!await confirmDialog('Registrare questa decisione? Non viene contabilizzato alcun incasso.'))return;
       for(const control of actions.querySelectorAll('button'))control.disabled=true;
       const {data:decision,error:decisionError}=await client.rpc('review_school_offline_event',{
        p_event_id:event.id,p_approve:approve,p_reason:why
@@ -68,7 +69,7 @@ export function initializeOfflineReview(client){
    if(event.status==='approved'&&event.event_kind==='shift_change'){
     const button=element('button','Contabilizza turno verificato','button button-primary button-small');
     button.type='button';button.addEventListener('click',async()=>{
-     if(!confirm('Confermi di aver verificato turno, sequenza dei movimenti e conteggio fisico?'))return;
+     if(!await confirmDialog('Confermi di aver verificato turno, sequenza dei movimenti e conteggio fisico?'))return;
      button.disabled=true;
      const {error}=await client.rpc('apply_approved_cash_shift_event',{p_event:event.id});
      if(error){report(error.message,true);button.disabled=false;return;}
@@ -79,7 +80,7 @@ export function initializeOfflineReview(client){
     const button=element('button','Riconcilia ritiro approvato','button button-primary button-small');
     button.type='button';
     button.addEventListener('click',async()=>{
-     if(!confirm('Verificati QR, ordine, contanti fisici ed eventuale rimborso? Confermare la riconciliazione?'))return;
+     if(!await confirmDialog('Verificati QR, ordine, contanti fisici ed eventuale rimborso? Confermare la riconciliazione?'))return;
      button.disabled=true;
      const {data:receipt,error:e}=await client.rpc(event.event_kind==='group_pickup'?'apply_approved_offline_group_pickup':'apply_approved_offline_pickup_event',{
       p_event:event.id
@@ -96,7 +97,7 @@ export function initializeOfflineReview(client){
     const button=element('button','Contabilizza vendita approvata','button button-primary button-small');
     button.type='button';
     button.addEventListener('click',async()=>{
-     if(!confirm('Registrare i contanti realmente verificati e aggiornare le scorte?'))return;
+     if(!await confirmDialog('Registrare i contanti realmente verificati e aggiornare le scorte?'))return;
      button.disabled=true;
      const {data:receipt,error:e}=await client.rpc('apply_approved_offline_cash_event',{
       p_event:event.id
@@ -124,14 +125,14 @@ export function initializeOfflineReview(client){
    const button=element('button','Riconcilia scorta fisica','button button-outline button-small');
    button.type='button';
    button.addEventListener('click',async()=>{
-    const units=prompt('Capacità totale verificata, incluse le vendite già avvenute. Se inferiore al prenotato, il sistema avvia le sostituzioni in ordine di priorità:');
+    const units=await promptDialog('Capacità totale verificata, incluse le vendite già avvenute. Se inferiore al prenotato, il sistema avvia le sostituzioni in ordine di priorità:');
     if(units===null)return;
     const capacity=Number(units);
     if(!Number.isInteger(capacity)||capacity<0)
      return report('Inserisci una quantità intera non negativa.',true);
-    const reason=prompt('Motivo dell’inventario e dettaglio verifica (almeno 10 caratteri):');
+    const reason=await promptDialog('Motivo dell’inventario e dettaglio verifica (almeno 10 caratteri):');
     if(!reason||reason.trim().length<10)return report('Motivazione obbligatoria.',true);
-    if(!confirm('Salvare la rettifica di magazzino? Resterà nello storico.'))return;
+    if(!await confirmDialog('Salvare la rettifica di magazzino? Resterà nello storico.'))return;
     button.disabled=true;
     const {error:resolveError}=await client.rpc('resolve_offline_stock_conflict',{
      p_conflict:c.id,p_new_capacity:capacity,p_reason:reason.trim()
