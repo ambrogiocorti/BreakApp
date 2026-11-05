@@ -42,7 +42,7 @@ test('dossier: booking has two meaningful steps, real GPS check and labeled coup
   assert.doesNotMatch(html,/data-step="3"/);
   assert.match(html,/id="order-window"/);
   assert.match(orders,/step===2\?['"]Passaggio 1 di 2/);
-  assert.match(orders,/positionOnce\(\)/);
+  assert.match(orders,/positionOnce\(controller\.signal\)/);
   assert.match(orders,/submit_promoted_order/);
   assert.match(orders,/couponLabel\.htmlFor='order-coupon'/);
 });

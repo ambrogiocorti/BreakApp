@@ -1,7 +1,12 @@
+import {accuratePosition} from '../../core/geolocation.js';
+
 const el=(tag,value='',css='')=>{const n=document.createElement(tag);n.className=css;n.textContent=value;return n;};
 const byId=id=>document.getElementById(id);
 const money=c=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(c/100);
 const dateRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const groupStatus=status=>({draft:'Bozza',confirmed:'Confermato',preparing:'In preparazione',ready:'Pronto al ritiro',delivered:'Consegnato',no_show:'Non ritirato',approval_pending:'In attesa di approvazione',approval_queued:'In coda per approvazione',approval_active:'In approvazione',awaiting_reschedule:'In attesa di una nuova fascia',expired:'Scaduto',cancelled:'Annullato'})[status]||'Stato da verificare';
+const memberStatus=status=>({accepted:'Iscritto',pending:'In attesa',rejected:'Rifiutato',left:'Uscito'})[status]||'Stato da verificare';
+const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato'})[status]||'Stato da verificare';
 function inviteId(input){
  const value=String(input||'').trim();
  let candidate=value;
@@ -10,25 +15,19 @@ function inviteId(input){
   throw new Error('Incolla un link di invito valido o il relativo codice UUID.');
  return candidate;
 }
-function coordinates(){
- return new Promise((resolve,reject)=>{
-  if(!('geolocation' in navigator))return reject(new Error('Geolocalizzazione non supportata dal dispositivo.'));
-  navigator.geolocation.getCurrentPosition(p=>{
-   if(p.coords.accuracy>100)return reject(new Error('Precisione GPS superiore a 100 m: riprova all’aperto.'));
-   resolve({p_latitude:p.coords.latitude,p_longitude:p.coords.longitude,
-    p_accuracy_m:p.coords.accuracy,p_observed_at:new Date(p.timestamp).toISOString()});
-  },e=>reject(new Error(e.code===1?'Autorizza la posizione per entrare nel gruppo.':
-    'Posizione non disponibile: '+e.message)),{enableHighAccuracy:true,maximumAge:0,timeout:15000});
- });
+async function coordinates(onProgress){
+ const p=await accuratePosition({onProgress});
+ return {p_latitude:p.coords.latitude,p_longitude:p.coords.longitude,
+  p_accuracy_m:p.coords.accuracy,p_observed_at:new Date(p.timestamp).toISOString()};
 }
 export function initializeGroupDrafts(client){
  if(!client)return;
  const panel=byId('groups'),list=byId('groups-list'),feedback=byId('groups-feedback'),
   createForm=byId('groups-create-form'),joinForm=byId('groups-join-form'),
   school=byId('groups-school'),bar=byId('groups-bar'),windowSelect=byId('groups-window'),
-  detailPanel=byId('group-detail'),productsPanel=byId('group-products'),
+  detailPanel=byId('group-detail'),overview=byId('groups-overview'),pageHeading=panel.querySelector('.group-page-heading'),productsPanel=byId('group-products'),
   membersPanel=byId('group-members'),cartForm=byId('group-cart-form');
- let user=null,schools=[],bars=[],windows=[],products=[],detail=null,version=0,createdKey=null;
+ let user=null,schools=[],bars=[],windows=[],products=[],detail=null,version=0,createdKey=null,activeSchoolId=null;
  const report=(message,error=false)=>{
   feedback.textContent=message;feedback.dataset.type=error?'error':'information';
  };
@@ -55,20 +54,21 @@ export function initializeGroupDrafts(client){
   if(a.error||b.error||w.error)throw a.error||b.error||w.error;
   schools=a.data||[];bars=b.data||[];windows=w.data||[];
   options(school,schools.map(s=>[s.id,s.name]));
+  if(activeSchoolId&&schools.some(s=>s.id===activeSchoolId))school.value=activeSchoolId;
   await selectSchool();
  }
  async function myGroups(){
   const {data,error}=await client.rpc('list_my_group_drafts');
   if(error)throw error;
   list.replaceChildren();
-  if(!Array.isArray(data)||!data.length)list.append(el('p','Nessuna bozza gruppo presente.'));
+  if(!Array.isArray(data)||!data.length)list.append(el('p','Non hai ancora gruppi. Creane uno o partecipa con un invito.'));
   for(const g of data||[]){
    const card=el('div','','group-draft-row');
    card.append(el('strong',g.title),el('small',
-     (g.coordinator?'Coordinatore':'Partecipante')+' · '+g.my_status+
-      ' · '+(g.status==='draft'?'Bozza':g.status)));
+     (g.coordinator?'Coordinatore':'Partecipante')+' · '+memberStatus(g.my_status)+
+      ' · '+groupStatus(g.status)));
    const open=el('button','Apri gruppo','button button-outline button-small');
-   open.type='button';open.addEventListener('click',()=>void showGroup(g.id));
+   open.type='button';open.addEventListener('click',()=>void showGroup(g.id,{focus:true}));
    card.append(open);list.append(card);
   }
  }
@@ -86,7 +86,7 @@ export function initializeGroupDrafts(client){
   }
   if(!products.length)productsPanel.append(el('p','Nessun prodotto pubblicato per questo bar.'));
  }
- async function showGroup(id){
+ async function showGroup(id,{focus=false}={}){
   const seq=++version;
   report('Caricamento bozza gruppo…');
   const {data,error}=await client.rpc('group_draft_details',{p_group_id:id});
@@ -94,12 +94,14 @@ export function initializeGroupDrafts(client){
   if(error){report(error.message,true);return;}
   detail=data;
   detailPanel.hidden=false;
+  overview.hidden=true;
+  pageHeading.hidden=true;
   byId('group-detail-title').textContent=detail.title;
   byId('group-detail-meta').textContent=
-   'Stato: '+detail.status+' · '+(detail.coordinator?'Coordinatore':'Partecipante')+
-   ' · iscrizione: '+detail.my_status;
+   groupStatus(detail.status)+' · '+(detail.coordinator?'Coordinatore':'Partecipante')+
+   ' · '+memberStatus(detail.my_status);
   byId('group-aggregate').replaceChildren(
-   el('strong','Riepilogo aggregato'),
+   el('strong','Totale gruppo'),
    el('span',(detail.totals?.count||0)+' prodotti · '+money(Number(detail.totals?.total_cents||0)))
   );
   const invite=byId('group-invite');
@@ -123,7 +125,7 @@ export function initializeGroupDrafts(client){
    apply.addEventListener('click',async()=>{const r=await client.rpc('apply_group_promotion',{p_group:detail.id,p_code:code.value,p_key:crypto.randomUUID()});if(r.error)return report(r.error.message,true);await showGroup(detail.id);});
    const remove=el('button','Rimuovi coupon','button button-outline button-small');remove.type='button';
    remove.addEventListener('click',async()=>{const r=await client.rpc('apply_group_promotion',{p_group:detail.id,p_code:'',p_key:crypto.randomUUID()});if(r.error)return report(r.error.message,true);code.value='';await showGroup(detail.id);});
-   couponBox.append(code,apply,remove);byId('group-manage').append(couponBox);}
+   couponBox.append(code,apply,remove);byId('group-manage').querySelector('.group-manage-fields').append(couponBox);}
   couponBox.hidden=!managing;
   byId('group-leave').hidden=detail.status!=='draft'||!['accepted','pending'].includes(detail.my_status);
   if(managing){
@@ -132,7 +134,7 @@ export function initializeGroupDrafts(client){
    byId('group-limit').value=detail.max_members??'';
    const candidates=Array.isArray(detail.members)?detail.members.filter(
     m=>m.status==='accepted'&&m.member_id!==user.id):[];
-   options(byId('group-transfer-member'),candidates.map(m=>[m.member_id,m.member_id.slice(0,8)]));
+   options(byId('group-transfer-member'),candidates.map(m=>[m.member_id,'Partecipante '+m.member_id.slice(0,8)]));
    const possible=windows.filter(w=>w.bar_id===detail.bar_id);
    options(byId('group-reschedule-window'),possible.map(w=>[w.id,
      w.service_date+' · '+w.starts_at.slice(0,5)+'–'+w.ends_at.slice(0,5)]));
@@ -140,7 +142,9 @@ export function initializeGroupDrafts(client){
    byId('group-transfer').disabled=!candidates.length;
   }
   byId('group-confirm-panel').hidden=!managing;
-  if(!managing)byId('group-accept-unready').checked=false;
+  const unready=managing&&Array.isArray(detail.members)&&detail.members.some(m=>m.status==='accepted'&&!m.ready);
+  byId('group-accept-unready-label').hidden=!unready;
+  if(!unready)byId('group-accept-unready').checked=false;
   byId('group-confirmed-panel').hidden=true;
   if(['confirmed','approval_pending'].includes(detail.status))await loadConfirmedGroup(detail.id,seq);
   const readyButton=byId('group-ready');
@@ -156,11 +160,13 @@ export function initializeGroupDrafts(client){
    products=p.data||[];renderLines();
   }
   membersPanel.replaceChildren();
+  const pending=(Array.isArray(detail.members)?detail.members:[]).filter(m=>m.status==='pending').length;
+  byId('group-members-count').textContent=pending?' · '+pending+' in attesa':'';
   if(detail.coordinator && Array.isArray(detail.members)){
    for(const m of detail.members){
     const row=el('div','','group-member-row');
-    row.append(el('span',(m.member_id===user.id?'Io':m.member_id.slice(0,8))+
-      ' · '+m.status+' · '+(m.ready?'Pronto':'In composizione')+' · '+m.line_count+' prodotti'));
+    row.append(el('span',(m.member_id===user.id?'Tu':'Partecipante '+m.member_id.slice(0,8))+
+      ' · '+memberStatus(m.status)+' · '+(m.ready?'Pronto':'In composizione')+' · '+m.line_count+' prodotti'));
     if(m.status==='pending'){
      for(const [label,approved] of [['Approva',true],['Rifiuta',false]]){
       const btn=el('button',label,'button button-outline button-small');btn.type='button';
@@ -177,14 +183,17 @@ export function initializeGroupDrafts(client){
     membersPanel.append(row);
    }
   }
-  report(detail.my_status==='pending'
-    ?'In attesa dell’approvazione del coordinatore.'
-    :'Gruppo caricato. Le bozze non riservano scorte né incassano denaro.');
+  if(detail.my_status==='pending')report('In attesa dell’approvazione del coordinatore.');
+  else if(feedback.dataset.type!=='error')report('');
+  if(focus){
+   for(const id of ['group-coordinator-panel','group-payments-panel','group-manage'])byId(id).open=false;
+   byId('group-detail-title').focus();
+  }
  }
- async function reload(){
+ async function reload({announce=false}={}){
   if(!user)return;
   report('Aggiornamento gruppi…');
-  try{await schoolsAndWindows();await myGroups();report('Elenco gruppi aggiornato.');}
+  try{await schoolsAndWindows();await myGroups();report(announce?'Elenco gruppi aggiornato.':'');}
   catch(err){report(err.message,true);}
  }
  createForm.addEventListener('submit',async event=>{
@@ -201,7 +210,7 @@ export function initializeGroupDrafts(client){
   button.disabled=false;
   if(error){report(error.message,true);return;}
   createdKey=null;createForm.reset();
-  await myGroups();await showGroup(data);
+  await myGroups();await showGroup(data,{focus:true});
  });
  joinForm.addEventListener('submit',async event=>{
   event.preventDefault();if(!user||!joinForm.reportValidity())return;
@@ -209,32 +218,60 @@ export function initializeGroupDrafts(client){
   try{
    const token=inviteId(byId('groups-invite-token').value);
    report('Richiesta del consenso GPS…');
-   const pos=await coordinates();
+   const pos=await coordinates(accuracy=>report('Posizione approssimativa (±'+accuracy+' m). Attendi, cerchiamo una misura più precisa…'));
    const {data,error}=await client.rpc('join_group_draft',{p_invite_token:token,...pos});
    if(error)throw error;
-   await myGroups();await showGroup(data);
+   await myGroups();await showGroup(data,{focus:true});
   }catch(err){report(err.message,true);}
   finally{button.disabled=false;}
  });
- cartForm.addEventListener('submit',async event=>{
-  event.preventDefault();if(!detail||!user)return;
+ function cartItems(){
   const items=[];
   for(const n of productsPanel.querySelectorAll('input[data-product-id]')){
    const q=Number(n.value);
-   if(!Number.isSafeInteger(q)||q<0||q>1000)return report('Quantità non valida.',true);
+   if(!Number.isSafeInteger(q)||q<0||q>1000)throw new Error('Quantità non valida.');
    if(q>0)items.push({product_id:n.dataset.productId,quantity:q});
   }
-  const {error}=await client.rpc('replace_group_personal_cart',{p_group_id:detail.id,p_items:items});
-  if(error)return report(error.message,true);
-  await showGroup(detail.id);
+  return items;
+ }
+ const normalizeCart=rows=>JSON.stringify([...rows].sort((a,b)=>a.product_id.localeCompare(b.product_id)));
+ const savedCart=()=>((detail?.my_items||[]).map(x=>({product_id:x.product_id,quantity:Number(x.quantity)})));
+ cartForm.addEventListener('submit',async event=>{
+  event.preventDefault();if(!detail||!user)return;
+  let items;
+  try{items=cartItems();}catch(error){return report(error.message,true);}
+  const button=cartForm.querySelector('button[type=submit]'),ready=byId('group-ready');
+  button.disabled=ready.disabled=true;
+  try{
+   const {error}=await client.rpc('replace_group_personal_cart',{p_group_id:detail.id,p_items:items});
+   if(error)throw error;
+   await showGroup(detail.id);report('Carrello salvato.');
+  }catch(error){report(error.message||'Impossibile salvare il carrello.',true);}
+  finally{button.disabled=ready.disabled=false;}
  });
  byId('group-ready').addEventListener('click',async()=>{
   if(!detail)return;
-  const {error}=await client.rpc('set_group_personal_ready',{
-    p_group_id:detail.id,p_ready:!detail.my_ready
-  });
-  if(error)return report(error.message,true);
-  await showGroup(detail.id);
+  const button=byId('group-ready'),save=cartForm.querySelector('button[type=submit]');
+  let cartSaved=false;button.disabled=save.disabled=true;
+  try{
+   if(!detail.my_ready){
+    const items=cartItems();
+    const saved=savedCart();
+    if(normalizeCart(items)!==normalizeCart(saved)){
+     const visible=new Set(products.map(p=>p.id));
+     if(saved.some(item=>!visible.has(item.product_id)))throw new Error('Alcuni prodotti non sono più disponibili. Verifica e salva il carrello prima di proseguire.');
+     const result=await client.rpc('replace_group_personal_cart',{p_group_id:detail.id,p_items:items});
+     if(result.error)throw result.error;
+     cartSaved=true;
+    }
+   }
+   const {error}=await client.rpc('set_group_personal_ready',{
+     p_group_id:detail.id,p_ready:!detail.my_ready
+   });
+   if(error)throw error;
+   await showGroup(detail.id);
+  }catch(error){report((cartSaved?'Carrello salvato, ma non sei ancora segnato come pronto. ':'')+(error.message||'Impossibile aggiornare il carrello.'),true);}
+  finally{button.disabled=save.disabled=false;}
  });
  async function loadPayableLines(groupId,seq){
   const {data,error}=await client.rpc('group_payable_lines',{p_group_id:groupId});
@@ -246,12 +283,13 @@ export function initializeGroupDrafts(client){
    const check=el('input');check.type='checkbox';check.value=line.line_id;
    check.dataset.amountCents=String(line.amount_cents);
    check.disabled=line.payment_state!=='available'||Number(line.amount_cents)<=0;
-   const own=line.beneficiary_id?(' · '+line.beneficiary_id.slice(0,8)):'';
+   const own=line.beneficiary_id?(' · '+(line.beneficiary_id===user.id?'Tu':'Partecipante '+line.beneficiary_id.slice(0,8))):'';
    row.append(check,el('span',line.quantity+' × '+line.product_name+
-    ' · '+money(line.amount_cents)+' · '+line.payment_state+own));
+    ' · '+money(line.amount_cents)+' · '+paymentStatus(line.payment_state)+own));
    list.append(row);
   }
-  if(!data?.length)list.append(el('p','Nessuna riga da pagare.'));
+  if(!data?.length)list.append(el('p','Non ci sono ancora prodotti da pagare.'));
+  byId('group-pay-selected').disabled=!(data||[]).some(line=>line.payment_state==='available'&&Number(line.amount_cents)>0);
  }
  byId('group-pay-selected').addEventListener('click',async()=>{
   if(!detail||!['draft','confirmed','approval_pending'].includes(detail.status))return;
@@ -290,7 +328,7 @@ export function initializeGroupDrafts(client){
   if(summaryError)return report(summaryError.message,true);
   byId('group-confirmed-panel').hidden=false;
   byId('group-confirmed-summary').replaceChildren(
-   el('strong','Stato: '+summary.status),
+   el('strong','Stato: '+groupStatus(summary.status)),
    el('p','Totale '+money(Number(summary.total_cents||0))+
      ' · Pagato '+money(Number(summary.paid_cents||0))+
      ' · Residuo '+money(Number(summary.due_cents||0))),
@@ -313,15 +351,25 @@ export function initializeGroupDrafts(client){
  }
  byId('group-confirm').addEventListener('click',async()=>{
   if(!detail?.coordinator||detail.status!=='draft')return;
+  if(!cartForm.hidden){
+   try{
+    if(normalizeCart(cartItems())!==normalizeCart(savedCart()))
+     return report('Hai quantità non salvate: premi «Ho finito» o «Salva il mio carrello» prima di confermare.',true);
+   }catch(error){return report(error.message,true);}
+  }
   const unready=byId('group-accept-unready').checked;
   if(!unready&&Array.isArray(detail.members)&&detail.members.some(
    m=>m.status==='accepted'&&!m.ready))
    return report('Conferma esplicitamente i partecipanti non pronti.',true);
   const button=byId('group-confirm');button.disabled=true;
+  const groupId=detail.id,requestVersion=version;
   finalConfirmKey ||=crypto.randomUUID();
   try{
    report('Verifica GPS, disponibilità e scorte…');
-   const gps=await coordinates();
+   const gps=await coordinates(accuracy=>report('Posizione approssimativa (±'+accuracy+' m). Attendi, cerchiamo una misura più precisa…'));
+   if(version!==requestVersion||!detail||detail.id!==groupId||!detail.coordinator||detail.status!=='draft')return;
+   if(!cartForm.hidden&&normalizeCart(cartItems())!==normalizeCart(savedCart()))
+    throw new Error('Hai modificato il carrello durante la verifica: salvalo prima di confermare.');
    const {data:order,error}=await client.rpc('confirm_group_order',{
     p_group_id:detail.id,p_request_key:finalConfirmKey,
     p_accept_unready:unready,...gps
@@ -347,7 +395,7 @@ export function initializeGroupDrafts(client){
   report('Salvataggio sul server…');
   const {error}=await client.rpc(rpc,args);
   if(error)return report(error.message,true);
-  if(close){detail=null;detailPanel.hidden=true;await myGroups();report(success);return;}
+  if(close){detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;await myGroups();report(success);return;}
   await myGroups();await showGroup(id);
   report(success);
  }
@@ -397,9 +445,20 @@ export function initializeGroupDrafts(client){
  byId('group-invite-copy').addEventListener('click',async()=>{
   try{await navigator.clipboard.writeText(byId('group-invite-link').value);
    report('Link invito copiato.');}
-  catch{byId('group-invite-link').select();report('Seleziona e copia il link invito.');}
+  catch{byId('group-invite-link').hidden=false;byId('group-invite-link').select();report('Seleziona e copia il link invito.');}
  });
- byId('groups-refresh').addEventListener('click',()=>void reload());
+ byId('groups-refresh').addEventListener('click',()=>void reload({announce:true}));
+ byId('group-back').addEventListener('click',()=>{
+  version++;detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;report('');
+  byId('groups-heading').focus();
+ });
+ window.addEventListener('breakapp:workspace-context',event=>{
+  if(event.detail?.role!=='customer')return;
+  activeSchoolId=event.detail.schoolId||null;
+  if(activeSchoolId&&schools.some(s=>s.id===activeSchoolId)){
+   school.value=activeSchoolId;void selectSchool();
+  }
+ });
  school.addEventListener('change',()=>void selectSchool());
  bar.addEventListener('change',()=>void selectBar());
  window.addEventListener('breakapp:route-changed',event=>{
@@ -408,11 +467,12 @@ export function initializeGroupDrafts(client){
  function session(next){
   const changed=user?.id!==next?.id;user=next;
   panel.hidden=!user;
-  if(!user){version++;detail=null;detailPanel.hidden=true;list.replaceChildren();return;}
+  byId('groups-create-disclosure').hidden=Boolean(user?.app_metadata?.guest||user?.is_anonymous);
+  if(!user){version++;detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;list.replaceChildren();return;}
   if(changed)void reload();
   if(changed&&location.search.includes('invite=')){
    const invite=new URLSearchParams(location.search).get('invite');
-   if(invite){byId('groups-invite-token').value=invite;location.hash='groups';}
+   if(invite){byId('groups-invite-token').value=invite;byId('groups-join-disclosure').open=true;location.hash='groups';}
   }
  }
  client.auth.onAuthStateChange((_event,s)=>queueMicrotask(()=>session(s?.user||null)));

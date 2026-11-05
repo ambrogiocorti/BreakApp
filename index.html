@@ -288,132 +288,106 @@
 
 
       <section id="groups" class="container orders-section workspace-page" hidden aria-labelledby="groups-heading">
-        <div class="section-heading">
-          <span class="eyebrow">CLIENTE · GRUPPI</span>
-          <h2 id="groups-heading">I miei gruppi</h2>
-          <p>Organizza la merenda insieme: invita i partecipanti, conferma l'ordine e gestisci i pagamenti delle singole righe. Il carrello non blocca le scorte prima della conferma.</p>
+        <div class="section-heading group-page-heading">
+          <span class="eyebrow">I TUOI ORDINI CONDIVISI</span>
+          <h2 id="groups-heading" tabindex="-1">I miei gruppi</h2>
+          <p>Organizza l’intervallo con i tuoi compagni.</p>
         </div>
         <p id="groups-feedback" class="catalog-status" role="status" aria-live="polite"></p>
-        <div class="pilot-grid group-entry-grid">
-          <article class="pilot-card group-panel group-panel-create">
-            <div class="group-panel-heading">
-              <span class="group-step">01 · ORGANIZZA</span>
-              <h3>Crea un gruppo</h3>
-              <p>Prepara un ordine condiviso e scegli come invitare i partecipanti.</p>
-            </div>
-            <form id="groups-create-form" class="group-create-form">
-              <div class="group-field group-field-wide">
-                <label for="groups-create-title">Nome del gruppo</label>
-                <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Classe 5A" />
-              </div>
-              <div class="group-field">
-                <label for="groups-school">Scuola</label>
-                <select id="groups-school" required></select>
-              </div>
-              <div class="group-field">
-                <label for="groups-bar">Bar</label>
-                <select id="groups-bar" required></select>
-              </div>
-              <div class="group-field group-field-wide">
-                <label for="groups-window">Data e fascia di ritiro</label>
-                <select id="groups-window" required></select>
-              </div>
-              <div class="group-field">
-                <label for="groups-entry-mode">Accesso con invito</label>
-                <select id="groups-entry-mode"><option value="open">Ingresso diretto</option><option value="approval">Richiede approvazione coordinatore</option></select>
-              </div>
-              <div class="group-field">
-                <label for="groups-limit">Numero massimo partecipanti <span class="group-optional">facoltativo</span></label>
-                <input id="groups-limit" type="number" min="1" max="100" placeholder="Senza limite" />
-              </div>
-              <div class="group-form-actions">
-                <p>La bozza non riserva scorte e non avvia pagamenti.</p>
-                <button class="button button-primary" type="submit">Crea bozza gruppo</button>
-              </div>
-            </form>
-          </article>
-          <article class="pilot-card group-panel group-panel-join">
-            <div class="group-panel-heading">
-              <span class="group-step">02 · PARTECIPA</span>
-              <h3>Entra in un gruppo</h3>
-              <p>Hai ricevuto un invito? Inseriscilo per unirti ai tuoi compagni.</p>
-            </div>
-            <form id="groups-join-form" class="group-join-form">
-              <div class="group-field">
-                <label for="groups-invite-token">Link o codice invito</label>
-                <input id="groups-invite-token" required placeholder="Incolla il link ricevuto" />
-              </div>
-              <p class="group-location-note">Per partecipare, ti chiederemo una sola verifica della posizione vicino alla scuola.</p>
-              <button class="button button-primary" type="submit">Verifica posizione e partecipa</button>
-            </form>
-            <div class="group-recent-heading">
-              <div>
-                <span class="group-step">LE TUE ATTIVITÀ</span>
-                <h3>Gruppi recenti</h3>
-              </div>
+        <div id="groups-overview">
+          <article class="pilot-card group-list-panel">
+            <div class="group-list-heading">
+              <div><h3>I tuoi gruppi</h3><p>Apri un gruppo per vedere il carrello e i partecipanti.</p></div>
               <button type="button" id="groups-refresh" class="button button-outline button-small">Aggiorna</button>
             </div>
             <div id="groups-list" class="service-list" aria-live="polite"></div>
           </article>
+          <div class="group-entry-grid">
+            <details id="groups-create-disclosure" class="pilot-card group-panel group-action-card">
+              <summary><span><strong>Crea un gruppo</strong><small>Organizza un ordine condiviso</small></span></summary>
+              <form id="groups-create-form" class="group-create-form">
+                <div class="group-field group-field-wide">
+                  <label for="groups-create-title">Nome del gruppo</label>
+                  <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Classe 5A" />
+                </div>
+                <div class="group-field"><label for="groups-school">Scuola</label><select id="groups-school" required></select></div>
+                <div class="group-field"><label for="groups-bar">Bar</label><select id="groups-bar" required></select></div>
+                <div class="group-field group-field-wide"><label for="groups-window">Data e fascia di ritiro</label><select id="groups-window" required></select></div>
+                <div class="group-field"><label for="groups-entry-mode">Accesso con invito</label><select id="groups-entry-mode"><option value="open">Ingresso diretto</option><option value="approval">Richiede approvazione del coordinatore</option></select></div>
+                <div class="group-field"><label for="groups-limit">Numero massimo partecipanti <span class="group-optional">facoltativo</span></label><input id="groups-limit" type="number" min="1" max="100" placeholder="Senza limite" /></div>
+                <div class="group-form-actions"><p>La bozza non riserva prodotti.</p><button class="button button-primary" type="submit">Crea gruppo</button></div>
+              </form>
+            </details>
+            <details id="groups-join-disclosure" class="pilot-card group-panel group-action-card">
+              <summary><span><strong>Entra in un gruppo</strong><small>Usa il link ricevuto da un compagno</small></span></summary>
+              <form id="groups-join-form" class="group-join-form">
+                <div class="group-field"><label for="groups-invite-token">Link o codice invito</label><input id="groups-invite-token" required placeholder="Incolla il link ricevuto" /></div>
+                <p class="group-location-note">Per entrare verifica una volta la tua posizione vicino alla scuola.</p>
+                <button class="button button-primary" type="submit">Verifica posizione e partecipa</button>
+              </form>
+            </details>
+          </div>
         </div>
         <article id="group-detail" class="pilot-card group-detail" hidden>
-          <div class="section-heading"><h3 id="group-detail-title">Dettaglio gruppo</h3><p id="group-detail-meta"></p></div>
-          <div id="group-invite" class="group-invite" hidden>
-            <label for="group-invite-link">Link da condividere</label>
-            <input id="group-invite-link" readonly />
-            <button id="group-invite-copy" type="button" class="button button-outline button-small">Copia invito</button>
-          </div>
+          <button type="button" id="group-back" class="group-back">← Tutti i gruppi</button>
+          <div class="section-heading"><h3 id="group-detail-title" tabindex="-1">Dettaglio gruppo</h3><p id="group-detail-meta"></p></div>
           <div id="group-aggregate" class="service-summary"></div>
+          <div id="group-invite" class="group-invite" hidden>
+            <span class="group-invite-description"><strong>Invita i tuoi compagni</strong><small>Condividi il link per farli partecipare.</small></span>
+            <button id="group-invite-copy" type="button" class="button button-outline button-small">Copia invito</button>
+            <input id="group-invite-link" aria-label="Link di invito al gruppo" readonly hidden />
+          </div>
           <div id="group-personal" hidden>
             <h4>Il mio carrello</h4>
-            <p class="catalog-help">Ogni partecipante può modificare soltanto il proprio carrello, finché non seleziona «Ho finito».</p>
+            <p class="catalog-help">Scegli le quantità, poi premi «Ho finito».</p>
             <form id="group-cart-form">
               <div id="group-products" class="warehouse-items"></div>
               <button class="button button-primary" type="submit">Salva il mio carrello</button>
             </form>
             <button id="group-ready" type="button" class="button button-outline">Ho finito</button>
           </div>
-          <div id="group-coordinator-panel" hidden>
-            <h4>Coordinatore · richieste e avanzamento</h4>
+          <details id="group-coordinator-panel" class="group-disclosure" hidden>
+            <summary>Partecipanti e richieste <span id="group-members-count"></span></summary>
             <div id="group-members" class="service-list"></div>
-          </div>
-          <div id="group-manage" hidden>
-            <h4>Gestione della bozza</h4>
-            <label class="group-toggle"><input type="checkbox" id="group-accepting" /> Accetta nuovi partecipanti</label>
-            <label class="group-toggle"><input type="checkbox" id="group-approval" /> Richiedi approvazione per entrare</label>
-            <label for="group-limit">Limite partecipanti (vuoto: senza limite)</label>
-            <input id="group-limit" type="number" min="1" max="100" />
-            <button type="button" id="group-save-settings" class="button button-outline button-small">Salva impostazioni</button>
-            <button type="button" id="group-rotate-invite" class="button button-outline button-small">Rigenera link invito</button>
-            <label for="group-transfer-member">Nuovo coordinatore (partecipante approvato)</label>
-            <select id="group-transfer-member"></select>
-            <button type="button" id="group-transfer" class="button button-outline button-small">Trasferisci coordinamento</button>
-            <label for="group-reschedule-window">Cambia fascia di ritiro della bozza</label>
-            <select id="group-reschedule-window"></select>
-            <button type="button" id="group-reschedule" class="button button-outline button-small">Cambia fascia</button>
-            <button type="button" id="group-cancel" class="button button-outline button-small">Annulla bozza</button>
-          </div>
-          <button type="button" id="group-leave" class="button button-outline button-small" hidden>Esci dal gruppo</button>
-          <div id="group-payments-panel" hidden>
-            <h4>Paga righe intere con Stripe</h4>
-            <p class="catalog-help">Puoi pagare prodotti tuoi o di altri partecipanti. Ogni riga viene pagata per intero, senza importi arbitrari.</p>
+          </details>
+          <details id="group-payments-panel" class="group-disclosure" hidden>
+            <summary>Pagamento online</summary>
+            <p class="catalog-help">Se disponibile, puoi pagare per intero i prodotti tuoi o dei compagni.</p>
             <div id="group-payable-list" class="service-list"></div>
             <button id="group-pay-selected" type="button" class="button button-primary">Paga le righe selezionate</button>
-          </div>
+          </details>
           <div id="group-confirm-panel" hidden>
-            <h4>Conferma definitiva dell'ordine di gruppo</h4>
-            <p class="catalog-help">Alla conferma verranno riverificate posizione, disponibilità e scorte.</p>
-            <label><input id="group-accept-unready" type="checkbox" /> Accetto che alcuni partecipanti non abbiano premuto «Ho finito».</label>
+            <h4>Conferma l’ordine</h4>
+            <p class="catalog-help">Verificheremo la tua posizione e la disponibilità dei prodotti.</p>
+            <label id="group-accept-unready-label"><input id="group-accept-unready" type="checkbox" /> Confermo anche se alcuni partecipanti non hanno finito.</label>
             <button type="button" id="group-confirm" class="button button-primary">Conferma ordine di gruppo</button>
           </div>
           <div id="group-confirmed-panel" hidden>
-            <h4>Ordine confermato · unico ritiro</h4>
+            <h4>Ordine confermato</h4>
             <div id="group-confirmed-summary" class="service-summary"></div>
             <div id="group-ticket-qr" class="group-invite" aria-label="QR ritiro coordinatore"></div>
             <p id="group-ticket-token" class="catalog-help"></p>
             <button type="button" id="group-cancel-confirmed" class="button button-outline button-small" hidden>Annulla l'intero ordine</button>
           </div>
-          <p class="catalog-help">Il coordinatore conferma e ritira l’intero gruppo. Il pagamento online richiede un merchant scolastico abilitato; il residuo può essere saldato dal coordinatore al bancone.</p>
+          <details id="group-manage" class="group-disclosure" hidden>
+            <summary>Impostazioni del gruppo</summary>
+            <div class="group-manage-fields">
+              <label class="group-toggle"><input type="checkbox" id="group-accepting" /> Accetta nuovi partecipanti</label>
+              <label class="group-toggle"><input type="checkbox" id="group-approval" /> Richiedi approvazione per entrare</label>
+              <label for="group-limit">Limite partecipanti (vuoto: senza limite)</label>
+              <input id="group-limit" type="number" min="1" max="100" />
+              <button type="button" id="group-save-settings" class="button button-outline button-small">Salva impostazioni</button>
+              <button type="button" id="group-rotate-invite" class="button button-outline button-small">Rigenera link invito</button>
+              <label for="group-transfer-member">Nuovo coordinatore (partecipante approvato)</label>
+              <select id="group-transfer-member"></select>
+              <button type="button" id="group-transfer" class="button button-outline button-small">Trasferisci coordinamento</button>
+              <label for="group-reschedule-window">Fascia di ritiro</label>
+              <select id="group-reschedule-window"></select>
+              <button type="button" id="group-reschedule" class="button button-outline button-small">Cambia fascia</button>
+              <button type="button" id="group-cancel" class="button button-outline button-small">Annulla bozza</button>
+            </div>
+          </details>
+          <button type="button" id="group-leave" class="button button-outline button-small" hidden>Esci dal gruppo</button>
         </article>
       </section>
 
@@ -799,15 +773,15 @@
         <span id="order-step-label" class="auth-tag">Passaggio 1 di 2</span>
         <h2 id="stepper-title">Conferma prenotazione</h2>
         <section data-step="2" aria-label="Ritiro" hidden>
-          <h3>2. Data e fascia di ritiro</h3>
-          <label for="order-window">Scegli una fascia tra quelle effettivamente configurate</label>
+          <h3>Quando ritiri?</h3>
+          <label for="order-window">Scegli data e fascia di ritiro</label>
           <select id="order-window" required></select>
-          <p class="catalog-help">Ti chiederemo il permesso di verificare la posizione solo quando confermi: serve a controllare che tu sia vicino alla scuola, come previsto dalle regole del bar. Se neghi il permesso, l'ordine non viene inviato.</p>
+          <p class="catalog-help">Alla conferma ti chiederemo la posizione per verificare che tu sia vicino alla scuola.</p>
         </section>
         <section data-step="4" aria-label="Riepilogo" hidden>
-          <h3>4. Verifica finale</h3>
+          <h3>Riepilogo</h3>
           <div id="order-review"></div>
-          <p class="catalog-help">Pagamento al banco (contanti o POS esterno). Dopo la prenotazione puoi scegliere Stripe dall'elenco dei tuoi ordini, se disponibile.</p>
+          <p class="catalog-help">Dopo la prenotazione puoi pagare online dalla lista ordini, se disponibile.</p>
         </section>
         <p id="order-checkout-feedback" class="catalog-status" role="status" aria-live="polite"></p>
         <div class="order-actions">

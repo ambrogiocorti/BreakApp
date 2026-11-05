@@ -1,5 +1,7 @@
 import {readClassNames} from './class-import.js';
 import {icon} from '../../core/icons.js';
+import {orderStatusLabel} from '../orders/staff-board.js';
+import {changeKindLabel,changeStateLabel,paymentLabel} from '../../core/status-labels.js';
 const node=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 function input(form,label,type='text',value=''){
  const wrapper=node('label',label),field=node('input');field.type=type;field.value=value;field.required=true;wrapper.append(field);form.append(wrapper);return field;
@@ -37,7 +39,7 @@ export function initializeCompletionUI(client){
    const orders=[...(individual.data||[]).map(o=>({...o,kind:'individual',label:'#'+o.display_no})),...(groups||[]).filter(g=>staff||g.coordinator).map(o=>({...o,kind:'group',label:o.title||'Gruppo'}))].filter(o=>!['cancelled','delivered','no_show'].includes(o.status));
    const cards=node('div','','service-list');extra.append(node('h3','Proposte e modifiche'),cards);
    for(const c of changes||[]){
-    const box=node('article','','order-card');box.append(node('strong',c.kind+' · '+c.state));
+    const box=node('article','','order-card');box.append(node('strong',changeKindLabel(c.kind)+' · '+changeStateLabel(c.state)));
     if(c.payload.name)box.append(node('p',c.payload.quantity+' × '+c.payload.name+' · '+formatEuro(c.payload.quantity*c.payload.unit_cents)),node('p','Ingredienti: '+(c.payload.ingredients||'non indicati')),node('p','Allergeni: '+(c.payload.allergens||[]).join(', ')));
     if(c.owner_id===user.id&&c.state==='customer_pending'){
      for(const[label,action]of [['Accetta proposta','accept'],['Rifiuta proposta','reject'],['Annulla ordine e avvia rimborsi','cancel']])box.append(button(label,b=>act(b,async()=>{if(confirm(label+'?'))await rpc('respond_order_exception',{p_change:c.id,p_action:action,p_window:null});})));
@@ -62,7 +64,7 @@ export function initializeCompletionUI(client){
     })));
    }
    if(orders.length){
-    const f=formCard(extra,staff?'Proponi sostituzione o nuovo orario':'Modifica o annulla un ordine'),choice=select(f,'Ordine',orders.map(o=>[o.kind+':'+o.id,o.label+' · '+o.status]));
+    const f=formCard(extra,staff?'Proponi sostituzione o nuovo orario':'Modifica o annulla un ordine'),choice=select(f,'Ordine',orders.map(o=>[o.kind+':'+o.id,o.label+' · '+orderStatusLabel(o.status)]));
     const body=node('div');f.append(body);
     const fill=async()=>{
      const selected=choice.value,[kind,id]=selected.split(':'),detail=await rpc('workflow_order_details',{p_kind:kind,p_order:id});
@@ -86,10 +88,10 @@ export function initializeCompletionUI(client){
      }
     };choice.addEventListener('change',()=>void fill());void fill();f.addEventListener('submit',e=>e.preventDefault());
    }
-   if(refunds.length){extra.append(node('h3','Contanti da restituire'));for(const r of refunds){const box=node('article','','order-card');box.append(node('p',formatEuro(r.amount_cents)+' · '+r.status+' · '+r.reason));
+   if(refunds.length){extra.append(node('h3','Contanti da restituire'));for(const r of refunds){const box=node('article','','order-card');box.append(node('p',formatEuro(r.amount_cents)+' · '+paymentLabel(r.status)+' · '+r.reason));
     if(staff&&r.status==='pending')box.append(button('Registra restituzione fisica',b=>act(b,async()=>{const reason=prompt('Conferma restituzione fisica e motivo (almeno 8 caratteri)');if(reason)await rpc('confirm_cash_refund_return',{p_refund:r.id,p_reason:reason});})));extra.append(box);}}
    if(!staff){extra.append(node('h3','I tuoi pagamenti'),node('p','Conferme interne di pagamento e rimborsi. Non sostituiscono il documento fiscale.'));
-    for(const p of documents||[])extra.append(node('p',new Date(p.created_at).toLocaleString('it-IT')+' · '+formatEuro(p.amount_cents)+' · '+p.status+' · rimborsi: '+p.refunds.map(r=>formatEuro(r.amount_cents)+' '+r.status).join(', ')));}
+    for(const p of documents||[])extra.append(node('p',new Date(p.created_at).toLocaleString('it-IT')+' · '+formatEuro(p.amount_cents)+' · '+paymentLabel(p.status)+' · rimborsi: '+p.refunds.map(r=>formatEuro(r.amount_cents)+' '+paymentLabel(r.status)).join(', ')));}
    if(admin){
     const settings=await client.from('schools').select('no_show_penalty_minutes,require_guest_class').eq('id',context.schoolId);
     for(const o of [...(individual.data||[]).map(o=>({...o,kind:'individual',label:'#'+o.display_no})),...(groups||[]).map(o=>({...o,kind:'group',label:o.title||'Gruppo'}))].filter(o=>['delivered','no_show'].includes(o.status)))

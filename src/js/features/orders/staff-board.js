@@ -17,7 +17,11 @@ export const BOARD_COLUMNS = Object.freeze([
   { key:'closed', label:'Conclusi' }
 ]);
 export function orderStatusLabel(status) {
-  return ORDER_STATUS[status]?.label || 'Stato da verificare';
+  return ORDER_STATUS[status]?.label || ({
+    approval_queued:'In attesa di approvazione',
+    approval_active:'In valutazione dal bar',
+    awaiting_reschedule:'In attesa di una nuova fascia'
+  })[status] || 'Stato da verificare';
 }
 export function orderStatusGroup(status) {
   return ORDER_STATUS[status]?.group || 'closed';

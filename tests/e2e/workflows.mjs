@@ -39,6 +39,7 @@ try{
    const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.route(origin+'/fixture',r=>r.fulfill({contentType:'text/html',body:fixture}));await page.goto(origin+'/fixture');
    await page.waitForFunction(()=>window.fixture?.ready);await page.evaluate(()=>window.fixture.switchRole('bartender'));
+   await page.getByRole('heading',{name:'Ordine · In valutazione'}).waitFor();
    await page.getByRole('button',{name:'Approva',exact:true}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='decide_order_approval'&&c.args.p_approve===true));
    await page.getByLabel('Sono in servizio e disponibile per le approvazioni').check();

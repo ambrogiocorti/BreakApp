@@ -40,7 +40,7 @@ try{
  await page.getByRole('button',{name:'Aggiungi DEMO - Panino al carrello'}).click();
  await page.getByRole('button',{name:/Carrello · 1 articoli/}).click();
  await page.getByRole('button',{name:'Continua con il ritiro'}).click();
- const slot=page.getByRole('combobox',{name:'Scegli una fascia tra quelle effettivamente configurate'});
+ const slot=page.getByRole('combobox',{name:'Scegli data e fascia di ritiro'});
  assert.ok(await slot.locator('option').count()>0,'Nessuna fascia demo disponibile');
  await page.getByRole('button',{name:'Continua',exact:true}).click();
  stage='prenotazione con posizione fittizia';submitted=true;

@@ -1,4 +1,5 @@
 import {formatEuro} from '../catalog/utils.js';
+import {approvalLabel} from '../../core/status-labels.js';
 const make=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;n.className=cls;return n;};
 const button=(text,run)=>{const b=make('button',text,'button button-outline button-small');b.type='button';b.addEventListener('click',()=>void run(b));return b;};
 export function initializeOrderWorkflows(client){
@@ -40,7 +41,7 @@ export function initializeOrderWorkflows(client){
    list.replaceChildren(make('h3','Grandi ordini'));
    if(!rows.length)list.append(make('p','Nessuna richiesta di approvazione.'));
    for(const a of rows){
-    const box=make('article','','order-card');box.append(make('h4',(a.group_order_id?'Gruppo':'Ordine')+' · '+a.state),
+    const box=make('article','','order-card');box.append(make('h4',(a.group_order_id?'Gruppo':'Ordine')+' · '+approvalLabel(a.state)),
      make('p',a.service_date+' '+a.starts_at.slice(0,5)),make('p',a.reason||'La richiesta non è confermata finché il personale non la approva.'));
     if(a.lease_until&&a.state==='active')box.append(make('p','Scade alle '+new Date(a.lease_until).toLocaleTimeString('it-IT')));
     if(staff&&a.state==='active'){
