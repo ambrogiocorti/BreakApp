@@ -1,6 +1,21 @@
 import { loadSchoolAccess } from '../auth/access.js';
 import {icon} from '../../core/icons.js';
 
+// A new screen opens at its top. Dashboards fill in asynchronously, and WebKit
+// can move the window a few pixels as that late content lands. Keep the page
+// pinned to the top for a moment, unless the person starts scrolling.
+let releaseTop=null;
+function holdTop(stillActive,reset){
+ releaseTop?.();
+ const stop=()=>{clearTimeout(timer);removeEventListener('scroll',onScroll);for(const t of USER_SCROLL)removeEventListener(t,stop,true);releaseTop=null;};
+ const onScroll=()=>{const a=document.activeElement;if(stillActive()&&scrollY!==0&&(!a||a===document.body||a.id==='workspace-page-title'))reset();};
+ const timer=setTimeout(stop,1500);
+ addEventListener('scroll',onScroll,{passive:true});
+ for(const t of USER_SCROLL)addEventListener(t,stop,{capture:true,passive:true});
+ releaseTop=stop;
+}
+const USER_SCROLL=['wheel','touchstart','keydown','pointerdown'];
+
 const LABELS = Object.freeze({
  customer:'Cliente',bartender:'Barista',
  warehouse_manager:'Magazziniere',school_admin:'Admin scuola',
@@ -347,6 +362,7 @@ export function initializeWorkspace(client){
    // Let fragment navigation and the newly displayed section finish their layout.
    // Otherwise the browser can scroll past the page heading during initial Auth.
    requestAnimationFrame(()=>{if(route===target)resetScroll();});
+   holdTop(()=>route===target,resetScroll);
    window.dispatchEvent(new CustomEvent('breakapp:route-changed',{
      detail:{route,schoolId:active.schoolId,role:active.role}
    }));
