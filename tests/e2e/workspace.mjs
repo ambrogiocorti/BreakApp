@@ -11,6 +11,10 @@ try{
   browser=await engine.launch({headless:true});
   for(const viewport of [{width:1440,height:1000},{width:768,height:1024},{width:390,height:844}]){
    let page=await browser.newPage({viewport});const errors=[];page.on('pageerror',error=>errors.push(error.message));
+   // Diagnostics: if the page ends up scrolled, report what moved it.
+   await page.addInitScript(()=>{const log=window.__scrollLog=[];const who=el=>el?(el.id?'#'+el.id:el.tagName+(el.className?'.'+String(el.className).split(' ')[0]:'')):'-';
+    for(const[obj,key]of[[Element.prototype,'focus'],[Element.prototype,'scrollIntoView'],[window,'scrollTo'],[window,'scroll'],[window,'scrollBy']]){const orig=obj[key];obj[key]=function(...a){const r=orig.apply(this,a);log.push(key+' '+who(this===window?null:this)+' '+JSON.stringify(a[0]??null)+' y='+scrollY);return r;};}
+    addEventListener('scroll',()=>log.push('scroll y='+scrollY+' active='+who(document.activeElement)+' h='+document.documentElement.scrollHeight),{passive:true});});
    await page.goto(origin+'/__workspace-qa');
    await page.getByRole('heading',{name:'Panoramica',exact:true}).waitFor();
    await page.locator('#platform-metrics .metric-card').first().waitFor();
@@ -45,7 +49,7 @@ try{
    assert.equal(await page.locator('body').getAttribute('data-active-route'),'platform-overview');
    // The real indicators must be in the first screen on every viewport.
    assert.ok(geometry.metrics.y<viewport.height-150,'indicators below the fold: '+JSON.stringify(geometry.metrics));
-   const layout=await page.evaluate(()=>({main:document.querySelector('.app-main').scrollTop,window:scrollY}));
+   const layout=await page.evaluate(()=>({main:document.querySelector('.app-main').scrollTop,window:scrollY,log:(window.__scrollLog||[]).slice(-20)}));
    assert.equal(layout.main,0,JSON.stringify(layout));
    assert.equal(layout.window,0,JSON.stringify(layout));
    if(process.env.WORKSPACE_SCREENSHOTS)await page.screenshot({path:process.env.WORKSPACE_SCREENSHOTS+'/overview-'+name+'-'+viewport.width+'.png',fullPage:false,animations:'disabled'});
