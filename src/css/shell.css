@@ -143,6 +143,10 @@ body:not([data-workspace="true"]) .workspace-breadcrumb { display: none; }
 
 /* Route visibility: in the workspace only the active section is shown. */
 body[data-workspace="true"] .app-main > section:not(.is-route-active) { display: none !important; }
+/* Dashboards fill in asynchronously after the route resets scroll to the top.
+   Scroll anchoring would turn that late content into a scroll jump (seen in
+   WebKit), so the workspace opts out, as the previous layout did. */
+html:has(> body[data-workspace="true"]), body[data-workspace="true"], body[data-workspace="true"] .app-main { overflow-anchor: none; }
 .app-main > section { display: grid; gap: var(--space-5); align-content: start; }
 
 .page-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
