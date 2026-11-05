@@ -1,0 +1,76 @@
+/* Preview only — «Disposizione B». Same tokens, colours and fonts as the
+   app; only where things sit changes. Loaded by the visual tour when
+   TOUR_LAYOUT=b, never by the application. */
+
+/* 1. Desktop: navigation moves from a left sidebar to a band under the top bar. */
+@media (min-width: 1024px) {
+  :root { --navband-h: 52px; }
+  body[data-workspace="true"] { padding-left: 0; }
+  body[data-workspace="true"] .site-header .brand { display: inline-flex; }
+  body[data-workspace="true"] .workspace-sidebar {
+    position: sticky; top: var(--topbar-h); bottom: auto; z-index: 25;
+    width: 100%; height: var(--navband-h); flex-direction: row; align-items: center; gap: var(--space-4);
+    padding: 0 var(--gutter); overflow: visible;
+    border-right: 0; border-bottom: 1px solid var(--line);
+  }
+  body[data-workspace="true"] .sidebar-head, body[data-workspace="true"] .workspace-sidebar-bottom { display: none; }
+  body[data-workspace="true"] .app-desktop-nav { order: 1; display: flex; flex: 1; gap: var(--space-5); align-items: stretch; height: 100%; }
+  body[data-workspace="true"] .nav-group { display: flex; gap: var(--space-1); align-items: stretch; }
+  body[data-workspace="true"] .nav-group + .nav-group { padding-left: var(--space-5); border-left: 1px solid var(--line); margin-block: 12px; }
+  body[data-workspace="true"] .nav-group-label { display: none; }
+  body[data-workspace="true"] .app-desktop-nav .workspace-link { min-height: 0; height: 100%; padding: 0 var(--space-2); border-radius: 0; background: transparent; }
+  body[data-workspace="true"] .nav-group + .nav-group .workspace-link { height: auto; margin-block: -12px; }
+  body[data-workspace="true"] .app-desktop-nav .workspace-link-icon { display: none; }
+  body[data-workspace="true"] .app-desktop-nav .workspace-link[aria-current="page"] { background: transparent; color: var(--lavagna); box-shadow: inset 0 -3px 0 var(--tuorlo); }
+  body[data-workspace="true"] .app-desktop-nav .workspace-link[aria-current="page"]::before { display: none; }
+  body[data-workspace="true"] .workspace-context { order: 2; display: flex; align-items: center; gap: var(--space-2); padding: 0; background: transparent; }
+  body[data-workspace="true"] .workspace-context label { white-space: nowrap; }
+  body[data-workspace="true"] .workspace-context select { min-height: 36px; max-width: 16rem; }
+
+  /* Page heading: title and the page's tools on one line. */
+  .workspace-page-head { align-items: center; }
+}
+
+/* 2. Menu: product tiles in a grid instead of one long list. */
+.menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+@media (min-width: 720px) { .menu-grid { grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: var(--space-3); } }
+.menu-product-card {
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 1fr auto; align-items: start;
+  min-height: 0; padding: 0; overflow: hidden;
+}
+.menu-product-media { grid-column: 1; grid-row: 1; width: 44px; height: 44px; margin: var(--space-3) 0 0 var(--space-3); font-size: var(--text-lg); }
+.menu-product-media:has(img) { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 16 / 10; margin: 0; border-radius: 0; }
+.menu-product-content { grid-column: 1 / -1; padding: var(--space-3) var(--space-3) 0; }
+.menu-product-description { -webkit-line-clamp: 2; }
+.menu-product-meta { margin-top: var(--space-1); }
+.menu-product-action { grid-column: 2; grid-row: 3; padding: 0 var(--space-3) var(--space-3); justify-self: end; }
+.menu-product-content { grid-row: 2; }
+@media (min-width: 1024px) {
+  /* Categories go back to a row above the products: the grid gets the full width. */
+  .market-workbench { grid-template-columns: 1fr; }
+  .market-sidebar { position: static; grid-template-columns: minmax(0, 1fr) auto; }
+  .market-sidebar .menu-search { grid-column: 1; }
+  .market-sidebar .menu-allergen-panel { grid-column: 2; grid-row: 1; }
+  .market-sidebar .menu-categories { grid-column: 1 / -1; flex-direction: row; overflow-x: auto; gap: var(--space-2); }
+  .market-sidebar .menu-category-chip { border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--surface); }
+  .market-sidebar .menu-category-chip[aria-pressed="true"] { background: var(--lavagna); color: var(--lavagna-ink); border-color: var(--lavagna); }
+}
+
+/* 3. Orders: the first order (the newest) is the hero, the others a compact grid. */
+.orders-list { display: grid; gap: var(--space-3); }
+@media (min-width: 720px) {
+  .orders-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .orders-list > :first-child, .orders-list > p, .orders-list > h3 { grid-column: 1 / -1; }
+}
+.orders-list > .order-card:first-of-type { border-width: 2px; border-color: var(--lavagna-line); }
+.orders-list > .order-card:first-of-type .order-card-head h3 { font-size: var(--text-2xl); }
+.orders-list > .order-card:not(:first-of-type) .order-progress { display: none; }
+.orders-list > .order-card:not(:first-of-type) .order-items { font-size: var(--text-sm); }
+
+/* 4. Banco: the production list becomes a strip above the lanes. */
+@media (min-width: 1280px) {
+  .service-floor { grid-template-columns: 1fr; }
+  .service-console { position: static; order: -1; }
+  .staff-production-list { grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); column-gap: var(--space-6); }
+  .staff-board[data-view="all"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
