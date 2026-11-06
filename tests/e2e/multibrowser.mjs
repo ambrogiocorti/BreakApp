@@ -35,7 +35,8 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     if(width.scroll>width.viewport+4)failures.push('horizontal overflow '+JSON.stringify(width));
     if(process.env.WORKSPACE_SCREENSHOTS){
       const screenshotFile=process.env.WORKSPACE_SCREENSHOTS+'/login-'+name+'-'+viewport.width+'.png';
-      await page.screenshot({path:screenshotFile,animations:'disabled',fullPage:false});
+      // caret:'initial': con 'hide' Playwright inserisce un <style> che la CSP (giustamente) blocca in WebKit.
+      await page.screenshot({path:screenshotFile,animations:'disabled',caret:'initial',fullPage:false});
     }
     if(failures.length)errors.push({name,viewport,failures});
     console.log(JSON.stringify({browser:name,viewport,result:failures.length?'FAIL':'PASS',failures}));
