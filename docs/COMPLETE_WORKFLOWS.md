@@ -48,7 +48,7 @@ Nel centro assistenza si può associare un gruppo e scegliere conversazione cond
 
 ## Distribuzione e verifiche
 
-Le nove migrazioni `20261027214803`..`20261028071246` si applicano dopo la baseline e gli incrementi precedenti. Non rieseguire file già registrati nel progetto. Il connettore può assegnare un timestamp remoto differente: riconciliare la cronologia prima di usare `supabase db push`.
+Le nove migrazioni `20261027223652`..`20261028071521` si applicano dopo la baseline e gli incrementi precedenti. Non rieseguire file già registrati nel progetto. Il connettore può assegnare un timestamp remoto differente: riconciliare la cronologia prima di usare `supabase db push`.
 
 Distribuire `guest-access`, `push-dispatch` e `stripe-full-refund`. Queste Edge Functions gestiscono internamente l'autenticazione prevista dal rispettivo ingresso; il dispatcher verifica il token Vault, il rimborso verifica la sessione e il guest endpoint scambia un link privato con una sessione verificata. Il cron esistente richiama manutenzione approvazioni, proposte e chiusure prima degli invii push.
 

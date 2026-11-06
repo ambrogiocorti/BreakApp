@@ -148,6 +148,9 @@ jobs:
       - name: Apply timestamped operational migrations
         run: |
           for file in supabase/migrations/*.sql; do
+            if grep -qxF "$(basename "$file")" supabase/hosted-only-migrations.txt; then
+              echo "Skip hosted-only migration $file"; continue
+            fi
             docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
           done
       - name: Test physical cash counts, immutable closings and revoked offline event recovery
