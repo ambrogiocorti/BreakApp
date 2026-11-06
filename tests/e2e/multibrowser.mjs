@@ -7,7 +7,16 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     const page=await browser.newPage({viewport});
     const failures=[];
     page.on('pageerror',e=>failures.push(e.message));
-    page.on('console',message=>{if(/Content.Security.Policy|CSP detail/i.test(message.text()))failures.push('CSP violation: '+message.text());});
+    // Le violazioni CSP si leggono dall'evento securitypolicyviolation, con il
+    // dettaglio. In WebKit Playwright inserisce un proprio foglio di stile fuori
+    // dal DOM della pagina (target = documento, nessun elemento): non è
+    // codice di BreakApp e la CSP lo blocca correttamente, quindi è ignorato.
+    page.on('console',message=>{
+      const text=message.text();if(!text.startsWith('CSP detail: '))return;
+      const v=JSON.parse(text.slice(12));
+      if(v.element==='#document'&&/^style-src/.test(v.directive)&&v.blocked==='inline')return;
+      failures.push('CSP violation: '+text);
+    });
     // Dettagli della violazione (elemento, sorgente, estratto) per capire cosa la causa.
     await page.addInitScript(()=>{document.addEventListener('securitypolicyviolation',e=>{
       const t=e.target,el=t&&t.nodeType===1?t.outerHTML.slice(0,160):String(t&&t.nodeName);
@@ -40,8 +49,7 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     if(width.scroll>width.viewport+4)failures.push('horizontal overflow '+JSON.stringify(width));
     if(process.env.WORKSPACE_SCREENSHOTS){
       const screenshotFile=process.env.WORKSPACE_SCREENSHOTS+'/login-'+name+'-'+viewport.width+'.png';
-      // caret:'initial': con 'hide' Playwright inserisce un <style> che la CSP (giustamente) blocca in WebKit.
-      await page.screenshot({path:screenshotFile,animations:'disabled',caret:'initial',fullPage:false});
+      await page.screenshot({path:screenshotFile,animations:'disabled',fullPage:false});
     }
     if(failures.length)errors.push({name,viewport,failures});
     console.log(JSON.stringify({browser:name,viewport,result:failures.length?'FAIL':'PASS',failures}));
