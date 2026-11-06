@@ -11,6 +11,20 @@ function input(form,label,type='text',value=''){
 function select(form,label,rows){const wrapper=node('label',label),s=node('select');s.setAttribute('aria-label',label);for(const[id,text]of rows)s.add(new Option(text,id));wrapper.append(s);form.append(wrapper);return s;}
 function formCard(parent,title){const box=node('article','','order-card'),f=node('form');box.append(node('h3',title),f);parent.append(box);return f;}
 function submit(f,label,action,act){const b=node('button',label,'button button-primary button-small');b.type='submit';f.append(b);f.addEventListener('submit',e=>{e.preventDefault();if(f.reportValidity())void act(b,action);});}
+// Esito dell'assegnazione del primo Admin: subito attivo se aveva già un
+// account, altrimenti invito con codice mostrato una sola volta.
+export function showOnboardingAdmin(box,admin){
+ if(!box||!admin)return;
+ box.replaceChildren();box.hidden=false;
+ if(admin.status==='assigned'){
+  box.dataset.type='success';
+  box.append(node('strong','Scuola creata. '+admin.email+' è Admin e può entrare subito.'));
+  return;
+ }
+ box.dataset.type='information';
+ box.append(node('strong','Scuola creata. Codice di attivazione per '+admin.email+': '),node('code',admin.code||'','staff-invite-code'),
+  node('p','Al primo accesso con questa email la persona diventa Admin della scuola. Con un indirizzo @admin.breakapp.it deve inserire il codice nel Profilo. Il codice compare solo ora.'));
+}
 export function initializeCompletionUI(client){
  if(!client)return;let epoch=0;
  window.addEventListener('breakapp:workflow-loaded',async event=>{
@@ -23,14 +37,18 @@ export function initializeCompletionUI(client){
     const f=formCard(extra,'Dati della scuola'),slug=input(f,'Identificativo della scuola (es. liceo-verdi)'),name=input(f,'Nome della scuola'),bar=input(f,'Nome del bar'),lat=input(f,'Latitudine','number'),lon=input(f,'Longitudine','number');
     f.prepend(name.closest('label'));name.closest('label').classList.add('onboarding-wide');
     slug.placeholder='es. liceo-verdi';name.placeholder='Es. Liceo Giuseppe Verdi';bar.placeholder='Es. Bar centrale';lat.placeholder='45,5200';lon.placeholder='9,3300';lat.min='-90';lat.max='90';lon.min='-180';lon.max='180';
-    lat.step='any';lon.step='any';const mode=select(f,'Preparazione',[['active','Preparazione su ordine'],['ready_made','Prodotti già pronti']]),email=input(f,'Email verificata del primo Admin','email');
+    lat.step='any';lon.step='any';const mode=select(f,'Preparazione',[['active','Preparazione su ordine'],['ready_made','Prodotti già pronti']]),email=input(f,'Email del primo Admin','email');
     email.placeholder='admin@scuola.it';
+    const outcome=node('div','','alert staff-invite-notice');outcome.hidden=true;outcome.setAttribute('role','status');
     submit(f,'Crea scuola e bar',async()=>{
+     outcome.hidden=true;outcome.replaceChildren();
      const result=await rpc('platform_onboard_school',{p_slug:slug.value,p_name:name.value,p_bar_name:bar.value,p_latitude:Number(lat.value),p_longitude:Number(lon.value),p_mode:mode.value,p_admin_email:email.value});
+     showOnboardingAdmin(outcome,result?.admin);
      window.dispatchEvent(new CustomEvent('breakapp:platform-onboarded',{detail:result}));
     },act);
+    f.after(outcome);
     const note=node('aside','','onboarding-note');note.append(icon('Building2'),node('h3','Uno spazio, una scuola'),node('p','La nuova scuola parte con le prenotazioni in pausa, così puoi preparare il servizio con calma.'));
-    const steps=node('ol');for(const text of ['Usa l’email di un Admin che ha già creato e verificato il proprio account.','Completa catalogo, personale e orari nella sezione Configurazione.','Verifica il servizio prima di aprire le prenotazioni.'])steps.append(node('li',text));note.append(steps);extra.append(note);return;
+    const steps=node('ol');for(const text of ['Se l’Admin non ha ancora un account riceve un codice di attivazione: comunicaglielo di persona.','Completa catalogo, personale e orari nella sezione Configurazione.','Verifica il servizio prima di aprire le prenotazioni.'])steps.append(node('li',text));note.append(steps);extra.append(note);return;
    }
    const [individual,groups,changes,refunds,documents]=await Promise.all([
     client.from('orders').select('id,display_no,bar_id,status').eq(staff?'school_id':'customer_id',staff?context.schoolId:user.id).order('created_at',{ascending:false}).limit(100),
