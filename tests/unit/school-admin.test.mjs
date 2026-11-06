@@ -38,3 +38,14 @@ test('school admin has its own Staff and Promotions pages; Requests keeps only r
  for(const rpc of ['set_approval_capacity','set_no_show_policy','set_guest_class_policy','import_school_classes','save_school_promotion','list_school_promotions'])
   assert.match(admin,new RegExp("'"+rpc+"'"),rpc);
 });
+
+test('the menu shows only the student own school once it is known',async()=>{
+ const {restrictToOwnSchool}=await import('../../src/js/features/menu/menu.js');
+ const schools=[{id:'a',name:'A'},{id:'b',name:'B'}];
+ assert.deepEqual(restrictToOwnSchool(schools,'b'),[{id:'b',name:'B'}]);
+ assert.deepEqual(restrictToOwnSchool(schools,null),schools);
+ assert.deepEqual(restrictToOwnSchool(schools,'gone'),schools);
+ const migration=read('supabase/migrations/20261106140000_customer_single_school.sql');
+ for(const table of ['orders','group_drafts','group_members'])assert.match(migration,new RegExp('before insert on public\\.'+table));
+ assert.match(migration,/Puoi ordinare solo dal bar della tua scuola/);
+});
