@@ -1,8 +1,6 @@
 import {confirmDialog,promptDialog} from '../../core/dialog.js';
-import {readClassNames} from './class-import.js';
 import {icon} from '../../core/icons.js';
 import {orderStatusLabel} from '../orders/staff-board.js';
-import {renderSchoolStaffPanel} from './school-staff.js';
 import {changeKindLabel,changeStateLabel,paymentLabel} from '../../core/status-labels.js';
 const node=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 function input(form,label,type='text',value=''){
@@ -113,24 +111,8 @@ export function initializeCompletionUI(client){
    if(!staff){extra.append(node('h3','I tuoi pagamenti'),node('p','Conferme interne di pagamento e rimborsi. Non sostituiscono il documento fiscale.'));
     for(const p of documents||[])extra.append(node('p',new Date(p.created_at).toLocaleString('it-IT')+' · '+formatEuro(p.amount_cents)+' · '+paymentLabel(p.status)+' · rimborsi: '+p.refunds.map(r=>formatEuro(r.amount_cents)+' '+paymentLabel(r.status)).join(', ')));}
    if(admin){
-    const settings=await client.from('schools').select('no_show_penalty_minutes,require_guest_class').eq('id',context.schoolId);
     for(const o of [...(individual.data||[]).map(o=>({...o,kind:'individual',label:'#'+o.display_no})),...(groups||[]).map(o=>({...o,kind:'group',label:o.title||'Gruppo'}))].filter(o=>['delivered','no_show'].includes(o.status)))
      extra.append(button('Richiedi rimborso '+o.label,b=>act(b,async()=>{const reason=await promptDialog('Motivo (almeno 8 caratteri). Online: rimborso ai pagatori originali. Contanti: obbligo di restituzione fisica.');if(reason)await rpc('request_completed_order_refund',{p_kind:o.kind,p_order:o.id,p_key:crypto.randomUUID(),p_reason:reason});})));
-    const policy=formCard(extra,'Politica mancati ritiri'),minutes=input(policy,'Sospensione prenotazioni in minuti (0: nessuna penalità)','number',String(settings.data?.[0]?.no_show_penalty_minutes||0));minutes.min='0';minutes.max='10080';
-    submit(policy,'Salva politica no-show',()=>rpc('set_no_show_policy',{p_school:context.schoolId,p_minutes:Number(minutes.value)}),act);
-    const bars=await client.from('bars').select('id,name').eq('school_id',context.schoolId).eq('is_active',true);
-    const f=formCard(extra,'Coupon e bundle'),bar=select(f,'Bar',(bars.data||[]).map(b=>[b.id,b.name])),code=input(f,'Codice coupon'),title=input(f,'Titolo'),kind=select(f,'Tipo',[['percent','Sconto percentuale'],['unit_discount','Sconto in centesimi per prodotto'],['bundle','Bundle di prodotti']]),value=input(f,'Valore (% o centesimi)','number','10'),start=input(f,'Inizio','datetime-local'),end=input(f,'Fine','datetime-local'),max=input(f,'Utilizzi totali (vuoto: nessun limite)','number'),per=input(f,'Utilizzi per cliente','number','1');max.required=false;
-    const recipe=[],recipeList=node('p');f.append(recipeList);
-    const prod=await client.from('products').select('id,name').eq('school_id',context.schoolId).eq('is_active',true);
-    const component=select(f,'Prodotto del bundle',(prod.data||[]).map(p=>[p.id,p.name])),qty=input(f,'Quantità del componente','number','1'),discount=input(f,'Sconto unitario del componente, centesimi','number','0');
-    f.append(button('Aggiungi componente',async()=>{recipe.push({product_id:component.value,quantity:Number(qty.value),discount_cents:Number(discount.value)});recipeList.textContent=recipe.map(r=>r.quantity+' × '+(prod.data||[]).find(p=>p.id===r.product_id)?.name).join(', ');}));
-    submit(f,'Crea promozione',()=>rpc('save_school_promotion',{p_id:null,p_bar:bar.value,p_code:code.value,p_title:title.value,p_kind:kind.value,p_value:Number(value.value),p_start:new Date(start.value).toISOString(),p_end:new Date(end.value).toISOString(),p_max:max.value?Number(max.value):null,p_per_user:Number(per.value),p_recipe:kind.value==='bundle'?recipe:[]}),act);
-    const promos=await rpc('list_school_promotions',{p_bar:bar.value});for(const p of promos)extra.append(node('p',p.code+' · '+p.title),button('Disattiva '+p.code,b=>act(b,()=>rpc('save_school_promotion',{p_id:p.id,p_bar:bar.value,p_code:p.code,p_title:p.title,p_kind:p.kind,p_value:p.value,p_start:new Date().toISOString(),p_end:p.ends_at,p_max:null,p_per_user:1,p_recipe:[]}))));
-    const classes=formCard(extra,'Importa classi da CSV o Excel'),file=input(classes,'File CSV o XLSX','file');file.accept='.csv,.xlsx';
-    submit(classes,'Importa classi',async()=>rpc('import_school_classes',{p_school:context.schoolId,p_names:await readClassNames(file.files[0])}),act);
-    const required=formCard(extra,'Classe per gli ospiti'),requireClass=select(required,'Richiedi una classe importata',[['false','Facoltativa'],['true','Obbligatoria']]);requireClass.value=String(Boolean(settings.data?.[0]?.require_guest_class));
-    submit(required,'Salva requisito classe',()=>rpc('set_guest_class_policy',{p_school:context.schoolId,p_required:requireClass.value==='true'}),act);
-    renderSchoolStaffPanel(extra,{client,schoolId:context.schoolId});
    }
   }catch(error){if(v===epoch)extra.append(node('p','Impossibile aggiornare: '+error.message));}
  });

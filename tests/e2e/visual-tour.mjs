@@ -10,7 +10,7 @@ const roles={
  guest:['menu','groups','accesso'],
  bartender:['staff-orders-section','workflow-center','bar-operations','cash-workspace','offline-terminal','support-center'],
  warehouse:['warehouse-inventory'],
- admin:['admin-overview','staff-orders-section','workflow-center','admin-catalog','warehouse-inventory','bar-operations','admin-order-setup','cash-workspace','school-reports','offline-review','accesso'],
+ admin:['admin-overview','staff-orders-section','workflow-center','admin-catalog','school-promotions','school-staff','warehouse-inventory','bar-operations','admin-order-setup','cash-workspace','school-reports','offline-review','accesso'],
  platform:['platform-overview','platform-schools','platform-configuration','workflow-center','accesso']
 };
 const only=process.env.TOUR_ROLES?.split(',');

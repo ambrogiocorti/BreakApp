@@ -3,10 +3,11 @@ import {spawn} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import assert from 'node:assert/strict';
 const origin='http://127.0.0.1:5175';
-const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body><main id="main-content"></main>
+const fixture=`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/css/app.css"></head><body><main id="main-content"><section id="school-staff" hidden><div id="school-staff-root"></div></section><section id="school-promotions" hidden><p id="school-promotions-status" role="status"></p><div id="school-promotions-root"></div></section><section id="admin-order-setup"><section id="school-settings-panel" hidden><p id="school-settings-status" role="status"></p><div id="school-settings-root"></div></section></section></main>
 <script type="module">
 import {initializeOrderWorkflows} from '/src/js/features/operations/workflows.js';
 import {initializeCompletionUI} from '/src/js/features/operations/completion-ui.js';
+import {initializeSchoolAdmin} from '/src/js/features/operations/school-admin.js';
 import {readClassNames} from '/src/js/features/operations/class-import.js';
 import {workbookBytes} from '/src/js/features/shell/report-files.js';
 window.fixture={calls:[],role:'bartender',customerOrders:[]};
@@ -18,10 +19,12 @@ const client={auth:{onAuthStateChange(){},async getUser(){return{data:{user}}}},
   if(name==='platform_onboard_school')return{data:{school_id:'created-school',bar_id:'created-bar'}};
   if(name==='workflow_order_details')return{data:{bar_id:'bar-1',total_cents:250,due_cents:250,lines:[]}};
   if(['list_order_changes','list_cash_refund_obligations','my_payment_documents','list_staff_group_orders','list_my_confirmed_group_orders','list_school_promotions'].includes(name))return{data:[]};
+  if(name==='list_school_staff')return{data:{members:[],invites:[]}};
+  if(name==='import_school_classes')return{data:2};
   return{data:null};},
- from(name){const q={select(){return this},eq(){return this},order(){return this},limit(){return this},then(resolve,reject){return Promise.resolve({data:name==='bars'?[{id:'bar-1',name:'School bar'}]:name==='orders'?window.fixture.customerOrders:[]}).then(resolve,reject)}};return q}
+ from(name){const q={select(){return this},eq(){return this},order(){return this},limit(){return this},then(resolve,reject){return Promise.resolve({data:name==='bars'?[{id:'bar-1',name:'School bar'}]:name==='orders'?window.fixture.customerOrders:name==='schools'?[{max_active_approvals:4,no_show_penalty_minutes:0,require_guest_class:false}]:name==='products'?[{id:'product-1',name:'Focaccia',price_cents:150,ingredients:'',allergens:[]}]:[]}).then(resolve,reject)}};return q}
 };
-initializeCompletionUI(client);initializeOrderWorkflows(client);
+initializeCompletionUI(client);initializeSchoolAdmin(client);initializeOrderWorkflows(client);
 window.fixture.switchRole=role=>{window.fixture.role=role;window.dispatchEvent(new CustomEvent('breakapp:workspace-context',{detail:{role,schoolId:'school-1',verified:true}}));document.getElementById('workflow-center').hidden=false};
 window.fixture.testExcel=async()=>{
  const bytes=workbookBytes([{name:'Classi',rows:[['Classe'],['5A'],['5B'],['5A']]}]);
@@ -45,12 +48,23 @@ try{
    await page.getByLabel('Sono in servizio e disponibile per le approvazioni').check();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='set_staff_service_presence'&&c.args.p_present===true));
    await page.evaluate(()=>window.fixture.switchRole('school_admin'));
-   await page.getByRole('heading',{name:'Coupon e bundle'}).waitFor();
-   const promotion=page.locator('article').filter({has:page.getByRole('heading',{name:'Coupon e bundle'})});
-   await promotion.getByLabel('Codice coupon',{exact:true}).fill('TEST20');await promotion.getByLabel('Titolo',{exact:true}).fill('Test discount');
+   // Promozioni, Personale e Regole della scuola hanno una sezione propria:
+   // la pagina Richieste resta dedicata ad approvazioni e modifiche.
+   await page.getByRole('heading',{name:'Nuova promozione'}).waitFor();
+   assert.equal(await page.locator('#workflow-center').getByText('Coupon e bundle').count(),0);
+   assert.equal(await page.locator('#workflow-center').getByRole('heading',{name:'Personale della scuola'}).count(),0);
+   await page.locator('#school-staff').getByRole('heading',{name:'Personale della scuola'}).waitFor({state:'attached'});
+   const promotion=page.locator('#school-promotions');
+   await promotion.getByLabel('Codice',{exact:true}).fill('TEST20');await promotion.getByLabel('Titolo',{exact:true}).fill('Test discount');
+   await promotion.getByLabel('Tipo',{exact:true}).selectOption('unit_discount');await promotion.getByLabel('Sconto per prodotto (€)').fill('0,50');
    await promotion.getByLabel('Inizio',{exact:true}).fill('2026-10-27T08:00');await promotion.getByLabel('Fine',{exact:true}).fill('2026-11-01T18:00');
    await promotion.getByRole('button',{name:'Crea promozione'}).click();
-   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='save_school_promotion'&&c.args.p_code==='TEST20'));
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='save_school_promotion'&&c.args.p_code==='TEST20'&&c.args.p_value===50&&c.args.p_kind==='unit_discount'));
+   const rules=page.locator('#school-settings-panel');
+   assert.equal(await rules.getByLabel('Grandi ordini in valutazione insieme').inputValue(),'4');
+   await rules.getByLabel('Blocco dopo un mancato ritiro (min)').fill('30');
+   await rules.getByRole('button',{name:'Salva regole della scuola'}).click();
+   await page.waitForFunction(()=>['set_approval_capacity','set_no_show_policy','set_guest_class_policy'].every(n=>window.fixture.calls.some(c=>c.name===n))&&window.fixture.calls.some(c=>c.name==='set_no_show_policy'&&c.args.p_minutes===30));
    assert.deepEqual(await page.evaluate(()=>window.fixture.testExcel()),['5A','5B']);
    await page.evaluate(()=>window.fixture.switchRole('customer'));
    await page.getByRole('heading',{name:'Proposte e modifiche'}).waitFor();
