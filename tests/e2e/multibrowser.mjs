@@ -7,7 +7,12 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     const page=await browser.newPage({viewport});
     const failures=[];
     page.on('pageerror',e=>failures.push(e.message));
-    page.on('console',message=>{if(/Content.Security.Policy/i.test(message.text()))failures.push('CSP violation: '+message.text());});
+    page.on('console',message=>{if(/Content.Security.Policy|CSP detail/i.test(message.text()))failures.push('CSP violation: '+message.text());});
+    // Dettagli della violazione (elemento, sorgente, estratto) per capire cosa la causa.
+    await page.addInitScript(()=>{document.addEventListener('securitypolicyviolation',e=>{
+      const t=e.target,el=t&&t.nodeType===1?t.outerHTML.slice(0,160):String(t&&t.nodeName);
+      console.log('CSP detail: '+JSON.stringify({directive:e.violatedDirective,blocked:e.blockedURI,source:e.sourceFile,line:e.lineNumber,sample:e.sample,element:el}));
+    },true);});
     page.on('requestfailed',request=>{
       if(new URL(request.url()).origin===new URL(site).origin&&['script','stylesheet'].includes(request.resourceType()))
         failures.push('asset failed: '+request.url());
