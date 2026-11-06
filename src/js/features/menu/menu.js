@@ -252,6 +252,17 @@ export function initializePublicMenu(client) {
     }
   }
 
+  // Chi ha già una scuola (studente dopo la prima prenotazione, ospite,
+  // personale) vede solo quella: il database rifiuta comunque le altre.
+  async function ownSchoolId() {
+    try {
+      const { data: auth } = await client.auth.getUser();
+      if (!auth?.user) return null;
+      const r = await client.from('school_memberships').select('school_id').eq('user_id', auth.user.id).eq('membership_status', 'active');
+      return !r.error && r.data?.length === 1 ? r.data[0].school_id : null;
+    } catch { return null; }
+  }
+
   async function fetchDirectory() {
     if (!client) {
       schoolInput.disabled = true;
@@ -264,13 +275,14 @@ export function initializePublicMenu(client) {
     }
     feedback('Ricerca delle scuole attive…');
     try {
-      const [schoolResponse, barResponse] = await Promise.all([
+      const [schoolResponse, barResponse, ownSchool] = await Promise.all([
         client.from('schools').select('id,name').eq('is_active',true).order('name'),
-        client.from('bars').select('id,school_id,name,is_active').eq('is_active',true).order('name')
+        client.from('bars').select('id,school_id,name,is_active').eq('is_active',true).order('name'),
+        ownSchoolId()
       ]);
       if (schoolResponse.error) throw schoolResponse.error;
       if (barResponse.error) throw barResponse.error;
-      schools = schoolResponse.data || [];
+      schools = restrictToOwnSchool(schoolResponse.data || [], ownSchool);
       bars = barResponse.data || [];
       fillSchools();
       fillBars();
@@ -303,4 +315,20 @@ export function initializePublicMenu(client) {
   });
   refreshButton.addEventListener('click', () => { void fetchDirectory(); });
   void fetchDirectory();
+  // Dopo l'accesso o il cambio di account l'elenco delle scuole può cambiare.
+  let lastUser;
+  client?.auth?.onAuthStateChange?.((_event, session) => {
+    const id = session?.user?.id || null;
+    const first = lastUser === undefined;
+    if (id === lastUser) return;
+    lastUser = id;
+    if (first) return; // il primo caricamento è già in corso
+    queueMicrotask(() => { void fetchDirectory(); });
+  });
+}
+
+export function restrictToOwnSchool(schools, ownSchool) {
+  if (!ownSchool) return schools;
+  const own = schools.filter((school) => school.id === ownSchool);
+  return own.length ? own : schools;
 }

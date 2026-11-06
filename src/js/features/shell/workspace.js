@@ -61,12 +61,14 @@ const SCREENS = Object.freeze({
    ['workflow-center','Richieste','ShieldCheck'],
    ['support-center','Assistenza','MessageSquareText'],
    ['admin-catalog','Catalogo','ShoppingBag'],
+   ['school-promotions','Promozioni','Tag'],
    ['warehouse-inventory','Magazzino','Boxes'],
    ['bar-operations','Orari e servizio','CalendarDays','Orari'],
-   ['admin-order-setup','Impostazioni bar','SlidersHorizontal','Impostazioni'],
    ['cash-workspace','Cassa','Receipt'],
    ['school-reports','Report','LayoutDashboard'],
    ['offline-review','Revisione offline','CloudOff','Offline'],
+   ['school-staff','Personale','UsersRound'],
+   ['admin-order-setup','Impostazioni scuola','SlidersHorizontal','Impostazioni'],
    ['accesso','Profilo e sicurezza','UserRound','Profilo']
   ],
  platform_admin:[
@@ -100,9 +102,10 @@ const NAV_GROUPS=Object.freeze({
  },
  school_admin:{
   'admin-overview':'OGGI','staff-orders-section':'OGGI','workflow-center':'OGGI',
-  'support-center':'OGGI','admin-catalog':'OFFERTA','warehouse-inventory':'OFFERTA',
-  'bar-operations':'OFFERTA','admin-order-setup':'OFFERTA','cash-workspace':'FINANZE',
-  'school-reports':'FINANZE','offline-review':'FINANZE','accesso':'ACCOUNT'
+  'support-center':'OGGI','admin-catalog':'OFFERTA','school-promotions':'OFFERTA',
+  'warehouse-inventory':'OFFERTA','bar-operations':'OFFERTA','cash-workspace':'FINANZE',
+  'school-reports':'FINANZE','offline-review':'FINANZE','school-staff':'SCUOLA',
+  'admin-order-setup':'SCUOLA','accesso':'ACCOUNT'
  },
  bartender:{
   'staff-orders-section':'BANCO','workflow-center':'BANCO',
@@ -125,7 +128,9 @@ const PAGE_NOTES=Object.freeze({
  'staff-orders-section':'',
  'warehouse-inventory':'Disponibilità per giorno e per bar.',
  'admin-catalog':'Categorie, prodotti, prezzi, ingredienti e allergeni.',
- 'admin-order-setup':'Posizione della scuola, regole, fasce e scorte.',
+ 'admin-order-setup':'Posizione, regole di prenotazione, fasce, scorte e classi.',
+ 'school-staff':'Baristi e magazzinieri della scuola, anche prima del primo accesso.',
+ 'school-promotions':'Coupon e bundle per i bar della scuola.',
  'bar-operations':'Pausa, orari settimanali e chiusure.',
  'cash-workspace':'Apertura, movimenti e chiusura del turno.',
  'school-reports':'Riepiloghi per periodo ed esportazioni.',

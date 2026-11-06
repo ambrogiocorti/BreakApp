@@ -12,9 +12,8 @@ export function initializeOrderWorkflows(client){
  barSelect.setAttribute('aria-label','Bar di servizio');
  const label=make('label','');label.append(presence,document.createTextNode(' Sono in servizio e disponibile per le approvazioni'));
  controls.append(barSelect,label,button('Aggiorna',()=>reload()));
- const capacity=make('form'),limit=make('input');limit.type='number';limit.min='1';limit.max='30';limit.value='3';limit.setAttribute('aria-label','Numero massimo di richieste attive');
- capacity.append(make('label','Richieste attive contemporaneamente'),limit,make('button','Salva limite','button button-outline button-small'));
- const list=make('div','','service-list');section.append(controls,capacity,status,list);document.getElementById('main-content').append(section);
+ // Il limite delle richieste attive è nelle Impostazioni della scuola (school-admin.js).
+ const list=make('div','','service-list');section.append(controls,status,list);document.getElementById('main-content').append(section);
  let context=null,user=null,epoch=0,activeBar=null;
  const say=(s,error=false)=>{status.textContent=s;status.dataset.type=error?'error':'information';};
  async function rpc(name,args){const r=await client.rpc(name,args);if(r.error)throw r.error;return r.data;}
@@ -25,7 +24,7 @@ export function initializeOrderWorkflows(client){
   if(!user||!context)return;
   const v=++epoch,staff=['bartender','school_admin'].includes(context.role);
   section.hidden=!context.verified||!['customer','bartender','school_admin','platform_admin'].includes(context.role);
-  controls.hidden=!staff;presence.closest('label').hidden=context.role!=='bartender';capacity.hidden=context.role!=='school_admin';
+  controls.hidden=!staff;presence.closest('label').hidden=context.role!=='bartender';
   list.hidden=context.role==='platform_admin';
   heading.textContent=context.role==='platform_admin'?'Nuova scuola':'Richieste e gestione ordini';
   if(section.hidden)return;
@@ -35,10 +34,6 @@ export function initializeOrderWorkflows(client){
     window.dispatchEvent(new CustomEvent('breakapp:workflow-loaded',{detail:{section,context,user,client,rpc,act,make,button,formatEuro}}));return;
    }
    const rows=await rpc('list_order_approvals',{p_school:staff?context.schoolId:null});if(v!==epoch)return;
-   if(context.role==='school_admin'){
-    const settings=await client.from('schools').select('max_active_approvals').eq('id',context.schoolId);
-    if(v!==epoch)return;if(settings.data?.[0])limit.value=String(settings.data[0].max_active_approvals);
-   }
    list.replaceChildren(make('h3','Grandi ordini'));
    if(!rows.length)list.append(make('p','Nessuna richiesta di approvazione.'));
    for(const a of rows){
@@ -69,7 +64,6 @@ export function initializeOrderWorkflows(client){
   try{await rpc('set_staff_service_presence',{p_bar:activeBar,p_present:true});}catch(e){say(e.message,true);presence.checked=false;}
  }
  presence.addEventListener('change',()=>void act(presence,async()=>{activeBar=barSelect.value;await rpc('set_staff_service_presence',{p_bar:activeBar,p_present:presence.checked});}));
- capacity.addEventListener('submit',e=>{e.preventDefault();void act(capacity.querySelector('button'),()=>rpc('set_approval_capacity',{p_school:context.schoolId,p_limit:Number(limit.value)}));});
  barSelect.addEventListener('change',async()=>{if(activeBar&&presence.checked)await rpc('set_staff_service_presence',{p_bar:activeBar,p_present:false}).catch(e=>say(e.message,true));activeBar=barSelect.value;presence.checked=false;});
  window.addEventListener('breakapp:workspace-context',async e=>{
   if(activeBar&&presence.checked&&navigator.onLine)void rpc('set_staff_service_presence',{p_bar:activeBar,p_present:false}).catch(()=>{});

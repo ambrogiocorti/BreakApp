@@ -28,3 +28,15 @@ test('GitHub Actions deploy requires Pages OIDC and main branch, not exposed sec
   assert.match(workflow,/branches: \[main\]/);
   assert.doesNotMatch(workflow,/service_role|sk_test_|sk_live_/);
 });
+
+test('GitHub Pages build carries a Content-Security-Policy meta tag limited to the Supabase origin',async()=>{
+ const {contentSecurityPolicy,contentSecurityPolicyPlugin}=await import('../../scripts/content-security-policy.mjs');
+ const policy=contentSecurityPolicy('https://ynvswdyirngvdpudcikl.supabase.co');
+ for(const directive of ["default-src 'self'","script-src 'self'","style-src 'self'","object-src 'none'","base-uri 'self'","form-action 'self'"])
+  assert.ok(policy.includes(directive),directive);
+ assert.match(policy,/connect-src 'self' https:\/\/ynvswdyirngvdpudcikl\.supabase\.co wss:\/\/ynvswdyirngvdpudcikl\.supabase\.co/);
+ assert.doesNotMatch(policy,/unsafe-inline|unsafe-eval|\*/);
+ assert.equal(contentSecurityPolicy('').includes('supabase'),false);
+ const html=contentSecurityPolicyPlugin({VITE_SUPABASE_URL:'https://x.supabase.co'}).transformIndexHtml('<head>\n    <meta charset="UTF-8" />\n<script type="module" src="/a.js"></script></head>');
+ assert.ok(html.indexOf('Content-Security-Policy')<html.indexOf('<script'),'CSP must precede scripts');
+});
