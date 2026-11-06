@@ -64,7 +64,7 @@ try{
    const onboarding=page.locator('article').filter({has:page.getByRole('heading',{name:'Dati della scuola'})});
    await onboarding.getByLabel('Identificativo della scuola (es. liceo-verdi)').fill('test-school');await onboarding.getByLabel('Nome della scuola',{exact:true}).fill('Test school');
    await onboarding.getByLabel('Nome del bar',{exact:true}).fill('Test bar');await onboarding.getByLabel('Latitudine').fill('45');await onboarding.getByLabel('Longitudine').fill('9');
-   await onboarding.getByLabel('Email verificata del primo Admin').fill('admin@test.invalid');await onboarding.getByRole('button',{name:'Crea scuola e bar'}).click();
+   await onboarding.getByLabel('Email del primo Admin').fill('admin@test.invalid');await onboarding.getByRole('button',{name:'Crea scuola e bar'}).click();
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='platform_onboard_school'&&c.args.p_slug==='test-school'));
    const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert.ok(width.scroll<=width.viewport+3);
    assert.deepEqual(errors,[]);console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'approvals, presence, promotion, XLSX import, onboarding'}));await page.close();

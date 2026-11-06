@@ -7,6 +7,7 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     const page=await browser.newPage({viewport});
     const failures=[];
     page.on('pageerror',e=>failures.push(e.message));
+    page.on('console',message=>{if(/Content.Security.Policy/i.test(message.text()))failures.push('CSP violation: '+message.text());});
     page.on('requestfailed',request=>{
       if(new URL(request.url()).origin===new URL(site).origin&&['script','stylesheet'].includes(request.resourceType()))
         failures.push('asset failed: '+request.url());
@@ -26,6 +27,8 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     if(!/accedi|accesso|login/i.test(doc))failures.push('login not present');
     const manifest=await page.locator('link[rel="manifest"]').getAttribute('href');
     if(!manifest?.includes('/BreakApp/manifest.webmanifest'))failures.push('incorrect manifest path: '+manifest);
+    const csp=await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content').catch(()=>null);
+    if(!csp||!/script-src 'self'/.test(csp)||!/object-src 'none'/.test(csp))failures.push('missing Content-Security-Policy meta');
     const main=await page.locator('main').count();
     if(!main)failures.push('missing main landmark');
     const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
