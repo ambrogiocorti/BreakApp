@@ -36,9 +36,9 @@ test('Super Admin has no customer navigation routes',()=>{
  assert.equal(allowedRoute('platform_admin','platform-overview'),true);
  assert.equal(allowedRoute('platform_admin','accesso'),true);
 });
-test('regular school users retain their existing per-school roles',()=>{
+test('school staff do not receive an implicit customer role for their school',()=>{
  const contexts=contextsFromMemberships(memberships,schools,true,false);
- assert.ok(contexts.some(c=>c.role==='customer'&&c.schoolId===a));
+ assert.equal(contexts.some(c=>c.role==='customer'&&c.schoolId===a),false);
  assert.ok(contexts.some(c=>c.role==='school_admin'&&c.schoolId===a));
  assert.ok(contexts.some(c=>c.role==='bartender'&&c.schoolId===b));
  assert.equal(contexts.some(c=>c.role==='platform_admin'),false);
