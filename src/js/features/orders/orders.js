@@ -2,6 +2,7 @@ import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.j
 import { formatEuro } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
 import { accuratePosition } from '../../core/geolocation.js';
+import { paymentError } from '../../core/payment-error.js';
 import { confirmDialog, toast } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
@@ -540,7 +541,7 @@ export function initializeOrders(client) {
             const {data,error}=await client.functions.invoke('stripe-checkout-individual',{
               body:{order_id:o.id,request_key:key}
             });
-            if(error)throw error;
+            if(error)throw await paymentError(error);
             if(data?.error)throw new Error(data.error);
             if(!data?.checkout_url||
                 !data.checkout_url.startsWith('https://checkout.stripe.com/')){
