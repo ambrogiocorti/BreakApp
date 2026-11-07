@@ -55,16 +55,13 @@ try{
    await page.getByRole('button',{name:'← I tuoi gruppi'}).click();
    await page.getByText('Entra con un invito',{exact:true}).click();
    await page.getByLabel('Link o codice invito').fill('11111111-1111-4111-8111-111111111111');
-   await page.getByRole('button',{name:'Verifica posizione ed entra'}).click();
-   // Trigger a fresh native geolocation event in each browser after the watch
-   // has started; Firefox's emulated provider does not always replay its initial fix.
-   await context.setGeolocation({latitude:45.50001,longitude:9.3,accuracy:35});
-   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='join_group_draft')||document.getElementById('groups-feedback').dataset.type==='error'||['denied','weak','unavailable','timeout','error','far'].includes(document.getElementById('groups-join-location').dataset.state),null,{timeout:27000});
-   const locationMessage=await page.locator('#groups-feedback').innerText()+' '+await page.locator('#groups-join-location').innerText();
+   await context.clearPermissions();
+   await page.getByRole('button',{name:'Entra nel gruppo'}).click();
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='join_group_draft'),null,{timeout:5000});
    const join=await page.evaluate(()=>window.fixture.calls.find(c=>c.name==='join_group_draft'));
-   const locationDiagnostic=await page.evaluate(()=>window.geoTestDiagnostic||null);
-   assert.ok(join,'Ingresso gruppo non completato in '+name+': '+locationMessage+' '+JSON.stringify(locationDiagnostic));
-   assert.equal(join.args.p_accuracy_m,35);
+   assert.ok(join,'Ingresso gruppo non completato in '+name);
+   assert.equal(join.args.p_accuracy_m,null);
+   assert.equal(join.args.p_latitude,null);
    await page.getByRole('button',{name:'← I tuoi gruppi'}).click();
    await page.evaluate(()=>window.fixture.setGuest());
    await page.waitForFunction(()=>document.getElementById('groups-create-disclosure').hidden);
@@ -74,7 +71,7 @@ try{
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
    assert.ok(overflow<=3,'horizontal overflow: '+overflow);
    assert.deepEqual(errors,[]);
-   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'compact group overview, saved cart, settings, guest access and emulated location',timestampNormalized:name!=='chromium'}));
+   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'compact group overview, saved cart, settings, guest access without GPS'}));
    await context.close();
   }
   await browser.close();browser=null;
