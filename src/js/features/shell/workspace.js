@@ -161,24 +161,34 @@ export function contextsFromMemberships(memberships,schools,aal2,platform=false)
  }];
  const result=[];
  const knownSchools=new Map(schools.map(s=>[s.id,s]));
- for(const school of schools){
-   result.push({key:school.id+':customer',schoolId:school.id,
-     schoolName:school.name,role:'customer',verified:true});
- }
+ const staffSchools=new Set();
  for(const m of memberships){
    if(!knownSchools.has(m.school_id))continue;
    for(const r of m.role_assignments||[]){
      if(!['bartender','warehouse_manager','school_admin'].includes(r.role_code))continue;
+     staffSchools.add(m.school_id);
      const key=m.school_id+':'+r.role_code;
      if(result.some(x=>x.key===key))continue;
      result.push({key,schoolId:m.school_id,schoolName:knownSchools.get(m.school_id).name,
        role:r.role_code,verified:r.role_code!=='school_admin'||aal2});
    }
  }
+ // A school staff member must not silently fall back to a customer workspace.
+ // In particular, AAL1 school admins stay admins with only the MFA page visible.
+ for(const school of schools){
+   if(staffSchools.has(school.id))continue;
+   result.push({key:school.id+':customer',schoolId:school.id,
+     schoolName:school.name,role:'customer',verified:true});
+ }
  return result;
 }
 export function chooseInitialContext(contexts,stored) {
  if(!contexts.length)return null;
+ // Staff contexts take precedence over stale customer preferences because the
+ // application has a single active school/role and no role switcher.
+ const staff=['school_admin','bartender','warehouse_manager','platform_admin']
+  .map(role=>contexts.find(c=>c.role===role)).find(Boolean);
+ if(staff)return staff;
  const preference=contexts.find(c=>c.key===stored);
  if(preference)return preference;
  return ['school_admin','bartender','warehouse_manager','platform_admin','customer']
@@ -471,8 +481,7 @@ export function initializeWorkspace(client){
    if(!contexts.length)contexts=[{key:'unassigned:customer',role:'customer',
      schoolId:null,schoolName:'Nessuna scuola disponibile',verified:true}];
    renderContexts();
-   const previous=active?.key;
-   const selected=contexts.find(x=>x.key===previous)||chooseInitialContext(contexts,safelyStored());
+   const selected=chooseInitialContext(contexts,active?.key||safelyStored());
    sidebar.hidden=false;nav.hidden=false;mobile.hidden=false;heading.hidden=false;
    // Every account belongs to one school with one role (a Super Admin works
    // from the platform screens, which pick the school themselves). No

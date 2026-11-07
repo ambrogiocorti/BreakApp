@@ -15,10 +15,22 @@ test('contexts are derived from returned memberships not a local claimed role',(
  const ctx=contextsFromMemberships([
   {school_id:a,role_assignments:[{role_code:'warehouse_manager'},{role_code:'school_admin'}]}
  ],[{id:a,name:'School A'}],false,false);
- assert.equal(ctx.length,3);
+ assert.equal(ctx.length,2);
  assert.equal(ctx.find(x=>x.role==='warehouse_manager').verified,true);
  assert.equal(ctx.find(x=>x.role==='school_admin').verified,false);
- assert.equal(ctx.find(x=>x.role==='customer').verified,true);
+ assert.equal(ctx.some(x=>x.role==='customer'&&x.schoolId===a),false);
+});
+test('an admin awaiting 2FA remains admin, not customer, even with a stale preference',()=>{
+ const b='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ const ctx=contextsFromMemberships([
+  {school_id:a,role_assignments:[{role_code:'school_admin'}]}
+ ],[{id:a,name:'School A'},{id:b,name:'School B'}],false,false);
+ const selected=chooseInitialContext(ctx,b+':customer');
+ assert.equal(selected.role,'school_admin');
+ assert.equal(selected.schoolId,a);
+ assert.equal(selected.verified,false);
+ assert.equal(ctx.some(x=>x.role==='customer'&&x.schoolId===a),false);
+ assert.equal(ctx.some(x=>x.role==='customer'&&x.schoolId===b),true);
 });
 test('last valid context is restored; invalid stored value cannot confer privileges',()=>{
  const ctx=contextsFromMemberships([], [{id:a,name:'School A'}],true,false);
