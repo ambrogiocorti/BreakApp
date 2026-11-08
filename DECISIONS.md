@@ -38,3 +38,10 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - Admin scuola (con 2FA) e Barista possono richiedere un rimborso individuale concluso dalla scheda ordine; l'UUID resta un riferimento tecnico non visibile all'operatore. Autorizzazioni e motivazione sono validate lato PostgreSQL.
 - I pagamenti Stripe sono rimborsati ai pagatori effettivi e risultano completati soltanto dopo conferma del provider/webhook; contanti e POS esterno richiedono un'uscita fisica registrata con turno aperto, conferma e motivazione. Il software non esegue storni su POS esterni.
 - L'elenco operativo mostra soltanto le restituzioni pendenti e applica controllo di scuola/ruolo; l'anonimo non può invocare la nuova RPC. Il collaudo E2E con carta di test, webhook e rimborso resta una verifica bloccante per la vendita.
+
+## 7 novembre 2026 — Accesso ai gruppi e diagnosi pagamenti
+
+- Modifica richiesta e confermata: per entrare in un gruppo con invito valido non serve essere fisicamente vicino alla scuola né autorizzare il GPS. Rimangono invariati i controlli di invito, scadenza, capienza, approvazione, sessione e ruoli.
+- Il coordinatore deve verificare la propria posizione al momento della conferma definitiva dell'ordine di gruppo, con raggio e precisione verificati dalla RPC server; gli ordini individuali continuano a richiedere la posizione al momento dell'invio. Non si introduce una verifica GPS per il pagamento anticipato delle singole righe del gruppo.
+- Compatibilità API: `join_group_draft` mantiene temporaneamente i cinque parametri esistenti, che diventano facoltativi nel comportamento e vengono inviati come `null` dai nuovi client. Nessuna modifica alla verifica di `confirm_group_order`.
+- I checkout individuali e di gruppo leggono ora la motivazione restituita dalla Edge Function, quando disponibile, al posto del messaggio generico HTTP non-2xx. Non vengono stampati payload grezzi né credenziali.
