@@ -93,3 +93,11 @@ Non incollare mai segreti, link di onboarding personalizzati o dati bancari nei 
 - La sandbox non è un'autorizzazione a usare dati fittizi per l'onboarding reale.
 - Il badge «Account abilitato» nel Dashboard può coesistere con **pagamenti sospesi**; contano le capability di pagamento effettive.
 - Non attivare `sk_live_`, `charges_enabled` o incassi reali senza un merchant legalmente verificato e collaudo finanziario concluso.
+
+## Aggiornamento dell'8 novembre 2026 — stato automatico del merchant
+
+Dopo l'associazione (sezione 3) non serve più impostare a mano `charges_enabled` e `payouts_enabled`. Quando l'esercente completa l'onboarding, Stripe invia l'evento Connect `account.updated`; la funzione `stripe-webhook` (versione 14 nel DEV) ne verifica la firma e la RPC `apply_signed_stripe_account_status` aggiorna il merchant già associato, ignorando eventi duplicati o più vecchi.
+
+Prerequisito da fare una volta nella dashboard Stripe TEST: nell'endpoint webhook attivo aggiungere l'evento **`account.updated`** per gli **account collegati** (Connect). Senza questa iscrizione lo stato resta quello registrato in precedenza.
+
+Per la scuola DEMO serve un account Connect TEST **separato**: non riutilizzare quello di ITSOS Marie Curie.
