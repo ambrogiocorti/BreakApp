@@ -153,6 +153,8 @@ jobs:
             fi
             docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
           done
+      - name: Verify group entry from anywhere and GPS on final confirmation
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-join-anywhere.sql
       - name: Test physical cash counts, immutable closings and revoked offline event recovery
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/cash-sessions.sql
       - name: Test internal registration limits and server-side Authenticator enrollment guard

@@ -2,6 +2,7 @@ import {accuratePosition} from '../../core/geolocation.js';
 import {windowLabel} from '../orders/staff-board.js';
 import {confirmDialog} from '../../core/dialog.js';
 import {friendlyError} from '../../core/errors.js';
+import {paymentError} from '../../core/payment-error.js';
 import {showLocation,locationProblem} from '../../core/location-ui.js';
 
 const el=(tag,value='',css='')=>{const n=document.createElement(tag);n.className=css;n.textContent=value;return n;};
@@ -294,14 +295,16 @@ export function initializeGroupDrafts(client){
   const button=joinForm.querySelector('button[type=submit]');button.disabled=true;
   try{
    const token=inviteId(byId('groups-invite-token').value);
-   report('');
-   const where=byId('groups-join-location');
-   const pos=await locate(where);
-   const {data,error}=await client.rpc('join_group_draft',{p_invite_token:token,...pos});
-   if(error){serverLocation(where,error);throw error;}
-   showLocation(where,'idle');
+   report('Accesso al gruppo…');
+   // The RPC retains the historical signature until all clients are updated.
+   // Group entry does not require GPS; only final confirmation does.
+   const {data,error}=await client.rpc('join_group_draft',{
+    p_invite_token:token,p_latitude:null,p_longitude:null,
+    p_accuracy_m:null,p_observed_at:null
+   });
+   if(error)throw error;
    await myGroups();await showGroup(data,{focus:true});
-  }catch(err){if(locationProblem(err))report('');else report(err.message,true);}
+  }catch(err){report(err.message,true);}
   finally{button.disabled=false;}
  });
  function cartItems(){
@@ -388,11 +391,11 @@ export function initializeGroupDrafts(client){
    const {data,error}=await client.functions.invoke('stripe-checkout-group',{
     body:{group_id:detail.id,line_ids:lines,request_key:requestKey}
    });
-   if(error)throw error;
+   if(error)throw await paymentError(error);
    if(!data?.checkout_url||!data.checkout_url.startsWith('https://checkout.stripe.com/'))
     throw new Error(data?.error||'Risposta Checkout incompleta.');
    location.assign(data.checkout_url);
-  }catch(err){report(err.message||'Checkout non disponibile.',true);button.disabled=false;}
+  }catch(err){report(friendlyError(err,'Checkout non disponibile.'),true);button.disabled=false;}
  });
  let finalConfirmKey=null;
  async function loadConfirmedGroup(groupId,seq){

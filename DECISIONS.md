@@ -47,3 +47,9 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - GitHub Pages ignora `_headers`: la CSP è inserita in un tag `<meta>` durante la build. `frame-ancestors` e le altre intestazioni restano da applicare con un hosting che le supporti.
 - Admin scuola: «Personale» e «Promozioni» hanno una voce di menu; limite delle richieste, mancati ritiri e classi sono in «Impostazioni scuola». «Richieste» resta per approvazioni, modifiche e rimborsi. Un selettore con una sola scuola non viene mostrato.
 - Le migrazioni del repository hanno le stesse versioni dello storico Supabase (vedi `docs/SUPABASE_MIGRATIONS.md`).
+## 7 novembre 2026 — Accesso ai gruppi e diagnosi pagamenti
+
+- Modifica richiesta e confermata: per entrare in un gruppo con invito valido non serve essere fisicamente vicino alla scuola né autorizzare il GPS. Rimangono invariati i controlli di invito, scadenza, capienza, approvazione, sessione e ruoli.
+- Il coordinatore deve verificare la propria posizione al momento della conferma definitiva dell'ordine di gruppo, con raggio e precisione verificati dalla RPC server; gli ordini individuali continuano a richiedere la posizione al momento dell'invio. Non si introduce una verifica GPS per il pagamento anticipato delle singole righe del gruppo.
+- Compatibilità API: `join_group_draft` mantiene temporaneamente i cinque parametri esistenti, che diventano facoltativi nel comportamento e vengono inviati come `null` dai nuovi client. Nessuna modifica alla verifica di `confirm_group_order`.
+- I checkout individuali e di gruppo leggono ora la motivazione restituita dalla Edge Function, quando disponibile, al posto del messaggio generico HTTP non-2xx. Non vengono stampati payload grezzi né credenziali.
