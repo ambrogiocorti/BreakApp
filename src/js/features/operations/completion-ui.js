@@ -1,3 +1,4 @@
+import { romeToday, isUpcomingWindow } from '../../core/pickup-time.js';
 import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {icon} from '../../core/icons.js';
 import {orderStatusLabel} from '../orders/staff-board.js';
@@ -63,8 +64,8 @@ export function initializeCompletionUI(client){
      for(const[label,action]of [['Accetta proposta','accept'],['Rifiuta proposta','reject'],['Annulla ordine e avvia rimborsi','cancel']])box.append(button(label,b=>act(b,async()=>{if(await confirmDialog(label+'?'))await rpc('respond_order_exception',{p_change:c.id,p_action:action,p_window:null});})));
      if(c.kind==='delay'){
       const o=await rpc('workflow_order_details',{p_kind:c.order_id?'individual':'group',p_order:c.order_id||c.group_order_id});
-      const slots=await client.from('pickup_windows').select('id,service_date,starts_at').eq('bar_id',o.bar_id).eq('is_active',true).order('service_date').order('starts_at');
-      const s=select(box,'Fascia alternativa',(slots.data||[]).map(w=>[w.id,w.service_date+' '+w.starts_at.slice(0,5)]));
+      const slots=await client.from('pickup_windows').select('id,service_date,starts_at').eq('bar_id',o.bar_id).eq('is_active',true).gte('service_date',romeToday()).order('service_date').order('starts_at');
+      const s=select(box,'Fascia alternativa',(slots.data||[]).filter(isUpcomingWindow).map(w=>[w.id,w.service_date+' '+w.starts_at.slice(0,5)]));
       box.append(button('Scegli questa alternativa',b=>act(b,()=>rpc('respond_order_exception',{p_change:c.id,p_action:'alternative',p_window:s.value}))));
      }
     }
@@ -93,8 +94,8 @@ export function initializeCompletionUI(client){
       const line=select(body,'Riga da sostituire',detail.lines.map(i=>[i.line_id,i.quantity+' × '+(i.name||products.data?.find(p=>p.id===i.product_id)?.name||'Prodotto')]));
       const replacement=select(body,'Prodotto sostitutivo',(products.data||[]).map(p=>[p.id,p.name+' · '+formatEuro(p.price_cents)]));
       const info=node('p');body.append(info);const preview=()=>{const p=products.data?.find(p=>p.id===replacement.value);info.textContent=p?'Ingredienti: '+p.ingredients+' · Allergeni: '+p.allergens.join(', '):'';};replacement.addEventListener('change',preview);preview();
-      const windows=await client.from('pickup_windows').select('id,service_date,starts_at').eq('bar_id',detail.bar_id).eq('is_active',true).order('service_date').order('starts_at');
-      const win=select(body,'Nuova fascia',(windows.data||[]).map(w=>[w.id,w.service_date+' '+w.starts_at.slice(0,5)]));
+      const windows=await client.from('pickup_windows').select('id,service_date,starts_at').eq('bar_id',detail.bar_id).eq('is_active',true).gte('service_date',romeToday()).order('service_date').order('starts_at');
+      const win=select(body,'Nuova fascia',(windows.data||[]).filter(isUpcomingWindow).map(w=>[w.id,w.service_date+' '+w.starts_at.slice(0,5)]));
       const send=button('Invia proposta al cliente',b=>act(b,()=>rpc('propose_order_exception',{p_kind:kind,p_order:id,p_type:type.value,p_line:line.value||null,p_product:replacement.value||null,p_window:win.value||null,p_key:crypto.randomUUID()})));body.append(send);
      }else{
       body.append(node('p','Totale '+formatEuro(detail.total_cents)+' · Residuo '+formatEuro(detail.due_cents)));

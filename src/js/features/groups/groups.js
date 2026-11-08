@@ -1,3 +1,4 @@
+import {isUpcomingWindow} from '../../core/pickup-time.js';
 import {accuratePosition} from '../../core/geolocation.js';
 import {windowLabel} from '../orders/staff-board.js';
 import {confirmDialog} from '../../core/dialog.js';
@@ -56,7 +57,7 @@ export function initializeGroupDrafts(client){
   await selectBar();
  }
  async function selectBar(){
-  options(windowSelect,windows.filter(w=>w.bar_id===bar.value).map(w=>[w.id,windowLabel(w)]));
+  options(windowSelect,windows.filter(w=>w.bar_id===bar.value&&isUpcomingWindow(w)).map(w=>[w.id,windowLabel(w)]));
   if(!windowSelect.options.length)windowSelect.add(new Option('Nessuna fascia disponibile',''));
  }
  async function schoolsAndWindows(){
@@ -204,7 +205,7 @@ export function initializeGroupDrafts(client){
    const candidates=Array.isArray(detail.members)?detail.members.filter(
     m=>m.status==='accepted'&&m.member_id!==user.id):[];
    options(byId('group-transfer-member'),candidates.map(m=>[m.member_id,'Partecipante '+m.member_id.slice(0,8)]));
-   const possible=windows.filter(w=>w.bar_id===detail.bar_id);
+   const possible=windows.filter(w=>w.bar_id===detail.bar_id&&isUpcomingWindow(w));
    options(byId('group-reschedule-window'),possible.map(w=>[w.id,windowLabel(w)]));
    byId('group-reschedule-window').value=detail.pickup_window_id;
    byId('group-transfer').disabled=!candidates.length;

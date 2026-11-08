@@ -1,3 +1,4 @@
+import { romeToday, isUpcomingWindow } from '../../core/pickup-time.js';
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
@@ -357,7 +358,7 @@ export function initializeOrders(client) {
     const [win,service,closures,hours]=await Promise.all([
       client.from('pickup_windows')
         .select('id,service_date,starts_at,ends_at').eq('bar_id',context.barId)
-        .eq('is_active',true).order('service_date').order('starts_at').limit(150),
+        .eq('is_active',true).gte('service_date',romeToday()).order('service_date').order('starts_at').limit(150),
       client.from('bar_service_state').select('accepting_orders,reason')
         .eq('bar_id',context.barId).maybeSingle(),
       client.from('bar_closures').select('service_date,starts_at,ends_at,reopened_at')
@@ -373,7 +374,7 @@ export function initializeOrders(client) {
     }
     const paused=service.data?.accepting_orders===false;
     const closed=closures.data||[],open=hours.data||[];
-    const valid=(win.data||[]).filter(w=>{
+    const valid=(win.data||[]).filter(isUpcomingWindow).filter(w=>{
       const localDow=new Date(w.service_date+'T12:00:00Z').getUTCDay();
       const opened=open.some(h=>h.weekday===localDow&&
         h.starts_at<=w.starts_at&&h.ends_at>=w.ends_at);

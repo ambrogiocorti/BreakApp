@@ -1,3 +1,4 @@
+import { romeToday, isUpcomingWindow } from '../../core/pickup-time.js';
 import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {formatEuro} from '../catalog/utils.js';
 import {approvalLabel} from '../../core/status-labels.js';
@@ -19,7 +20,7 @@ export function initializeOrderWorkflows(client){
  async function rpc(name,args){const r=await client.rpc(name,args);if(r.error)throw r.error;return r.data;}
  async function act(b,fn){b.disabled=true;try{await fn();await reload();say('Operazione registrata sul server.');}
   catch(e){say(e.message,true);}finally{b.disabled=false;}}
- async function slots(bar){const r=await client.from('pickup_windows').select('id,service_date,starts_at').eq('bar_id',bar).eq('is_active',true).order('service_date').order('starts_at').limit(200);if(r.error)throw r.error;return r.data||[];}
+ async function slots(bar){const r=await client.from('pickup_windows').select('id,service_date,starts_at').eq('bar_id',bar).eq('is_active',true).gte('service_date',romeToday()).order('service_date').order('starts_at').limit(200);if(r.error)throw r.error;return (r.data||[]).filter(isUpcomingWindow);}
  async function reload(){
   if(!user||!context)return;
   const v=++epoch,staff=['bartender','school_admin'].includes(context.role);
