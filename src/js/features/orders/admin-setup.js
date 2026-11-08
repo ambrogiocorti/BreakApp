@@ -1,4 +1,14 @@
 import { getAdminSchools } from '../catalog/utils.js';
+import { accuratePosition } from '../../core/geolocation.js';
+
+// OpenStreetMap link to check the saved point; nothing is loaded in the page.
+export function mapLink(lat,lon){
+  if(String(lat??'').trim()===''||String(lon??'').trim()==='')return null;
+  const a=Number(lat),o=Number(lon);
+  if(!Number.isFinite(a)||!Number.isFinite(o)||a<-90||a>90||o<-180||o>180)return null;
+  const la=a.toFixed(6),lo=o.toFixed(6);
+  return 'https://www.openstreetmap.org/?mlat='+la+'&mlon='+lo+'#map=18/'+la+'/'+lo;
+}
 
 const make=(tag,text='')=>{const e=document.createElement(tag);e.textContent=text;return e;};
 export function initializeAdminOrderSetup(client) {
@@ -32,10 +42,11 @@ export function initializeAdminOrderSetup(client) {
   async function readSettings(){
     if(!school.value)return;
     const {data,error}=await client.from('schools')
-      .select('latitude,longitude,pickup_radius_m,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
+      .select('address,latitude,longitude,pickup_radius_m,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
       .eq('id',school.value).single();
     if(error){tell(error.message,true);return;}
     const values={
+      'ops-address':data.address,
       'ops-latitude':data.latitude,
       'ops-longitude':data.longitude,
       'ops-radius':data.pickup_radius_m,
@@ -46,6 +57,7 @@ export function initializeAdminOrderSetup(client) {
       'ops-approval-eur':data.approval_amount_threshold_cents==null?null:(data.approval_amount_threshold_cents/100)
     };
     for(const [id,value] of Object.entries(values))document.getElementById(id).value=value??'';
+    refreshMapLink();
   }
   function render(){
     slotList.replaceChildren();
@@ -93,6 +105,31 @@ export function initializeAdminOrderSetup(client) {
     windows=slots.data||[];products=pros.data||[];stock=availability.data||[];
     enableForms(true);render();tell('Configurazione del bar aggiornata.');
   }
+  const mapAnchor=document.querySelector('#ops-map-link');
+  const positionStatus=document.querySelector('#ops-position-status');
+  function refreshMapLink(){
+    if(!mapAnchor)return;
+    const href=mapLink(document.getElementById('ops-latitude').value,document.getElementById('ops-longitude').value);
+    mapAnchor.hidden=!href;if(href)mapAnchor.href=href;
+  }
+  for(const id of ['ops-latitude','ops-longitude'])
+    document.getElementById(id)?.addEventListener('input',refreshMapLink);
+  document.querySelector('#ops-use-position')?.addEventListener('click',async event=>{
+    const button=event.currentTarget;button.disabled=true;
+    positionStatus.textContent='Rilevamento della posizione in corso…';
+    try{
+      const position=await accuratePosition({onProgress:accuracy=>{
+        if(Number.isFinite(accuracy))positionStatus.textContent='Precisione attuale circa ±'+Math.ceil(accuracy)+' m, attendi…';}});
+      document.getElementById('ops-latitude').value=position.coords.latitude.toFixed(6);
+      document.getElementById('ops-longitude').value=position.coords.longitude.toFixed(6);
+      refreshMapLink();
+      positionStatus.textContent='Coordinate inserite (precisione ±'+Math.ceil(position.coords.accuracy)+' m). Controlla il punto sulla mappa e premi «Salva regole».';
+    }catch(error){
+      positionStatus.textContent=error?.code==='permission'||error?.code===1
+        ?'Permesso di posizione negato: abilitalo nelle impostazioni del browser oppure inserisci le coordinate a mano.'
+        :(error?.message||'Posizione non disponibile.')+' Puoi anche inserire le coordinate a mano.';
+    }finally{button.disabled=false;}
+  });
   schoolForm.addEventListener('submit',async event=>{
     event.preventDefault();if(!schoolForm.reportValidity())return;
     const val=id=>document.getElementById(id).value.trim();
@@ -110,8 +147,11 @@ export function initializeAdminOrderSetup(client) {
     if(!Number.isFinite(params.p_latitude)||!Number.isFinite(params.p_longitude))return tell('Coordinate obbligatorie.',true);
     tell('Salvataggio delle regole sul server…');
     const {error}=await client.rpc('configure_school_booking',params);
-    if(error)tell(error.message,true);
-    else{tell('Regole scuola salvate.');await readSettings();}
+    if(error)return tell(error.message,true);
+    const {error:addressError}=await client.rpc('set_school_address',{
+      p_school_id:school.value,p_address:val('ops-address')||null});
+    if(addressError)return tell('Regole salvate, indirizzo non salvato: '+addressError.message,true);
+    tell('Regole scuola salvate.');await readSettings();
   });
   slotForm.addEventListener('submit',async event=>{
     event.preventDefault();if(!slotForm.reportValidity())return;
