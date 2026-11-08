@@ -47,6 +47,7 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - GitHub Pages ignora `_headers`: la CSP è inserita in un tag `<meta>` durante la build. `frame-ancestors` e le altre intestazioni restano da applicare con un hosting che le supporti.
 - Admin scuola: «Personale» e «Promozioni» hanno una voce di menu; limite delle richieste, mancati ritiri e classi sono in «Impostazioni scuola». «Richieste» resta per approvazioni, modifiche e rimborsi. Un selettore con una sola scuola non viene mostrato.
 - Le migrazioni del repository hanno le stesse versioni dello storico Supabase (vedi `docs/SUPABASE_MIGRATIONS.md`).
+
 ## 7 novembre 2026 — Accesso ai gruppi e diagnosi pagamenti
 
 - Modifica richiesta e confermata: per entrare in un gruppo con invito valido non serve essere fisicamente vicino alla scuola né autorizzare il GPS. Rimangono invariati i controlli di invito, scadenza, capienza, approvazione, sessione e ruoli.
