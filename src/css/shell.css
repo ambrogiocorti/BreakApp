@@ -175,3 +175,18 @@ body[data-workspace="true"] .header-link { display: none; }
 body[data-active-route="menu"] .workspace-eyebrow { display: none; }
 @media (min-width: 1024px) { body[data-workspace="true"] .workspace-eyebrow { display: none; } }
 @media (max-width: 380px) { .header-actions { gap: 0; } .header-actions .icon-button { width: 40px; } }
+
+/* DEMO school: discreet, always-visible reminder that payments are Stripe TEST. */
+.demo-notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--tuorlo-soft);
+  color: var(--tuorlo-ink);
+  border-bottom: 1px solid color-mix(in srgb, var(--tuorlo) 45%, transparent);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+  text-align: center;
+  max-width: none;
+  overflow-wrap: anywhere;
+}
+.demo-notice[hidden] { display: none; }

@@ -44,6 +44,27 @@ Deno.serve(async request=>{
   const evt=JSON.parse(raw) as Record<string,any>;
   if(!/^evt_[A-Za-z0-9]+$/.test(evt.id||'')||evt.livemode!==false)
    return respond({error:'Evento Stripe non valido per il test'},400);
+  if(evt.type==='account.updated'){
+    // Connect event for a school merchant: only an already associated account
+    // is updated (the RPC never creates associations); stale snapshots are skipped.
+    const account=evt.data?.object;
+    if(!account||account.object!=='account'||!/^acct_[A-Za-z0-9]+$/.test(evt.account||'')||
+      account.id!==evt.account||!Number.isSafeInteger(evt.created)||evt.created<=0||
+      typeof account.charges_enabled!=='boolean'||typeof account.payouts_enabled!=='boolean'||
+      typeof account.details_submitted!=='boolean')
+      return respond({error:'Evento account incompleto o incongruente'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data,error}=await admin.rpc('apply_signed_stripe_account_status',{
+      p_event:evt.id,p_account:evt.account,p_created:evt.created,
+      p_charges:account.charges_enabled,p_payouts:account.payouts_enabled,
+      p_details:account.details_submitted
+    });
+    if(error)return respond({error:'Stato merchant non registrato'},500);
+    return respond({received:true,result:data},200);
+  }
   if(evt.type==='checkout.session.async_payment_failed'){
     const session=evt.data?.object;
     if(!session||session.object!=='checkout.session'||session.mode!=='payment'||

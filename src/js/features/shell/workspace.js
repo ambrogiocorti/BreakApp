@@ -175,17 +175,32 @@ export function contextsFromMemberships(memberships,schools,aal2,platform=false)
      const key=m.school_id+':'+r.role_code;
      if(result.some(x=>x.key===key))continue;
      result.push({key,schoolId:m.school_id,schoolName:knownSchools.get(m.school_id).name,
+       isDemo:knownSchools.get(m.school_id).is_demo===true,
        role:r.role_code,verified:r.role_code!=='school_admin'||aal2});
    }
  }
  // A school staff member must not silently fall back to a customer workspace.
  // In particular, AAL1 school admins stay admins with only the MFA page visible.
+ // An account bound to a school (staff or student) only gets that school:
+ // without this, a student of school B could land in school A's customer
+ // workspace just because A sorts first. Accounts not yet bound to any school
+ // keep the full list until their first booking binds them server-side.
+ const memberSchools=new Set(memberships.map(m=>m.school_id).filter(id=>knownSchools.has(id)));
  for(const school of schools){
    if(staffSchools.has(school.id))continue;
+   if(staffSchools.size)continue;
+   if(memberSchools.size&&!memberSchools.has(school.id))continue;
    result.push({key:school.id+':customer',schoolId:school.id,
-     schoolName:school.name,role:'customer',verified:true});
+     schoolName:school.name,isDemo:school.is_demo===true,role:'customer',verified:true});
  }
  return result;
+}
+// The DEMO school only takes Stripe TEST payments: say so on every screen.
+export function showDemoNotice(on,doc=globalThis.document){
+ const notice=doc?.getElementById?.('demo-notice');
+ if(!notice)return;
+ notice.hidden=!on;
+ if(on)doc.body.dataset.demo='true';else delete doc.body.dataset.demo;
 }
 export function chooseInitialContext(contexts,stored) {
  if(!contexts.length)return null;
@@ -407,6 +422,7 @@ export function initializeWorkspace(client){
    document.getElementById('workspace-identity-role').textContent=LABELS[context.role];
    document.body.dataset.activeRole=context.role;
    document.body.dataset.activeSchool=context.schoolId||'global';
+   showDemoNotice(context.isDemo===true);
    notifyContext();
    if(context.schoolId){
      for(const id of context.role==='customer'
@@ -433,6 +449,7 @@ export function initializeWorkspace(client){
    }
  }
  function signOutUI(){
+   showDemoNotice(false);
    epoch++;ready=false;user=null;contexts=[];active=null;route='';
    const brandHome=document.querySelector('.site-header .brand');
    if(brandHome)brandHome.href='#accesso';
@@ -458,7 +475,7 @@ export function initializeWorkspace(client){
    if(restoreOfflineBarista(userNext))return;
    const [access,sch,assurance,platform]=await Promise.allSettled([
      loadSchoolAccess(client,userNext.id),
-     client.from('schools').select('id,name').eq('is_active',true).order('name'),
+     client.from('schools').select('id,name,is_demo').eq('is_active',true).order('name'),
      client.auth.mfa.getAuthenticatorAssuranceLevel(),
      client.rpc('has_current_platform_admin_role')
    ]);

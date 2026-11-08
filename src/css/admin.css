@@ -196,6 +196,10 @@
   .staff-list > .staff-row > .button-row { justify-content: flex-start; }
 }
 
+/* School position: device location helper and map check link. */
+.location-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.location-tools .help { flex-basis: 100%; margin: 0; }
+.location-tools .help:empty { display: none; }
 /* Regole della scuola dentro «Impostazioni scuola»: le classi sono un blocco a parte. */
 .school-settings-root { display: grid; gap: var(--space-5); }
 .school-settings-classes { padding-top: var(--space-5); border-top: 1px solid var(--line); }
