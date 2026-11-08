@@ -1,5 +1,6 @@
 import { getAdminSchools } from '../catalog/utils.js';
 import { accuratePosition } from '../../core/geolocation.js';
+import { romeToday } from '../../core/pickup-time.js';
 
 // OpenStreetMap link to check the saved point; nothing is loaded in the page.
 export function mapLink(lat,lon){
@@ -91,7 +92,7 @@ export function initializeAdminOrderSetup(client) {
     tell('Caricamento impostazioni dal database...');
     const [slots,pros,availability]=await Promise.all([
       client.from('pickup_windows').select('id,service_date,starts_at,ends_at,is_active')
-        .eq('school_id',school_id).eq('bar_id',bar_id).order('service_date',{ascending:true}).order('starts_at',{ascending:true}).limit(80),
+        .eq('school_id',school_id).eq('bar_id',bar_id).gte('service_date',romeToday()).order('service_date',{ascending:true}).order('starts_at',{ascending:true}).limit(80),
       client.from('products').select('id,name,is_active').eq('school_id',school_id).eq('bar_id',bar_id).order('name'),
       client.from('daily_stock').select('id,product_id,service_date,capacity,allocated')
         .eq('school_id',school_id).eq('bar_id',bar_id).eq('service_date',day.value||'1900-01-01').order('product_id')
