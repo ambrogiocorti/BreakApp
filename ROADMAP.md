@@ -6,11 +6,11 @@ Stati: **COMPLETATO E VERIFICATO** (codice, database, test automatici e prova ne
 
 | Area | Stato | Problemi aperti | Priorità | Test | Azione |
 | --- | --- | --- | --- | --- | --- |
-| Ruoli e contesto scuola | IMPLEMENTATO MA NON ANCORA VERIFICATO | Vincolo DB «una scuola e un ruolo» (PR #94) in attesa di applicazione; prova con l'account Admin DEMO reale da fare | P0 | Unit `role-workspace`, `single-school-context`, e2e `workspace` | PR #97, poi PR #94 |
+| Ruoli e contesto scuola | IMPLEMENTATO MA NON ANCORA VERIFICATO | Vincolo DB «una scuola e un ruolo» applicato l'8/11 (PR #94, confermato dal titolare); prova con l'account Admin DEMO reale da fare | P0 | Unit `role-workspace`, `single-school-context`, DB `one-school-one-role`, e2e `workspace` | PR #97 |
 | 2FA Admin/Super Admin | IMPLEMENTATO MA NON ANCORA VERIFICATO | Prova manuale con TOTP reale da ripetere dopo #97 | P0 | Unit `superadmin-exclusive`, e2e `auth` | Collaudo manuale |
 | Ingresso gruppi senza GPS | COMPLETATO E VERIFICATO (DB + CI) | Prova su telefono fisico | P1 | DB `group-join-anywhere`, e2e `groups` | Integrato con #95 |
 | GPS alla conferma (individuale e coordinatore) | IMPLEMENTATO MA NON ANCORA VERIFICATO | GPS fisico non provato | P1 | e2e `checkout` con posizione simulata | Collaudo su telefono |
-| Coordinate scuola modificabili dall'Admin | IMPLEMENTATO MA NON ANCORA VERIFICATO | Latitudine, longitudine e raggio esistevano; aggiunti indirizzo, posizione del dispositivo, controllo su mappa esterna e storico. Migrazione da applicare; mappa interattiva non inclusa | P1 | Unit `school-location` | PR #97 |
+| Coordinate scuola modificabili dall'Admin | IMPLEMENTATO MA NON ANCORA VERIFICATO | Latitudine, longitudine e raggio esistevano; aggiunti indirizzo, posizione del dispositivo, controllo su mappa esterna e storico. Migrazione applicata; mappa interattiva non inclusa | P1 | Unit `school-location` | PR #97 |
 | Stripe DEMO | NON COMPLETATO | Nessun merchant TEST associato alla DEMO (causa dell'errore non-2xx) | P0 | — | Account Connect TEST da creare (azione del titolare) |
 | Stripe stato merchant | IMPLEMENTATO MA NON ANCORA VERIFICATO | Endpoint da iscrivere a `account.updated` | P1 | Unit `stripe-account-status`, DB `stripe-account-status` | PR #97 |
 | Stripe individuale TEST | COMPLETATO E VERIFICATO (ITSOS, 04/11) | Prova da interfaccia cliente/staff | P1 | Unit, DB, prova reale TEST | Ripetere nella DEMO |
