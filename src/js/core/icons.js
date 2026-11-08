@@ -11,6 +11,7 @@ const paths = Object.freeze({
  MessageSquareText:'M21 15a3 3 0 0 1-3 3H8l-5 4V6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3z M7 8h10 M7 12h7',
  Boxes:'m12 3 9 5-9 5-9-5z M3 8v10l9 5 9-5V8 M12 13v10 M7.5 5.5l9 5',
  ShoppingBag:'M5 7h14l2 14H3z M9 7V5a3 3 0 0 1 6 0v2',
+ Tag:'M3 12V3h9l9 9-9 9z M7.5 7.5h.01',
  SlidersHorizontal:'M3 6h5 M12 6h9 M3 18h9 M16 18h5 M8 3v6 M12 15v6',
  UtensilsCrossed:'M4 3v5a3 3 0 0 0 6 0V3 M7 3v18 M20 21V3c-4 2-5 8 0 10',
  Plus:'M12 5v14 M5 12h14',

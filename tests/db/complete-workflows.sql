@@ -152,7 +152,12 @@ begin
  denied:=false;begin perform public.submit_promoted_order('81000000-0000-4000-8000-000000000002','81000000-0000-4000-8000-000000000007','[{"product_id":"81000000-0000-4000-8000-000000000004","quantity":2}]',gen_random_uuid(),45,9,10,now(),'TEST25');exception when others then denied:=true;end;
  if not denied then raise exception 'Coupon quota bypassed';end if;
  perform pg_temp.actor('85555555-5555-4555-8555-555555555555','authenticated','aal2');
- j:=public.platform_onboard_school('workflow-second','Second school','Second bar',45,9,'ready_made','workflow-admin@test.invalid');
+ -- Un Admin che ha già una scuola non può riceverne una seconda: l'intera
+ -- creazione viene annullata.
+ denied:=false;begin perform public.platform_onboard_school('workflow-refused','Refused school','Refused bar',45,9,'ready_made','workflow-admin@test.invalid');exception when others then denied:=true;end;
+ if not denied or exists(select 1 from public.schools where slug='workflow-refused') then raise exception 'Onboarding gave a second school to an existing admin';end if;
+ j:=public.platform_onboard_school('workflow-second','Second school','Second bar',45,9,'ready_made','workflow-new-admin@test.invalid');
+ if j->'admin'->>'status'<>'invited' or coalesce(j->'admin'->>'code','')='' then raise exception 'Onboarding did not invite the first admin';end if;
  if not exists(select 1 from public.bar_service_state where bar_id=(j->>'bar_id')::uuid and not accepting_orders) then raise exception 'New school opened before setup';end if;
  perform pg_temp.actor('84444444-4444-4444-8444-444444444444','authenticated','aal2');
  if public.import_school_classes('81000000-0000-4000-8000-000000000001','["5A","5B","5A"]')<>2 then raise exception 'Class import duplicate handling incorrect';end if;

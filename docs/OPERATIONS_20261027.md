@@ -35,7 +35,7 @@ Centro notifiche → Preferenze: salvare le categorie push e gli avvisi di siste
 
 Il dispatcher genera promemoria a circa 5 minuti dal ritiro, con il saldo individuale o del coordinatore. I membri con proprie righe ancora scoperte ricevono un avviso di pagamento; quelli già saldati no. A circa 15 minuti dall'ultima chiusura della giornata, solo gli ordini pronti e non ritirati ricevono il richiamo; per un gruppo il destinatario è esclusivamente il coordinatore. Non è una nuova autorizzazione al ritiro anticipato. Le chiavi di deduplicazione comprendono ordine, fascia e destinatario; retry e batch successivi non duplicano i promemoria.
 
-Migrazioni aggiunte: `20261027212824_notification_preferences.sql` e `20261027213135_scheduled_pickup_reminders.sql`, applicate anche a breakapp-dev. Il dispatcher ora limita le consegne contemporanee e impone un timeout al provider. Una sesta consegna interrotta termina la coda invece di restare indefinitamente in stato sending.
+Migrazioni aggiunte: `20261027213355_user_notification_preferences_and_device_revocation.sql` e `20261027213421_idempotent_pickup_and_closing_reminders.sql`, applicate anche a breakapp-dev. Il dispatcher ora limita le consegne contemporanee e impone un timeout al provider. Una sesta consegna interrotta termina la coda invece di restare indefinitamente in stato sending.
 
 ## Verifiche
 

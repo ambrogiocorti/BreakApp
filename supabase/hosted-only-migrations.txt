@@ -1,0 +1,6 @@
+# Migrazioni che richiedono servizi presenti solo su Supabase ospitato
+# (pg_cron, pg_net, estensione http, Vault). La CI su PostgreSQL le salta;
+# su Supabase sono già applicate e registrate nello storico.
+20261027191724_hosted_push_scheduler.sql
+20261027194231_enable_synchronous_http_dispatch.sql
+20261027213045_switch_scheduler_to_synchronous_http.sql

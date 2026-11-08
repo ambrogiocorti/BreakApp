@@ -1,5 +1,6 @@
 // Full application bootstrap for visual reviews and browser tests. It mirrors
 // src/js/main.js but injects the in-memory client and fictional data.
+import { initializeSingleChoiceFields } from '../../../src/js/core/single-choice.js';
 import '../../../src/css/app.css';
 import { initializeTheme } from '../../../src/js/core/theme.js';
 import { initializeAuth } from '../../../src/js/features/auth/auth.js';
@@ -21,6 +22,7 @@ import { initializeCashWorkspace } from '../../../src/js/features/operations/cas
 import { initializeReports } from '../../../src/js/features/shell/reports.js';
 import { initializeOrderWorkflows } from '../../../src/js/features/operations/workflows.js';
 import { initializeCompletionUI } from '../../../src/js/features/operations/completion-ui.js';
+import { initializeSchoolAdmin } from '../../../src/js/features/operations/school-admin.js';
 import { initializeGuestAccess } from '../../../src/js/features/auth/guest.js';
 import { createMockClient } from './mock-client.js';
 import { demoState } from './demo-data.js';
@@ -47,6 +49,7 @@ if (params.get('geo') !== 'native') {
   } });
 }
 initializeTheme();
+initializeSingleChoiceFields();
 const client = initializeAuth({ configured: true, url: 'https://demo.invalid', publishableKey: 'demo' }, () => mock);
 initializeGuestAccess(client);
 initializePublicMenu(client);
@@ -65,6 +68,7 @@ initializeCashWorkspace(client, offlineTerminal);
 initializeReports(client);
 initializeOfflineReview(client);
 initializeCompletionUI(client);
+initializeSchoolAdmin(client);
 initializeOrderWorkflows(client);
 initializeWorkspace(client);
 window.demo.ready = true;

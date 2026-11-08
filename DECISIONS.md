@@ -39,6 +39,15 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - I pagamenti Stripe sono rimborsati ai pagatori effettivi e risultano completati soltanto dopo conferma del provider/webhook; contanti e POS esterno richiedono un'uscita fisica registrata con turno aperto, conferma e motivazione. Il software non esegue storni su POS esterni.
 - L'elenco operativo mostra soltanto le restituzioni pendenti e applica controllo di scuola/ruolo; l'anonimo non può invocare la nuova RPC. Il collaudo E2E con carta di test, webhook e rimborso resta una verifica bloccante per la vendita.
 
+## 6 novembre 2026 — Correzioni dal report di valutazione
+
+- «Una scuola e un ruolo per account» è un vincolo del database: un'appartenenza per account e un ruolo per appartenenza (indici unici). Il Super Admin non ha appartenenze: agisce su tutte le scuole tramite `platform_admins`.
+- La vecchia assegnazione del Super Admin e la creazione di una scuola passano dagli stessi controlli degli inviti; se il primo Admin non ha un account riceve un invito con codice. `school_assign_staff` è ritirata. Revocare l'ultimo ruolo rimuove anche l'appartenenza.
+- Decisione di Ambrogio: lo studente ordina solo dal bar della propria scuola. La prima prenotazione o il primo gruppo lo collegano come cliente; ordini, gruppi e ingressi in altre scuole sono rifiutati dal database (anche per il personale). Uno studente collegato come cliente non può diventare personale con lo stesso account.
+- GitHub Pages ignora `_headers`: la CSP è inserita in un tag `<meta>` durante la build. `frame-ancestors` e le altre intestazioni restano da applicare con un hosting che le supporti.
+- Admin scuola: «Personale» e «Promozioni» hanno una voce di menu; limite delle richieste, mancati ritiri e classi sono in «Impostazioni scuola». «Richieste» resta per approvazioni, modifiche e rimborsi. Un selettore con una sola scuola non viene mostrato.
+- Le migrazioni del repository hanno le stesse versioni dello storico Supabase (vedi `docs/SUPABASE_MIGRATIONS.md`).
+
 ## 7 novembre 2026 — Accesso ai gruppi e diagnosi pagamenti
 
 - Modifica richiesta e confermata: per entrare in un gruppo con invito valido non serve essere fisicamente vicino alla scuola né autorizzare il GPS. Rimangono invariati i controlli di invito, scadenza, capienza, approvazione, sessione e ruoli.

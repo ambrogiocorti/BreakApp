@@ -1,4 +1,5 @@
 import '../css/app.css';
+import { initializeSingleChoiceFields } from './core/single-choice.js';
 import { readSupabaseConfig } from './core/config.js';
 import { initializeTheme } from './core/theme.js';
 import { initializeAuth } from './features/auth/auth.js';
@@ -20,9 +21,11 @@ import { initializeCashWorkspace } from './features/operations/cash.js';
 import { initializeReports } from './features/shell/reports.js';
 import { initializeOrderWorkflows } from './features/operations/workflows.js';
 import { initializeCompletionUI } from './features/operations/completion-ui.js';
+import { initializeSchoolAdmin } from './features/operations/school-admin.js';
 import { initializeGuestAccess } from './features/auth/guest.js';
 
 initializeTheme();
+initializeSingleChoiceFields();
 const client = initializeAuth(readSupabaseConfig(import.meta.env));
 initializeGuestAccess(client);
 initializePublicMenu(client);
@@ -41,6 +44,7 @@ initializeCashWorkspace(client,offlineTerminal);
 initializeReports(client);
 initializeOfflineReview(client);
 initializeCompletionUI(client);
+initializeSchoolAdmin(client);
 initializeOrderWorkflows(client);
 initializeWorkspace(client);
 

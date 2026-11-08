@@ -7,6 +7,21 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     const page=await browser.newPage({viewport});
     const failures=[];
     page.on('pageerror',e=>failures.push(e.message));
+    // Le violazioni CSP si leggono dall'evento securitypolicyviolation, con il
+    // dettaglio. In WebKit Playwright inserisce un proprio foglio di stile fuori
+    // dal DOM della pagina (target = documento, nessun elemento): non è
+    // codice di BreakApp e la CSP lo blocca correttamente, quindi è ignorato.
+    page.on('console',message=>{
+      const text=message.text();if(!text.startsWith('CSP detail: '))return;
+      const v=JSON.parse(text.slice(12));
+      if(v.element==='#document'&&/^style-src/.test(v.directive)&&v.blocked==='inline')return;
+      failures.push('CSP violation: '+text);
+    });
+    // Dettagli della violazione (elemento, sorgente, estratto) per capire cosa la causa.
+    await page.addInitScript(()=>{document.addEventListener('securitypolicyviolation',e=>{
+      const t=e.target,el=t&&t.nodeType===1?t.outerHTML.slice(0,160):String(t&&t.nodeName);
+      console.log('CSP detail: '+JSON.stringify({directive:e.violatedDirective,blocked:e.blockedURI,source:e.sourceFile,line:e.lineNumber,sample:e.sample,element:el}));
+    },true);});
     page.on('requestfailed',request=>{
       if(new URL(request.url()).origin===new URL(site).origin&&['script','stylesheet'].includes(request.resourceType()))
         failures.push('asset failed: '+request.url());
@@ -26,6 +41,8 @@ for (const [name,engine] of Object.entries({chromium,firefox,webkit}).filter(([n
     if(!/accedi|accesso|login/i.test(doc))failures.push('login not present');
     const manifest=await page.locator('link[rel="manifest"]').getAttribute('href');
     if(!manifest?.includes('/BreakApp/manifest.webmanifest'))failures.push('incorrect manifest path: '+manifest);
+    const csp=await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content').catch(()=>null);
+    if(!csp||!/script-src 'self'/.test(csp)||!/object-src 'none'/.test(csp))failures.push('missing Content-Security-Policy meta');
     const main=await page.locator('main').count();
     if(!main)failures.push('missing main landmark');
     const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));
