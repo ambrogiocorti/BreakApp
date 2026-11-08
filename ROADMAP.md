@@ -1,5 +1,29 @@
 # Stato della piattaforma
 
+## Matrice di avanzamento — 8 novembre 2026
+
+Stati: **COMPLETATO E VERIFICATO** (codice, database, test automatici e prova nell'ambiente pertinente), **IMPLEMENTATO MA NON ANCORA VERIFICATO** (codice presente, manca una prova end-to-end reale), **NON COMPLETATO**. La presenza del codice da sola non basta per il primo stato. Unico progetto Supabase: `breakapp-dev` (piano Free). Nessun pagamento LIVE.
+
+| Area | Stato | Problemi aperti | Priorità | Test | Azione |
+| --- | --- | --- | --- | --- | --- |
+| Ruoli e contesto scuola | IMPLEMENTATO MA NON ANCORA VERIFICATO | Vincolo DB «una scuola e un ruolo» (PR #94) in attesa di applicazione; prova con l'account Admin DEMO reale da fare | P0 | Unit `role-workspace`, `single-school-context`, e2e `workspace` | PR #97, poi PR #94 |
+| 2FA Admin/Super Admin | IMPLEMENTATO MA NON ANCORA VERIFICATO | Prova manuale con TOTP reale da ripetere dopo #97 | P0 | Unit `superadmin-exclusive`, e2e `auth` | Collaudo manuale |
+| Ingresso gruppi senza GPS | COMPLETATO E VERIFICATO (DB + CI) | Prova su telefono fisico | P1 | DB `group-join-anywhere`, e2e `groups` | Integrato con #95 |
+| GPS alla conferma (individuale e coordinatore) | IMPLEMENTATO MA NON ANCORA VERIFICATO | GPS fisico non provato | P1 | e2e `checkout` con posizione simulata | Collaudo su telefono |
+| Coordinate scuola modificabili dall'Admin | NON COMPLETATO | Oggi le imposta solo la creazione scuola; manca la schermata Admin con mappa | P1 | — | Prossimo incremento |
+| Stripe DEMO | NON COMPLETATO | Nessun merchant TEST associato alla DEMO (causa dell'errore non-2xx) | P0 | — | Account Connect TEST da creare (azione del titolare) |
+| Stripe stato merchant | IMPLEMENTATO MA NON ANCORA VERIFICATO | Endpoint da iscrivere a `account.updated` | P1 | Unit `stripe-account-status`, DB `stripe-account-status` | PR #97 |
+| Stripe individuale TEST | COMPLETATO E VERIFICATO (ITSOS, 04/11) | Prova da interfaccia cliente/staff | P1 | Unit, DB, prova reale TEST | Ripetere nella DEMO |
+| Stripe gruppi e rimborso a terzi | IMPLEMENTATO MA NON ANCORA VERIFICATO | Scenario Anna/Luca solo in test DB, mai con Stripe TEST reale | P1 | DB `group-refunds` | Collaudo TEST dopo merchant DEMO |
+| Scorte concorrenti | COMPLETATO E VERIFICATO (DB) | — | P2 | DB `orders-smoke` | — |
+| Offline Barista | IMPLEMENTATO MA NON ANCORA VERIFICATO | Mai provato su tablet reale disconnesso | P1 | Unit, DB `offline-security` | Collaudo su dispositivo |
+| Notifiche push | IMPLEMENTATO MA NON ANCORA VERIFICATO | Nessuna prova su telefoni fisici | P2 | Unit, e2e `notifications` | Collaudo su dispositivi |
+| Grafica e UX | IMPLEMENTATO MA NON ANCORA VERIFICATO | Il titolare chiede un rifacimento (8/11); logo nuovo da approvare | P1 | e2e visivi | Fase 2 |
+| Backup | IMPLEMENTATO MA NON ANCORA VERIFICATO | Restore completo su progetto separato mai eseguito | P2 | Workflow backup | Prova di ripristino |
+| Hosting | COMPLETATO E VERIFICATO (GitHub Pages) | CSP via meta (PR #94); Cloudflare solo come piano futuro | P2 | Workflow `github-pages` | — |
+
+Blocchi esterni: account Connect TEST per la DEMO e iscrizione a `account.updated` (dashboard Stripe del titolare); telefoni e tablet fisici; consulenza legale/fiscale (GDPR minori, corrispettivi, contratti).
+
 ## Esperienza cliente — 5 novembre 2026
 
 La pagina Gruppi mostra prima i gruppi esistenti; creazione, ingresso, partecipanti, pagamenti e impostazioni si aprono quando richiesti. Gli stati sono leggibili in italiano e un ospite non vede la creazione di gruppi. Quando si preme «Ho finito», le quantità modificate vengono salvate prima dello stato di pronto; la conferma non procede con modifiche non salvate.
