@@ -30,7 +30,8 @@ test('an admin awaiting 2FA remains admin, not customer, even with a stale prefe
  assert.equal(selected.schoolId,a);
  assert.equal(selected.verified,false);
  assert.equal(ctx.some(x=>x.role==='customer'&&x.schoolId===a),false);
- assert.equal(ctx.some(x=>x.role==='customer'&&x.schoolId===b),true);
+ // One school, one role: the admin gets no customer context in other schools.
+ assert.equal(ctx.some(x=>x.role==='customer'),false);
 });
 test('last valid context is restored; invalid stored value cannot confer privileges',()=>{
  const ctx=contextsFromMemberships([], [{id:a,name:'School A'}],true,false);
