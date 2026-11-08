@@ -14,6 +14,8 @@
 .menu-place-text strong { font-size: var(--text-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu-place-change { flex: none; font-size: var(--text-sm); font-weight: 700; color: var(--lavagna); }
 .menu-place-picker[open] .menu-place-change { visibility: hidden; }
+.menu-place-picker[data-fixed] > summary { cursor: default; }
+.menu-place-picker[data-fixed] .menu-place-change { display: none; }
 .menu-toolbar { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); align-items: end; padding: 0 var(--space-4) var(--space-4); }
 .menu-toolbar .button { justify-self: start; }
 

@@ -195,3 +195,10 @@
   .staff-list > .staff-row { grid-template-columns: minmax(0, 1fr); }
   .staff-list > .staff-row > .button-row { justify-content: flex-start; }
 }
+
+/* Regole della scuola dentro «Impostazioni scuola»: le classi sono un blocco a parte. */
+.school-settings-root { display: grid; gap: var(--space-5); }
+.school-settings-classes { padding-top: var(--space-5); border-top: 1px solid var(--line); }
+.school-settings-classes h3 { font-size: var(--text-md); }
+.promotion-bundle { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-4); display: grid; gap: var(--space-3); }
+.promotion-bundle legend { padding: 0 var(--space-2); font-weight: 700; }

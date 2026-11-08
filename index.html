@@ -311,7 +311,7 @@
                   <label for="groups-create-title">Nome del gruppo</label>
                   <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Merenda 4A" />
                 </div>
-                <div class="field"><label for="groups-school">Scuola</label><select id="groups-school" required></select></div>
+                <div class="field"><label for="groups-school">Scuola</label><select id="groups-school" required data-hide-single></select></div>
                 <div class="field"><label for="groups-bar">Bar</label><select id="groups-bar" required></select></div>
                 <div class="field field-wide"><label for="groups-window">Ritiro</label><select id="groups-window" required></select></div>
                 <details class="disclosure field-wide">
@@ -541,7 +541,7 @@
           <details class="panel panel-disclosure support-new" id="support-new-panel">
             <summary><span>Nuova richiesta</span><small>Ordine, pagamento, prodotto o servizio</small></summary>
             <form id="support-create-form" class="panel-body form-grid">
-              <div class="field"><label for="support-school">Scuola</label><select id="support-school" required></select></div>
+              <div class="field"><label for="support-school">Scuola</label><select id="support-school" required data-hide-single></select></div>
               <div class="field"><label for="support-category">Argomento</label>
                 <select id="support-category">
                   <option value="order">Ordine</option>
@@ -824,7 +824,7 @@
 
       <section id="admin-catalog" class="catalog-section" aria-label="Catalogo" hidden>
         <div class="page-toolbar">
-          <div class="field field-inline"><label for="catalog-school">Scuola</label><select id="catalog-school" aria-label="Scuola da amministrare"></select></div>
+          <div class="field field-inline"><label for="catalog-school">Scuola</label><select id="catalog-school" aria-label="Scuola da amministrare" data-hide-single></select></div>
           <div class="field field-inline"><label for="catalog-bar">Bar</label><select id="catalog-bar" aria-label="Bar da amministrare"></select></div>
           <button id="catalog-refresh" type="button" class="button button-ghost button-small">Aggiorna</button>
         </div>
@@ -873,9 +873,18 @@
         </div>
       </section>
 
+      <section id="school-staff" class="school-staff-section" aria-label="Personale" hidden>
+        <div id="school-staff-root" class="school-admin-root"></div>
+      </section>
+
+      <section id="school-promotions" class="school-promotions-section" aria-label="Promozioni" hidden>
+        <p id="school-promotions-status" class="feedback" role="status" aria-live="polite"></p>
+        <div id="school-promotions-root" class="school-admin-root"></div>
+      </section>
+
       <section id="admin-order-setup" class="setup-section" aria-label="Regole di prenotazione" hidden>
         <div class="page-toolbar">
-          <div class="field field-inline"><label for="ops-school">Scuola</label><select id="ops-school"></select></div>
+          <div class="field field-inline"><label for="ops-school">Scuola</label><select id="ops-school" data-hide-single></select></div>
           <div class="field field-inline"><label for="ops-bar">Bar</label><select id="ops-bar"></select></div>
           <button type="button" class="button button-ghost button-small" id="ops-refresh">Aggiorna</button>
         </div>
@@ -917,6 +926,11 @@
               <div class="field-wide"><button type="submit" class="button button-primary">Salva scorta</button></div>
             </form>
             <div id="ops-stock-list" class="row-list catalog-list"></div>
+          </section>
+          <section class="panel" id="school-settings-panel" hidden aria-labelledby="school-settings-title">
+            <div class="panel-head"><h2 id="school-settings-title">Regole della scuola</h2></div>
+            <p id="school-settings-status" class="feedback" role="status" aria-live="polite"></p>
+            <div id="school-settings-root" class="school-settings-root"></div>
           </section>
         </div>
       </section>

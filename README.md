@@ -34,7 +34,7 @@ Flussi applicativi implementati e coperti da test. [ROADMAP.md](ROADMAP.md) dist
 
 ## Database e verifiche
 
-La baseline storica è in `supabase/sql/`, nell'ordine specificato dal workflow `database.yml`. Le nuove migrazioni CLI timestampate, in `supabase/migrations/`, vengono applicate dopo la baseline. Non usare `db push` su un database vuoto prima di aver ricostruito e riconciliato la cronologia storica.
+La baseline storica è in `supabase/sql/`, nell'ordine specificato dal workflow `database.yml`. Le nuove migrazioni CLI timestampate, in `supabase/migrations/`, vengono applicate dopo la baseline. Le versioni dei file coincidono con lo storico di Supabase: vedi [docs/SUPABASE_MIGRATIONS.md](docs/SUPABASE_MIGRATIONS.md). Non usare `db push` su un database vuoto prima di aver ricostruito e riconciliato la cronologia storica.
 
 La CI verifica sintassi, unit test, build, PostgreSQL 17, autorizzazioni, concorrenza stock e restore di un database temporaneo. Un workflow separato usa Chromium/Firefox/WebKit su desktop e mobile emulato. Non sostituisce il pilota fisico.
 

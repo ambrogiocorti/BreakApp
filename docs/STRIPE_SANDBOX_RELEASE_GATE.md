@@ -37,7 +37,7 @@ Le PR [#76](https://github.com/ambrogiocorti/BreakApp/pull/76) e [#77](https://g
 
 **Ancora aperto:** produrre e consegnare in Stripe TEST un `refund.failed` e un `checkout.session.async_payment_failed` effettivi, oltre a verificare il flusso completo da UI cliente/staff e i gruppi multipagatore. Il gate resta negativo fino alle prove richieste.
 
-Le migrazioni sono state applicate al DEV tramite il connettore, che assegna un timestamp diverso da quello del file Git: `20261104203342_reconcile_async_checkout_failure.sql` → versione remota `20261104204241`; `20261104203732_reconcile_refund_current_status.sql` → `20261104204931`. Questa differenza si aggiunge al disallineamento storico e va riconciliata prima di usare comandi automatici di allineamento migrazioni; non modificare manualmente la storia remota.
+Le migrazioni sono state applicate al DEV tramite il connettore, che assegna un timestamp diverso da quello del file Git. Il 06/11/2026 i file sono stati rinominati con le versioni remote (`20261104204241_reconcile_async_checkout_failure.sql`, `20261104204931_reconcile_refund_current_status.sql`): vedi [SUPABASE_MIGRATIONS.md](SUPABASE_MIGRATIONS.md).
 
 ## Test finanziario obbligatorio con sandbox e utente di prova
 
