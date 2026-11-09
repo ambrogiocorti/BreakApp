@@ -1,5 +1,4 @@
 -- Il controllo GPS e' opzionale per scuola, ma sempre deciso dal server.
--- Versione sincronizzata con lo storico remoto di breakapp-dev.
 -- Default conservativo: tutte le scuole esistenti mantengono la verifica.
 alter table public.schools
  add column if not exists require_geolocation boolean not null default true;
