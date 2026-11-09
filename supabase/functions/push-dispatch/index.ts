@@ -10,6 +10,8 @@ type PushJob={job_id:string;notice_id?:string;event_type?:string;
 function notificationSummary(job:PushJob){
  if(job.group_id||job.event_type?.startsWith('group_'))return {title:'BreakApp · Gruppi',body:'C’è un aggiornamento nel tuo gruppo.',url:'#groups'};
  if(job.ticket_id||job.event_type?.startsWith('support_'))return {title:'BreakApp · Assistenza',body:'Hai una novità nella tua richiesta.',url:'#support-center'};
+ if(job.event_type?.startsWith('school_'))return {title:'BreakApp · Scuola',body:'Hai un nuovo avviso della scuola.',url:'#accesso'};
+ if(job.event_type==='cash_anomaly')return {title:'BreakApp · Cassa',body:'Controlla una segnalazione di cassa.',url:'#cash-workspace'};
  if(job.event_type?.includes('refund'))return {title:'BreakApp · Rimborso',body:'Controlla lo stato del tuo rimborso.',url:'#orders'};
  if(job.event_type?.includes('payment'))return {title:'BreakApp · Pagamento',body:'Controlla lo stato del pagamento.',url:'#orders'};
  return {title:'BreakApp · Ordini',body:'C’è un aggiornamento sul tuo ordine.',url:'#orders'};

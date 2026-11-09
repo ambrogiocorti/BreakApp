@@ -7,6 +7,8 @@ test('notifications show a clear category and a human readable date',()=>{
  assert.equal(noticeCategory('group_join_requested').label,'Gruppo');
  assert.equal(noticeCategory('refund_issue').label,'Rimborso');
  assert.equal(noticeCategory('support_reply').label,'Assistenza');
+ assert.equal(noticeCategory('school_announcement').label,'Avviso scuola');
+ assert.equal(noticeCategory('cash_anomaly').label,'Avviso scuola');
  assert.equal(noticeCategory('order_status').label,'Ordine');
  assert.equal(noticeTime('invalid'),'Data non disponibile');
  assert.match(noticeTime('2026-11-09T12:36:01Z',new Date('2026-11-09T15:00:00Z')),/Oggi/);

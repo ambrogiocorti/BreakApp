@@ -24,7 +24,10 @@ export function noticeCategory(type=''){
  if(type.startsWith('support_'))return {label:'Assistenza',symbol:'?',tone:'support'};
  if(type.includes('refund'))return {label:'Rimborso',symbol:'€',tone:'money'};
  if(type.includes('payment'))return {label:'Pagamento',symbol:'€',tone:'money'};
- if(type.includes('closure'))return {label:'Avviso scuola',symbol:'!',tone:'warning'};
+ if(type.startsWith('school_')||type==='cash_anomaly'||type.includes('closing_reminder'))
+   return {label:'Avviso scuola',symbol:'!',tone:'warning'};
+ if(!type||!type.includes('order')&&!type.includes('pickup'))
+   return {label:'Aggiornamento',symbol:'•',tone:'order'};
  return {label:'Ordine',symbol:'✓',tone:'order'};
 }
 export function noticeTime(value,now=new Date()){
