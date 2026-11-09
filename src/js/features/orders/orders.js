@@ -854,9 +854,10 @@ export function initializeOrders(client) {
             selectedRefund=o;
             refundForm.reset();
             refundFeedback.textContent='';
+            // payment_method records the booking choice, not how the order was
+            // actually paid: the server routes each paid amount from the ledger.
             refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents)+
-              ' · '+(o.payment_method==='stripe'?'Pagamento online Stripe':o.payment_method==='external_pos'?'POS esterno':'Pagamento al banco')+
-              '. Verrà rimborsato solo il credito residuo effettivamente incassato.';
+              '. Verrà rimborsato solo il credito effettivamente incassato: la parte pagata online torna in automatico al pagatore con Stripe, quella in contanti o POS va restituita al banco.';
             refundDialog.showModal();
             refundReason.focus();
           });
