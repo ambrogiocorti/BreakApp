@@ -75,3 +75,9 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 - Ordine pronto da pagare al banco: «Incassa e consegna» con «Contanti» o «POS» e **una sola conferma** con l'importo reale. Il client esegue le stesse due chiamate di prima (registra l'incasso, poi la consegna); il server continua a rifiutare la consegna di un ordine non pagato. Stessa cosa nella finestra della scansione QR.
 - Nella conferma il pulsante «Conferma» ha il focus: Invio o Spazio confermano. Nel campo di ricerca «numero + Invio» porta all'ordine e mette il focus sul suo pulsante principale.
 - Nessuna regola di pagamento, consegna o scorte cambia.
+
+## 9 novembre 2026 — Nuova grafica solo su telefono
+
+- Decisione di Ambrogio: il logo resta com'è; le visualizzazioni della proposta grafica valgono **solo per il telefono**. Tablet e computer restano con la grafica attuale.
+- Tutte le regole stanno in `src/css/mobile.css`, dentro `@media (max-width: 719px)`: scegliere il bar diventa un'intestazione verde lavagna, la barra del carrello è color tuorlo, l'ordine pronto è evidenziato in tuorlo, il QR di ritiro mostra il numero d'ordine in grande, la barra del barista occupa meno spazio.
+- Solo aspetto: nessun comportamento, testo o regola cambia.

@@ -1,4 +1,4 @@
-/* BreakApp stylesheet entry. Order matters: tokens → base → components → shell → pages. */
+/* BreakApp stylesheet entry. Order matters: tokens → base → components → shell → pages → phone-only refresh. */
 @import './tokens.css';
 @import './base.css';
 @import './components.css';
@@ -9,3 +9,4 @@
 @import './groups.css';
 @import './staff.css';
 @import './admin.css';
+@import './mobile.css';
