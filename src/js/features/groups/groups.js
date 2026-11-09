@@ -1,5 +1,5 @@
 import {isUpcomingWindow} from '../../core/pickup-time.js';
-import {accuratePosition} from '../../core/geolocation.js';
+import {accuratePosition,schoolAccuracyLimit} from '../../core/geolocation.js';
 import {windowLabel} from '../orders/staff-board.js';
 import {confirmDialog} from '../../core/dialog.js';
 import {friendlyError} from '../../core/errors.js';
@@ -22,8 +22,8 @@ function inviteId(input){
   throw new Error('Incolla un link di invito valido o il relativo codice UUID.');
  return candidate;
 }
-async function coordinates(onProgress){
- const p=await accuratePosition({onProgress});
+async function coordinates(onProgress,maxAccuracy){
+ const p=await accuratePosition({onProgress,maxAccuracy});
  return {p_latitude:p.coords.latitude,p_longitude:p.coords.longitude,
   p_accuracy_m:p.coords.accuracy,p_observed_at:new Date(p.timestamp).toISOString()};
 }
@@ -41,7 +41,8 @@ export function initializeGroupDrafts(client){
  const locate=async(container,onProgress)=>{
   showLocation(container,'pending');
   try{
-   const result=await coordinates(accuracy=>{showLocation(container,'improving',{detail:'Precisione attuale: circa ±'+accuracy+' m (serve entro 100 m).'});onProgress?.(accuracy);});
+   const limit=await schoolAccuracyLimit(client,detail?.school_id||school.value);
+   const result=await coordinates(accuracy=>{showLocation(container,'improving',{detail:'Precisione attuale: circa ±'+accuracy+' m (serve entro '+limit+' m).'});onProgress?.(accuracy);},limit);
    showLocation(container,'ok',{detail:'Ora il server controlla che tu sia entro il raggio della scuola.'});
    return result;
   }catch(error){const key=locationProblem(error);if(key)showLocation(container,key,{detail:error.message});throw error;}

@@ -1,12 +1,27 @@
-// The server enforces the same 100 m accuracy limit and the school's radius.
+// The server enforces the same accuracy limit (set per school by its Admin,
+// 100 m by default) and the school's radius.
 // Keep listening briefly: the first position from a phone is often approximate.
 // Each error carries a `code` so the interface can explain what to do; the
 // checks themselves are unchanged and the server still decides.
 const geoError=(message,code,extra={})=>Object.assign(new Error(message),{code,...extra});
+export const DEFAULT_ACCURACY_M=100;
+/** A school's accuracy tolerance in metres (10–1000), else the 100 m default. */
+export function accuracyLimit(value){
+  const n=Number(value);
+  return value!=null&&Number.isInteger(n)&&n>=10&&n<=1000?n:DEFAULT_ACCURACY_M;
+}
+/** Reads the school's tolerance; any failure falls back to the default. */
+export async function schoolAccuracyLimit(client,schoolId){
+  if(!client||!schoolId)return DEFAULT_ACCURACY_M;
+  try{
+    const {data,error}=await client.from('schools').select('location_accuracy_m').eq('id',schoolId).maybeSingle();
+    return error?DEFAULT_ACCURACY_M:accuracyLimit(data?.location_accuracy_m);
+  }catch{return DEFAULT_ACCURACY_M;}
+}
 export function accuratePosition({
   geolocation=globalThis.navigator?.geolocation,
   timeoutMs=20000,
-  maxAccuracy=100,
+  maxAccuracy=DEFAULT_ACCURACY_M,
   onProgress=()=>{},
   signal
 }={}) {
@@ -28,7 +43,7 @@ export function accuratePosition({
     };
     const timeout=()=>{
       if(Number.isFinite(bestAccuracy)){
-        finish(geoError('Posizione ancora imprecisa (circa ±'+Math.ceil(bestAccuracy)+' m). Serve una precisione entro 100 m: attiva la posizione precisa e riprova vicino a una finestra o all’aperto.','accuracy',{accuracy:Math.ceil(bestAccuracy)}));
+        finish(geoError('Posizione ancora imprecisa (circa ±'+Math.ceil(bestAccuracy)+' m). Serve una precisione entro '+maxAccuracy+' m: attiva la posizione precisa e riprova vicino a una finestra o all’aperto.','accuracy',{accuracy:Math.ceil(bestAccuracy)}));
       }else if(invalidClock){
         finish(geoError('La posizione riporta un orario non valido. Controlla data e ora automatiche del dispositivo oppure riprova con un altro browser.','clock'));
       }else if(stalePosition){

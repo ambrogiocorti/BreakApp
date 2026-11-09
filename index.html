@@ -905,6 +905,7 @@
                 <p id="ops-position-status" class="help" role="status" aria-live="polite"></p>
               </div>
               <div class="field"><label for="ops-radius">Raggio consentito (m)</label><input type="number" id="ops-radius" min="100" max="10000" value="1000" required /></div>
+              <div class="field"><label for="ops-accuracy">Tolleranza precisione GPS (m)</label><input type="number" id="ops-accuracy" min="10" max="1000" step="1" value="100" required aria-describedby="ops-accuracy-help" /><p id="ops-accuracy-help" class="help">Precisione minima richiesta al telefono alla conferma. Più alta è, più facile è confermare, meno è sicura la verifica.</p></div>
               <div class="field"><label for="ops-horizon">Prenotabile fino a (giorni)</label><input type="number" id="ops-horizon" min="1" max="365" value="30" required /></div>
               <div class="field"><label for="ops-cutoff">Annullabile fino a (minuti prima)</label><input type="number" id="ops-cutoff" min="0" max="1440" value="10" required /></div>
               <div class="field"><label for="ops-max-unpaid">Ordini non pagati per persona</label><input type="number" id="ops-max-unpaid" min="1" max="50" value="3" required /></div>
