@@ -1,5 +1,5 @@
 // Explains the location check in plain words. It never decides anything: the
-// device reading goes to the server, which checks accuracy (100 m) and the
+// device reading goes to the server, which checks accuracy (the school's tolerance) and the
 // school's radius. Distance and accuracy are different problems and are worded
 // differently on purpose.
 const STATES = Object.freeze({
@@ -20,7 +20,7 @@ const STATES = Object.freeze({
   stale: { state: 'weak', title: 'Posizione non recente', tips: ['Riattiva la localizzazione e riprova.'] },
   unsupported: { state: 'unavailable', title: 'Posizione non supportata', tips: ['Prova con un browser aggiornato (Chrome, Safari, Firefox o Edge).'] },
   far: { state: 'far', title: 'Sei fuori dall’area della scuola', tips: ['La prenotazione si conferma solo entro il raggio stabilito dalla scuola.', 'Riprova quando sei a scuola.'] },
-  server_accuracy: { state: 'weak', title: 'Il server non ha accettato la precisione', tips: ['Serve una misura entro 100 m: attiva la posizione precisa e riprova all’aperto.'] },
+  server_accuracy: { state: 'weak', title: 'Il server non ha accettato la precisione', tips: ['Serve una misura più precisa di quella stabilita dalla scuola: attiva la posizione precisa e riprova all’aperto.'] },
   not_configured: { state: 'error', title: 'Posizione della scuola non configurata', tips: ['Avvisa l’Admin della scuola: senza coordinate non si possono confermare prenotazioni.'] },
   ok: { state: 'ok', title: 'Posizione verificata', tips: [] }
 });

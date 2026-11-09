@@ -2,7 +2,7 @@ import { romeToday, isUpcomingWindow } from '../../core/pickup-time.js';
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
-import { accuratePosition } from '../../core/geolocation.js';
+import { accuratePosition, schoolAccuracyLimit } from '../../core/geolocation.js';
 import { paymentError } from '../../core/payment-error.js';
 import { confirmDialog, toast } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
@@ -15,10 +15,10 @@ const report=(node,msg,error=false)=>{
   node.textContent=error?friendlyError(msg):msg; node.dataset.type=error?'error':'information';
 };
 const badge=(text,tone)=>{const node=elem('span',text,'status');node.dataset.tone=tone;return node;};
-function positionOnce(signal) {
-  return accuratePosition({signal,onProgress:accuracy=>showLocation(
+function positionOnce(signal,maxAccuracy) {
+  return accuratePosition({signal,maxAccuracy,onProgress:accuracy=>showLocation(
     document.querySelector('#order-location'),'improving',
-    {detail:'Precisione attuale: circa ±'+accuracy+' m (serve entro 100 m).'})});
+    {detail:'Precisione attuale: circa ±'+accuracy+' m (serve entro '+maxAccuracy+' m).'})});
 }
 export function initializeOrders(client) {
   if (!client) return;
@@ -461,7 +461,7 @@ export function initializeOrders(client) {
     const controller=new AbortController();locationAbort=controller;
     try {
       let loc;
-      try{loc=await positionOnce(controller.signal);}
+      try{loc=await positionOnce(controller.signal,await schoolAccuracyLimit(client,context.schoolId));}
       catch(error){const key=error.name!=='AbortError'&&locationProblem(error);if(key){showLocation(where,key,{detail:error.message});return;}throw error;}
       if(!stepper.open)return;
       showLocation(where,'ok',{detail:'Invio della prenotazione…'});

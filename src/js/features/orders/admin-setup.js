@@ -43,7 +43,7 @@ export function initializeAdminOrderSetup(client) {
   async function readSettings(){
     if(!school.value)return;
     const {data,error}=await client.from('schools')
-      .select('address,latitude,longitude,pickup_radius_m,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
+      .select('address,latitude,longitude,pickup_radius_m,location_accuracy_m,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
       .eq('id',school.value).single();
     if(error){tell(error.message,true);return;}
     const values={
@@ -51,6 +51,7 @@ export function initializeAdminOrderSetup(client) {
       'ops-latitude':data.latitude,
       'ops-longitude':data.longitude,
       'ops-radius':data.pickup_radius_m,
+      'ops-accuracy':data.location_accuracy_m,
       'ops-horizon':data.booking_horizon_days,
       'ops-cutoff':data.cancel_cutoff_minutes,
       'ops-max-unpaid':data.max_unpaid_orders_per_customer,
@@ -152,6 +153,9 @@ export function initializeAdminOrderSetup(client) {
     const {error:addressError}=await client.rpc('set_school_address',{
       p_school_id:school.value,p_address:val('ops-address')||null});
     if(addressError)return tell('Regole salvate, indirizzo non salvato: '+addressError.message,true);
+    const {error:accuracyError}=await client.rpc('set_school_location_accuracy',{
+      p_school_id:school.value,p_accuracy_m:Number(val('ops-accuracy'))});
+    if(accuracyError)return tell('Regole salvate, tolleranza GPS non salvata: '+accuracyError.message,true);
     tell('Regole scuola salvate.');await readSettings();
   });
   slotForm.addEventListener('submit',async event=>{
