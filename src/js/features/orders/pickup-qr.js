@@ -106,7 +106,7 @@ export function initializePickupQr(client) {
     }
     const actions=el('div','', 'order-actions');
     async function execute(label,query){
-      if(!await confirmDialog(label))return;
+      if(!await confirmDialog({title:'Confermi?',message:label,focusConfirm:true}))return;
       const buttons=[...actions.querySelectorAll('button')];
       buttons.forEach(button=>{button.disabled=true;});
       report('Registrazione dell’operazione sul server…');
@@ -125,17 +125,24 @@ export function initializePickupQr(client) {
       button.type='button';button.addEventListener('click',()=>void execute(message,callback));
       actions.append(button);
     }
+    // Payment at the counter and delivery in one confirmation: the same two
+    // server calls as before, in order; the server still refuses an unpaid delivery.
+    const collectAndDeliver=method=>async()=>{
+      const paid=await client.rpc('record_individual_counter_payment',{
+        p_order_id:order.id,p_method:method,p_request_key:crypto.randomUUID()
+      });
+      if(paid.error)return paid;
+      const delivered=await client.rpc('advance_individual_order',{p_order_id:order.id,p_next:'delivered'});
+      if(delivered.error)return {error:new Error('Incasso registrato, consegna non registrata: '+delivered.error.message)};
+      return delivered;
+    };
     if(order.payment_status==='due') {
-      command('Incassa contanti',
-        'Confermi di avere realmente ricevuto il residuo di '+formatEuro(order.due_cents)+' in contanti?',
-        ()=>client.rpc('record_individual_counter_payment',{
-          p_order_id:order.id,p_method:'cash',p_request_key:crypto.randomUUID()
-        }));
-      command('POS esterno',
-        'Confermi che il POS esterno ha già registrato il residuo di '+formatEuro(order.due_cents)+'?',
-        ()=>client.rpc('record_individual_counter_payment',{
-          p_order_id:order.id,p_method:'external_pos',p_request_key:crypto.randomUUID()
-        }));
+      command('Contanti e consegna',
+        'Hai ricevuto '+formatEuro(order.due_cents)+' in contanti e consegnato tutti i prodotti?',
+        collectAndDeliver('cash'));
+      command('POS e consegna',
+        'Il POS esterno ha registrato '+formatEuro(order.due_cents)+' e hai consegnato tutti i prodotti?',
+        collectAndDeliver('external_pos'));
     }
     if(order.payment_status==='paid'){
       command('Consegna ordine',

@@ -71,6 +71,8 @@
 .staff-status { font-size: var(--text-xs); font-weight: 700; color: var(--ink-3); }
 .staff-order-card .order-actions { padding-top: var(--space-1); }
 .staff-order-card .order-actions .button-primary { flex: 1 1 8rem; min-height: 48px; font-size: var(--text-base); }
+.staff-order-card .order-actions-caption { flex: 1 0 100%; margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--ink-2); }
+.staff-order-card .order-actions-caption ~ .button-outline { min-height: 48px; }
 
 /* Production summary */
 .service-console { min-width: 0; }

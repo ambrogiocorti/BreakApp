@@ -67,3 +67,11 @@ Frontend vanilla, tenant isolation, autorizzazioni server, TOTP Admin, denaro in
 
 - Decisione di Ambrogio: la precisione GPS richiesta alla conferma non è più fissa a 100 m; la decide l'Admin di ogni scuola in «Posizione e regole» (da 10 a 1000 m, default 100 m). La DEMO è impostata a 1000 m.
 - Il server la applica in `submit_individual_order` e `confirm_group_order`; resta invariato il controllo distanza + precisione entro il raggio della scuola. La modifica passa da `set_school_location_accuracy` (Admin della scuola con 2FA) ed è registrata nello storico delle impostazioni.
+
+## 9 novembre 2026 — Banco del barista più rapido
+
+- Richiesta di Ambrogio: niente rifacimento grafico generale; solo la schermata del barista deve essere più intuitiva e veloce.
+- Ordine confermato: il pulsante principale è «Pronto» (un tocco); «In preparazione» resta come scelta secondaria.
+- Ordine pronto da pagare al banco: «Incassa e consegna» con «Contanti» o «POS» e **una sola conferma** con l'importo reale. Il client esegue le stesse due chiamate di prima (registra l'incasso, poi la consegna); il server continua a rifiutare la consegna di un ordine non pagato. Stessa cosa nella finestra della scansione QR.
+- Nella conferma il pulsante «Conferma» ha il focus: Invio o Spazio confermano. Nel campo di ricerca «numero + Invio» porta all'ordine e mette il focus sul suo pulsante principale.
+- Nessuna regola di pagamento, consegna o scorte cambia.

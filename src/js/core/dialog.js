@@ -35,7 +35,7 @@ function wire(p){
     settle(true);
   });
 }
-function open({title,message='',confirmLabel='Conferma',cancelLabel='Annulla',danger=false,input=null}){
+function open({title,message='',confirmLabel='Conferma',cancelLabel='Annulla',danger=false,input=null,focusConfirm=false}){
   const p=parts();
   if(!p){
     // Defensive fallback for pages without the shared dialog markup.
@@ -60,7 +60,8 @@ function open({title,message='',confirmLabel='Conferma',cancelLabel='Annulla',da
   }
   if(p.dialog.open)p.dialog.close();
   p.dialog.showModal();
-  (input?p.input:p.cancel).focus();
+  // Cancel is the safe default; routine counter steps may ask to focus Confirm.
+  (input?p.input:(focusConfirm&&!danger?p.ok:p.cancel)).focus();
   return new Promise(resolve=>{pending=resolve;});
 }
 /** Resolves true when confirmed, false otherwise. */
