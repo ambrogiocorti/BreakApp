@@ -56,7 +56,9 @@ export function initializeInAppNotifications(client){
   const supported=window.isSecureContext&&'Notification' in window&&'PushManager' in window&&'serviceWorker' in navigator;
   const permissionStatus='Notification' in window?Notification.permission:'unsupported';
   let active=false;
-  if(supported){
+  // Revoking an existing subscription is possible even when the current
+  // browser does not expose the full PushManager/Notification API anymore.
+  if('serviceWorker' in navigator){
    try{active=Boolean(await (await navigator.serviceWorker.getRegistration())?.pushManager?.getSubscription());}catch{/* Keep an actionable diagnostic. */}
   }
   if(!user)return;

@@ -18,6 +18,8 @@ test('notification inbox has accessible actions and push device status',()=>{
  const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
  assert.match(html,/id="notifications-mark-all"/);
  assert.match(html,/id="notifications-device-state"[^>]*role="status"/);
+ const controller=readFileSync(new URL('../../src/js/features/notifications/notifications.js',import.meta.url),'utf8');
+ assert.match(controller,/if\('serviceWorker' in navigator\)\{/);
  const worker=readFileSync(new URL('../../public/sw.js',import.meta.url),'utf8');
  assert.match(worker,/targetClient=typeof open\.navigate/);
  const dispatcher=readFileSync(new URL('../../supabase/functions/push-dispatch/index.ts',import.meta.url),'utf8');
