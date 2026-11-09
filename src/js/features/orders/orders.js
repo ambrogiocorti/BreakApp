@@ -789,6 +789,7 @@ export function initializeOrders(client) {
     }
   }
   const laneTabs=document.querySelector('#staff-lane-tabs');
+  const compactStaffMedia=matchMedia('(max-width: 1023px)');
   // On phones the production summary starts collapsed above the queue.
   if(matchMedia('(max-width: 1279px)').matches)document.querySelector('#staff-production-panel')?.removeAttribute('open');
   let selectedLane='pending';
@@ -829,6 +830,9 @@ export function initializeOrders(client) {
     for(const stage of stages){
       if(staffVisibilityFilter.value==='active'&&stage.key==='closed')continue;
       if(staffVisibilityFilter.value==='closed'&&stage.key!=='closed')continue;
+      // A phone shows one lane at a time. Do not build hundreds of hidden
+      // tickets for the other lanes on every search, status update or tap.
+      if(compactStaffMedia.matches&&stage.key!==selectedLane)continue;
       const lane=elem('section','','staff-board-lane');
       lane.dataset.stage=stage.key;
       lane.setAttribute('aria-label',stage.label);
@@ -902,6 +906,7 @@ export function initializeOrders(client) {
     if(!shown && !staffList.childElementCount)
       staffList.append(elem('p','Nessun ordine corrisponde ai filtri.','staff-empty'));
   }
+  compactStaffMedia.addEventListener?.('change',drawStaff);
   async function checkStaff(){
     const attempt=++staffAuthVersion,actor=user?.id;
     stopStaffFeed();

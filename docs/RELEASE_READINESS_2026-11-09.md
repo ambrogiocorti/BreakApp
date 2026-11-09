@@ -18,8 +18,9 @@ produrre addebiti reali.
   stato del dispositivo, istruzioni di installazione iOS, tap dalla push verso
   la sezione corretta. Test automatici di logica e build disponibili.
 - **Banco:** accesso rapido alla cassa, ricerca `Ctrl/Cmd+K`, controlli e testi
-  più chiari. Si tratta di affinamenti mirati, non di un collaudo prestazionale
-  o di una revisione totale del workflow offline.
+  più chiari. Su telefono si costruiscono solo le schede della colonna selezionata,
+  evitando di disegnare centinaia di ordini nascosti. È un'ottimizzazione concreta
+  del rendering, non un collaudo prestazionale o una revisione totale dell'offline.
 
 ## Blocchi da chiudere
 
