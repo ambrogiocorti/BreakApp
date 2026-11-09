@@ -19,15 +19,60 @@ export async function revokeDevicePush(client){
 }
 
 const make=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
+export function noticeCategory(type=''){
+ if(type.startsWith('group_'))return {label:'Gruppo',symbol:'G',tone:'group'};
+ if(type.startsWith('support_'))return {label:'Assistenza',symbol:'?',tone:'support'};
+ if(type.includes('refund'))return {label:'Rimborso',symbol:'€',tone:'money'};
+ if(type.includes('payment'))return {label:'Pagamento',symbol:'€',tone:'money'};
+ if(type.startsWith('school_')||type==='cash_anomaly'||type.includes('closing_reminder'))
+   return {label:'Avviso scuola',symbol:'!',tone:'warning'};
+ if(!type||!type.includes('order')&&!type.includes('pickup'))
+   return {label:'Aggiornamento',symbol:'•',tone:'order'};
+ return {label:'Ordine',symbol:'✓',tone:'order'};
+}
+export function noticeTime(value,now=new Date()){
+ const time=new Date(value);
+ if(Number.isNaN(time.getTime()))return 'Data non disponibile';
+ const clock=time.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+ return time.toLocaleDateString('it-IT')===now.toLocaleDateString('it-IT')?'Oggi, '+clock:
+  time.toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'numeric'})+' · '+clock;
+}
 export function initializeInAppNotifications(client){
  if(!client)return;
  const toggle=byId('notifications-toggle'),dialog=byId('notifications-dialog'),
  count=byId('notifications-unread'),list=byId('notifications-list'),
  feedback=byId('notifications-feedback'),permission=byId('notifications-permission');
- let user=null,channel=null,poll=null,epoch=0,preferences=null,preferencesEpoch=0;
+ let user=null,channel=null,poll=null,epoch=0,preferences=null,preferencesEpoch=0,rowsCache=[];
  const preferenceFields=['browser_alerts','push_orders','push_groups','push_support','push_announcements'];
  const preferenceInput=key=>byId('notice-'+key.replaceAll('_','-'));
  const report=(value,error=false)=>{feedback.textContent=value;feedback.dataset.type=error?'error':'information';};
+ const markAll=byId('notifications-mark-all'),summary=byId('notifications-summary');
+ const deviceState=byId('notifications-device-state'),enablePush=byId('notifications-push'),disablePush=byId('notifications-push-disable');
+ async function updateDeviceState(){
+  if(!user)return;
+  const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)||
+   (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone===true;
+  const supported=window.isSecureContext&&'Notification' in window&&'PushManager' in window&&'serviceWorker' in navigator;
+  const permissionStatus='Notification' in window?Notification.permission:'unsupported';
+  let active=false;
+  // Revoking an existing subscription is possible even when the current
+  // browser does not expose the full PushManager/Notification API anymore.
+  if('serviceWorker' in navigator){
+   try{active=Boolean(await (await navigator.serviceWorker.getRegistration())?.pushManager?.getSubscription());}catch{/* Keep an actionable diagnostic. */}
+  }
+  if(!user)return;
+  enablePush.disabled=!supported||permissionStatus==='denied'||active;
+  disablePush.disabled=!active;
+  if(isIos&&!standalone){
+   deviceState.textContent='Su iPhone/iPad: aggiungi BreakApp alla schermata Home, aprila dall’icona e poi attiva le push.';
+   enablePush.disabled=true;
+  }else if(!window.isSecureContext)deviceState.textContent='Le notifiche push richiedono una connessione HTTPS.';
+  else if(!supported)deviceState.textContent='Le notifiche push non sono disponibili in questo browser o dispositivo.';
+  else if(permissionStatus==='denied')deviceState.textContent='Notifiche bloccate: abilita il permesso dalle impostazioni del browser o del sistema.';
+  else if(active)deviceState.textContent='Push attive su questo dispositivo. Riceverai gli avvisi consentiti, anche con l’app in background, se il servizio è operativo.';
+  else deviceState.textContent='Push non attive su questo dispositivo. Puoi abilitarle con il pulsante qui sotto.';
+ }
  async function foregroundNotice(notification){
    // This is foreground/browser-open only; no claims of closed-browser Web Push.
    if(!preferences?.browser_alerts||!('Notification' in window)||Notification.permission!=='granted')return;
@@ -45,16 +90,25 @@ export function initializeInAppNotifications(client){
    }catch{/* The in-app alert remains the authoritative fallback. */}
  }
  function renderRows(rows){
+   rowsCache=rows;
    list.replaceChildren();
    const unread=rows.filter(row=>!row.read_at).length;
    count.hidden=!unread;count.textContent=unread>99?'99+':String(unread);
+   summary.textContent=unread?unread+' '+(unread===1?'avviso da leggere':'avvisi da leggere'):'Tutto aggiornato';
+   markAll.hidden=!unread;
    toggle.setAttribute('aria-label',unread
      ?'Notifiche: '+unread+' non lette':'Apri notifiche');
-   if(!rows.length){list.append(make('p','Non ci sono notifiche.'));return;}
+   if(!rows.length){const empty=make('div','','notice-empty');empty.append(make('strong','Nessuna notifica'),make('p','Qui troverai le conferme dei tuoi ordini e gli avvisi della scuola.'));list.append(empty);return;}
    for(const n of rows){
      const item=make('article','','notice-row'+(n.read_at?'':' notice-unread'));
-     item.append(make('strong',new Date(n.created_at).toLocaleString('it-IT')),
-       make('p',n.message));
+     item.dataset.tone=noticeCategory(n.event_type).tone;
+     item.setAttribute('role','listitem');
+     const category=noticeCategory(n.event_type);
+     const symbol=make('span',category.symbol,'notice-symbol');symbol.setAttribute('aria-hidden','true');
+     const content=make('div','','notice-content'),meta=make('div','','notice-meta');
+     meta.append(make('strong',category.label));
+     const time=make('time',noticeTime(n.created_at));time.dateTime=n.created_at;meta.append(time);
+     content.append(meta,make('p',n.message));
      if(!n.read_at){
        const button=make('button','Segna come letta','button button-outline button-small');
        button.type='button';
@@ -66,28 +120,43 @@ export function initializeInAppNotifications(client){
          if(error){report(error.message,true);button.disabled=false;return;}
          await load();
        });
-       item.append(button);
+       content.append(button);
      }
      if(n.group_id){
-       const link=make('a','Apri gruppi','text-link');link.href='#groups';item.append(link);
+       const link=make('a','Apri gruppo','text-link');link.href='#groups';content.append(link);
      }else if(n.ticket_id){
-       const link=make('a','Centro assistenza','text-link');link.href='#support-center';item.append(link);
+       const link=make('a','Apri assistenza','text-link');link.href='#support-center';content.append(link);
      }else if(n.order_id){
-       const link=make('a','I miei ordini','text-link');link.href='#orders';item.append(link);
+       const link=make('a','Visualizza ordine','text-link');link.href='#orders';content.append(link);
      }
+     item.append(symbol,content);
      list.append(item);
    }
  }
+ list.addEventListener('click',event=>{if(event.target.closest('a[href^="#"]'))dialog.close();});
+ markAll.addEventListener('click',async()=>{
+   if(!user)return;
+   const uid=user.id,ids=rowsCache.filter(row=>!row.read_at).map(row=>row.id);
+   if(!ids.length)return;
+   markAll.disabled=true;
+   try{
+     const {error}=await client.from('customer_notifications').update({read_at:new Date().toISOString()})
+       .eq('user_id',uid).in('id',ids);
+     if(error)throw error;
+     if(user?.id===uid){await load();report('Avvisi segnati come letti.');}
+   }catch(error){if(user?.id===uid)report('Impossibile aggiornare gli avvisi: '+error.message,true);}
+   finally{markAll.disabled=false;}
+ });
  async function load(){
    if(!user)return;
    const current=++epoch,uid=user.id;
    const {data,error}=await client.from('customer_notifications')
-     .select('id,message,created_at,read_at,group_id,ticket_id,order_id')
+     .select('id,message,event_type,created_at,read_at,group_id,ticket_id,order_id')
      .eq('user_id',uid).order('created_at',{ascending:false}).limit(100);
    if(current!==epoch||user?.id!==uid)return;
    if(error){report('Impossibile aggiornare gli avvisi: '+error.message,true);return;}
    renderRows(data||[]);
-   report('Avvisi aggiornati.');
+   if(!feedback.dataset.type||feedback.dataset.type==='information')report('');
  }
  async function loadPreferences(){
    if(!user)return;
@@ -103,7 +172,7 @@ export function initializeInAppNotifications(client){
    preferencesEpoch++;preferences=null;
    if(channel){void client.removeChannel(channel);channel=null;}
    if(poll){clearInterval(poll);poll=null;}
-   list.replaceChildren();count.hidden=true;toggle.hidden=true;
+   list.replaceChildren();rowsCache=[];count.hidden=true;toggle.hidden=true;
    if(dialog.open)dialog.close();
  }
  function session(next){
@@ -114,6 +183,7 @@ export function initializeInAppNotifications(client){
    toggle.hidden=false;
    void loadPreferences();
    void load();
+   void updateDeviceState();
    // RLS restricts row delivery to the owner. Polling is fallback for
    // restrictive networks/browser suspensions or unconfigured Realtime.
    channel=client.channel('breakapp-notices-'+user.id);
@@ -139,12 +209,19 @@ export function initializeInAppNotifications(client){
    if(!window.isSecureContext||!('Notification' in window)||
       !('PushManager' in window)||!('serviceWorker' in navigator))
      throw new Error('Questo dispositivo/browser non supporta le Web Push.');
+   const isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)||
+    (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+   const standalone=window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone===true;
+   if(isIos&&!standalone)
+     throw new Error('Su iPhone/iPad aggiungi BreakApp alla schermata Home e aprila dall’icona per attivare le push.');
+   // WebKit requires the permission prompt to be initiated directly by the
+   // user's tap, before any unrelated asynchronous network request.
+   const grant=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+   if(grant!=='granted')throw new Error('Permesso push non concesso.');
    const keyResponse=await fetch(client.supabaseUrl+'/functions/v1/push-public-key');
    const keyData=await keyResponse.json();
    if(!keyResponse.ok||!keyData.public_key)
      throw new Error('Push non configurate sul server. Servono le chiavi VAPID.');
-   const grant=await Notification.requestPermission();
-   if(grant!=='granted')throw new Error('Permesso push non concesso.');
    const sw=await navigator.serviceWorker.ready;
    let subscription=await sw.pushManager.getSubscription();
    if(!subscription){
@@ -163,7 +240,7 @@ export function initializeInAppNotifications(client){
      p_auth_key:publicData.keys.auth
    });
    if(error)throw error;
-   return 'Push registrate per questo dispositivo. La consegna richiede il dispatcher server attivo.';
+   return 'Push attivate su questo dispositivo. Verifica il prossimo avviso ricevuto.';
  }
 
  byId('notification-preferences-form').addEventListener('submit',async event=>{
@@ -184,7 +261,7 @@ export function initializeInAppNotifications(client){
    const uid=user.id,button=byId('notifications-push-disable');button.disabled=true;
    try{await revokeDevicePush(client);if(user?.id===uid)report('Push disattivate su questo dispositivo.');}
    catch(error){if(user?.id===uid)report(error.message,true);}
-   finally{button.disabled=false;}
+   finally{button.disabled=false;void updateDeviceState();}
  });
 
  toggle.addEventListener('click',()=>{
@@ -192,14 +269,15 @@ export function initializeInAppNotifications(client){
    if(!dialog.open)dialog.showModal();
    void loadPreferences();
    void load();
+   void updateDeviceState();
  });
  byId('notifications-close').addEventListener('click',()=>dialog.close());
- byId('notifications-refresh').addEventListener('click',()=>{void load();void loadPreferences();});
+ byId('notifications-refresh').addEventListener('click',()=>{void load();void loadPreferences();void updateDeviceState();});
  byId('notifications-push').addEventListener('click',async()=>{
    const button=byId('notifications-push');button.disabled=true;
    try{report(await subscribeBackground());}
    catch(error){report(error.message||'Registrazione push fallita.',true);}
-   finally{button.disabled=false;}
+   finally{button.disabled=false;void updateDeviceState();}
  });
   permission.addEventListener('click',async()=>{
    if(!('Notification' in window)){report('Il browser non supporta le notifiche di sistema.',true);return;}
@@ -208,6 +286,7 @@ export function initializeInAppNotifications(client){
    report(status==='granted'
     ?'Permesso concesso. Gli avvisi del browser seguono le preferenze; per le push ad app chiusa usa il pulsante dedicato.'
     :'Permesso notifiche non concesso: gli avvisi in-app rimangono disponibili.',status!=='granted');
+   void updateDeviceState();
  });
  document.addEventListener('visibilitychange',()=>{
    if(document.visibilityState==='visible'&&user)void load();

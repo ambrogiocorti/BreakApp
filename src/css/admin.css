@@ -206,3 +206,13 @@
 .school-settings-classes h3 { font-size: var(--text-md); }
 .promotion-bundle { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-4); display: grid; gap: var(--space-3); }
 .promotion-bundle legend { padding: 0 var(--space-2); font-weight: 700; }
+.location-policy { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-sunken); }
+.location-policy-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); cursor: pointer; }
+.location-policy-toggle span { display: grid; gap: var(--space-1); }
+.location-policy-toggle strong { font-size: var(--text-base); }
+.location-policy-toggle small { color: var(--ink-2); font-size: var(--text-sm); line-height: 1.45; }
+.location-policy-toggle input { flex: none; appearance: none; position: relative; width: 46px; height: 28px; border-radius: var(--radius-pill); border: 2px solid var(--line-strong); background: var(--line-strong); cursor: pointer; transition: background .16s ease; }
+.location-policy-toggle input::before { content: ''; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: var(--surface); border-radius: 50%; box-shadow: 0 1px 3px rgb(0 0 0 / .16); transition: transform .16s ease; }
+.location-policy-toggle input:checked { background: var(--lavagna); border-color: var(--lavagna); }
+.location-policy-toggle input:checked::before { transform: translateX(18px); }
+.location-policy-toggle input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }

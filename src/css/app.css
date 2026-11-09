@@ -3,6 +3,7 @@
 @import './base.css';
 @import './components.css';
 @import './shell.css';
+@import './notifications.css';
 @import './access.css';
 @import './customer.css';
 @import './groups.css';

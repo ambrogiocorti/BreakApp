@@ -24,6 +24,12 @@ test('only paid completed staff orders expose the refund button',()=>{
   assert.match(orders,/stripeRefundKeys.get\(o.id\)\|\|crypto.randomUUID\(\)/);
 });
 
+test('the mobile bartender board renders only the selected lane',()=>{
+  assert.match(orders,/const compactStaffMedia=matchMedia\('\(max-width: 1023px\)'\)/);
+  assert.match(orders,/if\(compactStaffMedia\.matches&&stage\.key!==selectedLane\)continue/);
+  assert.match(orders,/compactStaffMedia\.addEventListener\?\.\('change',drawStaff\)/);
+});
+
 test('database checks tenant membership, completion state and request reason',()=>{
   assert.match(migration,/app_private.can_serve_group_bar/);
   assert.match(migration,/p_kind = 'individual'/);
@@ -51,6 +57,10 @@ test('cash refund completion is not falsely described as an automatic POS refund
   assert.match(html,/Non esegue uno storno sul terminale POS esterno/);
   assert.match(html,/Confermo di aver già restituito realmente/);
   assert.match(orders,/Il sistema non può accreditare automaticamente contanti/);
+  assert.match(orders,/checkCashRefundShift\(obligation,order\?\.bar_id\|\|null\)/);
+  assert.match(orders,/client\.rpc\('cash_workspace',\{p_school:obligation\.school_id\}\)/);
+  assert.match(orders,/cashReturnSubmit\.disabled=true/);
+  assert.match(html,/id="staff-cash-go-cash"/);
 });
 
 test('pending cash-refund RPC is scoped to school and cannot be called by anonymous users',()=>{

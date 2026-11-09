@@ -4,7 +4,18 @@
 // Deploy with verify_jwt=false; validate dispatch token before DB access.
 import webpush from 'npm:web-push@3.6.7';
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
-type PushJob={job_id:string;endpoint:string;p256dh:string;auth:string};
+type PushJob={job_id:string;notice_id?:string;event_type?:string;
+  group_id?:string;order_id?:string;ticket_id?:string;
+  endpoint:string;p256dh:string;auth:string};
+function notificationSummary(job:PushJob){
+ if(job.group_id||job.event_type?.startsWith('group_'))return {title:'BreakApp · Gruppi',body:'C’è un aggiornamento nel tuo gruppo.',url:'#groups'};
+ if(job.ticket_id||job.event_type?.startsWith('support_'))return {title:'BreakApp · Assistenza',body:'Hai una novità nella tua richiesta.',url:'#support-center'};
+ if(job.event_type?.startsWith('school_'))return {title:'BreakApp · Scuola',body:'Hai un nuovo avviso della scuola.',url:'#accesso'};
+ if(job.event_type==='cash_anomaly')return {title:'BreakApp · Cassa',body:'Controlla una segnalazione di cassa.',url:'#cash-workspace'};
+ if(job.event_type?.includes('refund'))return {title:'BreakApp · Rimborso',body:'Controlla lo stato del tuo rimborso.',url:'#orders'};
+ if(job.event_type?.includes('payment'))return {title:'BreakApp · Pagamento',body:'Controlla lo stato del pagamento.',url:'#orders'};
+ return {title:'BreakApp · Ordini',body:'C’è un aggiornamento sul tuo ordine.',url:'#orders'};
+}
 function out(data:unknown,status=200){
  return new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json',
    'cache-control':'no-store'}});
@@ -44,8 +55,8 @@ Deno.serve(async request=>{
   const results=await Promise.all(((jobs||[]) as PushJob[]).map(async job=>{
     let ok=false,status=0,err='';
     try{
-      const data=JSON.stringify({title:'BreakApp',body:'Hai un nuovo avviso in BreakApp.',
-       url:'/BreakApp/#accesso'});
+      // No name, payment amount or other private data on the lock screen.
+      const data=JSON.stringify({...notificationSummary(job),tag:'breakapp-notice-'+(job.notice_id||job.job_id)});
       const result=await webpush.sendNotification({
         endpoint:job.endpoint,
         keys:{p256dh:job.p256dh,auth:job.auth}
