@@ -1,5 +1,5 @@
 // Static shell only. Financial events and same-day manifests use the encrypted IndexedDB vault.
-const CACHE_NAME = 'breakapp-shell-v10';
+const CACHE_NAME = 'breakapp-shell-v11';
 const BASE_PATH = new URL('./', self.location.href).pathname;
 const SHELL_URL = BASE_PATH;
 self.addEventListener('install', (event) => {
@@ -47,7 +47,10 @@ self.addEventListener('notificationclick',event=>{
   if(target.origin!==self.location.origin)target=new URL(BASE_PATH,self.location.origin);
   event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
     const open=clients.find(c=>c.url.startsWith(self.location.origin+BASE_PATH));
-    if(open){await open.focus();return;}
+    if(open){
+      const targetClient=typeof open.navigate==='function'?await open.navigate(target.href):open;
+      await (targetClient||open).focus();return;
+    }
     await self.clients.openWindow(target.href);
   }));
 });
@@ -55,23 +58,24 @@ self.addEventListener('notificationclick',event=>{
 // True background push: service worker can run while app tabs are closed.
 // No order/payment mutations are performed from the notification payload.
 self.addEventListener('push',event=>{
- let data={title:'BreakApp',body:'Hai un nuovo avviso',url:BASE_PATH};
+ let data={title:'BreakApp',body:'Hai un nuovo avviso',url:BASE_PATH,tag:'breakapp-push'};
  try{
    if(event.data){
      const value=event.data.json();
      if(typeof value.title==='string')data.title=value.title.slice(0,70);
      if(typeof value.body==='string')data.body=value.body.slice(0,200);
      if(typeof value.url==='string')data.url=value.url;
+     if(typeof value.tag==='string'&&/^breakapp-notice-[0-9a-f-]{36}$/i.test(value.tag))data.tag=value.tag;
    }
  }catch{/* retain safe generic message */}
  let url=new URL(BASE_PATH,self.location.origin);
  try{
-   const candidate=new URL(data.url,self.location.origin);
+   const candidate=new URL(data.url,new URL(BASE_PATH,self.location.origin));
    if(candidate.origin===self.location.origin&&candidate.pathname.startsWith(BASE_PATH))
      url=candidate;
  }catch{/* retain internal URL */}
  event.waitUntil(self.registration.showNotification(data.title,{
   body:data.body,icon:BASE_PATH+'icon-placeholder.svg',
-  tag:'breakapp-push-'+Date.now(),data:{url:url.href}
+  tag:data.tag,renotify:false,data:{url:url.href}
  }));
 });

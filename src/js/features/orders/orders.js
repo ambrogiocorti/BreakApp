@@ -2,7 +2,7 @@ import { romeToday, isUpcomingWindow } from '../../core/pickup-time.js';
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
 import { formatEuro } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
-import { accuratePosition, schoolAccuracyLimit } from '../../core/geolocation.js';
+import { accuratePosition, schoolAccuracyLimit, schoolRequiresGeolocation } from '../../core/geolocation.js';
 import { paymentError } from '../../core/payment-error.js';
 import { confirmDialog, toast } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
@@ -75,7 +75,7 @@ export function initializeOrders(client) {
   let staffContextSchool=null;
   let staffFetchSequence=0,staffAuthVersion=0;
   const STAFF_PAGE_SIZE=250,STAFF_MAX_PAGES=8;
-  const STAFF_FIELDS='id,school_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)';
+  const STAFF_FIELDS='id,school_id,bar_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)';
   let staffChannels=[],staffFallbackTimer=null,staffDebounceTimer=null;
   function stopStaffFeed(){
     clearInterval(staffFallbackTimer);
@@ -136,11 +136,32 @@ export function initializeOrders(client) {
   const cashReturnReason=document.querySelector('#staff-cash-return-reason');
   const cashReturnFeedback=document.querySelector('#staff-cash-return-feedback');
   const cashReturnSubmit=document.querySelector('#staff-cash-return-submit');
+  const cashShiftHelp=document.querySelector('#staff-cash-return-shift-help');
+  const cashGoCash=document.querySelector('#staff-cash-go-cash');
   let cashRefunds=[],selectedCashRefund=null,cashRefundVersion=0;
+  cashGoCash.addEventListener('click',()=>{
+    cashReturnDialog.close();location.hash='cash-workspace';
+  });
   document.querySelector('#staff-cash-return-cancel').addEventListener('click',()=>cashReturnDialog.close());
   cashReturnDialog.addEventListener('close',()=>{
     selectedCashRefund=null;cashReturnForm.reset();cashReturnFeedback.textContent='';
+    cashShiftHelp.hidden=true;cashGoCash.hidden=true;cashReturnSubmit.disabled=false;
   });
+  async function checkCashRefundShift(obligation,barId){
+    const actor=user?.id;
+    const {data,error}=await client.rpc('cash_workspace',{p_school:obligation.school_id});
+    if(!cashReturnDialog.open||selectedCashRefund?.id!==obligation.id||user?.id!==actor)return;
+    if(error){
+      report(cashReturnFeedback,'Non è stato possibile verificare il turno di cassa: '+error.message,true);
+      return;
+    }
+    const hasShift=(data?.sessions||[]).some(s=>s.actor_id===actor&&!s.closed_at&&
+      (!barId||s.bar_id===barId));
+    if(!hasShift){
+      cashShiftHelp.hidden=false;cashGoCash.hidden=false;cashReturnSubmit.disabled=true;
+      report(cashReturnFeedback,'Nessun tuo turno di cassa aperto per questo ordine. Apri prima il turno con il profilo Barista, poi torna a registrare la restituzione.',true);
+    }
+  }
   cashReturnForm.addEventListener('submit',async event=>{
     event.preventDefault();
     const obligation=selectedCashRefund;
@@ -161,9 +182,14 @@ export function initializeOrders(client) {
       report(staffFeedback,'Restituzione di '+formatEuro(obligation.amount_cents)+' registrata in cassa. Il movimento è salvato dal server.');
       await fetchStaffOrders();
     }catch(error){
-      if(user?.id===actor)report(cashReturnFeedback,
-        'Restituzione non confermata: '+(error?.message||'errore sconosciuto')+
-        '. Se hai già consegnato il denaro, verifica i movimenti di cassa prima di riprovare.',true);
+      if(user?.id===actor){
+        const needsShift=String(error?.message||'').includes('Apri il turno di cassa');
+        cashShiftHelp.hidden=!needsShift;cashGoCash.hidden=!needsShift;
+        report(cashReturnFeedback,needsShift
+          ?'La restituzione non è stata registrata: manca il turno di cassa aperto. Non effettuare un secondo pagamento al cliente; verifica l’operazione dopo aver aperto il turno.'
+          :'Restituzione non confermata: '+(error?.message||'errore sconosciuto')+
+           '. Se hai già consegnato il denaro, verifica i movimenti di cassa prima di riprovare.',true);
+      }
     }finally{cashReturnSubmit.disabled=false;}
   });
   document.querySelector('#staff-refund-cancel').addEventListener('click',()=>refundDialog.close());
@@ -460,17 +486,20 @@ export function initializeOrders(client) {
     showLocation(where,'pending');
     const controller=new AbortController();locationAbort=controller;
     try {
-      let loc;
-      try{loc=await positionOnce(controller.signal,await schoolAccuracyLimit(client,context.schoolId));}
-      catch(error){const key=error.name!=='AbortError'&&locationProblem(error);if(key){showLocation(where,key,{detail:error.message});return;}throw error;}
+      let loc=null;
+      const requireGPS=await schoolRequiresGeolocation(client,context.schoolId);
+      if(requireGPS){
+        try{loc=await positionOnce(controller.signal,await schoolAccuracyLimit(client,context.schoolId));}
+        catch(error){const key=error.name!=='AbortError'&&locationProblem(error);if(key){showLocation(where,key,{detail:error.message});return;}throw error;}
+      }
       if(!stepper.open)return;
-      showLocation(where,'ok',{detail:'Invio della prenotazione…'});
+      showLocation(where,'ok',{detail:requireGPS?'Posizione verificata. Invio della prenotazione…':'La scuola non richiede la posizione. Invio della prenotazione…'});
       requestKey??=crypto.randomUUID();
       const {data,error}=await client.rpc('submit_promoted_order',{
         p_bar:context.barId,p_window:slotSelect.value,p_items:toRpcItems(cart),
-        p_key:requestKey,p_latitude:loc.coords.latitude,p_code:coupon.value.trim(),
-        p_longitude:loc.coords.longitude,p_accuracy:loc.coords.accuracy,
-        p_observed:new Date(loc.timestamp).toISOString()
+        p_key:requestKey,p_latitude:loc?.coords.latitude??null,p_code:coupon.value.trim(),
+        p_longitude:loc?.coords.longitude??null,p_accuracy:loc?.coords.accuracy??null,
+        p_observed:loc?new Date(loc.timestamp).toISOString():null
       });
       if(error){const key=locationProblem(error);if(key){showLocation(where,key);report(checkoutFeedback,'');return;}throw error;}
       if(!data)throw new Error('Conferma non ricevuta: controlla i tuoi ordini prima di riprovare.');
@@ -724,11 +753,13 @@ export function initializeOrders(client) {
         if(!user||!staffSchools.includes(obligation.school_id))return;
         selectedCashRefund=obligation;
         cashReturnForm.reset();
-        cashReturnFeedback.textContent='';
+        cashReturnFeedback.textContent='';cashShiftHelp.hidden=true;cashGoCash.hidden=true;
+        cashReturnSubmit.disabled=false;
         cashReturnSummary.textContent=title+' · '+formatEuro(obligation.amount_cents)+
           '. Conferma soltanto dopo aver restituito realmente il denaro e verificato la cassa.';
         cashReturnDialog.showModal();
         cashReturnReason.focus();
+        void checkCashRefundShift(obligation,order?.bar_id||null);
       });
       box.append(button);
       cashRefundList.append(box);
@@ -920,6 +951,12 @@ export function initializeOrders(client) {
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
+  document.addEventListener('keydown',event=>{
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'&&
+       !staffPanel.hidden&&!event.altKey){
+      event.preventDefault();document.querySelector('#staff-search').focus();
+    }
+  });
   staffSlotFilter.addEventListener('change',drawStaff);
   staffVisibilityFilter.addEventListener('change',()=>{void fetchStaffOrders();});
   function setUser(next){

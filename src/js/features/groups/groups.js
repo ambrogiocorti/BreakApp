@@ -1,5 +1,5 @@
 import {isUpcomingWindow} from '../../core/pickup-time.js';
-import {accuratePosition,schoolAccuracyLimit} from '../../core/geolocation.js';
+import {accuratePosition,schoolAccuracyLimit,schoolRequiresGeolocation} from '../../core/geolocation.js';
 import {windowLabel} from '../orders/staff-board.js';
 import {confirmDialog} from '../../core/dialog.js';
 import {friendlyError} from '../../core/errors.js';
@@ -451,8 +451,10 @@ export function initializeGroupDrafts(client){
   try{
    report('');
    const where=byId('group-confirm-location');
-   let gps;
-   try{gps=await locate(where);}catch(error){if(error.code)return;throw error;}
+   let gps={p_latitude:null,p_longitude:null,p_accuracy_m:null,p_observed_at:null};
+   if(await schoolRequiresGeolocation(client,detail.school_id)){
+     try{gps=await locate(where);}catch(error){if(error.code)return;throw error;}
+   }else showLocation(where,'ok',{detail:'La scuola non richiede la verifica della posizione.'});
    report('Controllo di disponibilità e scorte…');
    if(version!==requestVersion||!detail||detail.id!==groupId||!detail.coordinator||detail.status!=='draft')return;
    if(!cartForm.hidden&&normalizeCart(cartItems())!==normalizeCart(savedCart()))

@@ -18,6 +18,14 @@ export async function schoolAccuracyLimit(client,schoolId){
     return error?DEFAULT_ACCURACY_M:accuracyLimit(data?.location_accuracy_m);
   }catch{return DEFAULT_ACCURACY_M;}
 }
+/** Fail closed if the school's policy cannot be read. Only the server decides. */
+export async function schoolRequiresGeolocation(client,schoolId){
+  if(!client||!schoolId)return true;
+  try{
+    const {data,error}=await client.from('schools').select('require_geolocation').eq('id',schoolId).maybeSingle();
+    return error||typeof data?.require_geolocation!=='boolean'?true:data.require_geolocation;
+  }catch{return true;}
+}
 export function accuratePosition({
   geolocation=globalThis.navigator?.geolocation,
   timeoutMs=20000,

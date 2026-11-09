@@ -43,7 +43,7 @@ export function initializeAdminOrderSetup(client) {
   async function readSettings(){
     if(!school.value)return;
     const {data,error}=await client.from('schools')
-      .select('address,latitude,longitude,pickup_radius_m,location_accuracy_m,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
+      .select('address,latitude,longitude,pickup_radius_m,location_accuracy_m,require_geolocation,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
       .eq('id',school.value).single();
     if(error){tell(error.message,true);return;}
     const values={
@@ -59,6 +59,7 @@ export function initializeAdminOrderSetup(client) {
       'ops-approval-eur':data.approval_amount_threshold_cents==null?null:(data.approval_amount_threshold_cents/100)
     };
     for(const [id,value] of Object.entries(values))document.getElementById(id).value=value??'';
+    document.getElementById('ops-require-geolocation').checked=data.require_geolocation!==false;
     refreshMapLink();
   }
   function render(){
@@ -156,6 +157,9 @@ export function initializeAdminOrderSetup(client) {
     const {error:accuracyError}=await client.rpc('set_school_location_accuracy',{
       p_school_id:school.value,p_accuracy_m:Number(val('ops-accuracy'))});
     if(accuracyError)return tell('Regole salvate, tolleranza GPS non salvata: '+accuracyError.message,true);
+    const {error:geoError}=await client.rpc('set_school_geolocation_required',{
+      p_school:school.value,p_required:document.getElementById('ops-require-geolocation').checked});
+    if(geoError)return tell('Regole salvate, obbligo GPS non salvato: '+geoError.message,true);
     tell('Regole scuola salvate.');await readSettings();
   });
   slotForm.addEventListener('submit',async event=>{

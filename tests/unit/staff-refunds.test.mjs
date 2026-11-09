@@ -51,6 +51,10 @@ test('cash refund completion is not falsely described as an automatic POS refund
   assert.match(html,/Non esegue uno storno sul terminale POS esterno/);
   assert.match(html,/Confermo di aver già restituito realmente/);
   assert.match(orders,/Il sistema non può accreditare automaticamente contanti/);
+  assert.match(orders,/checkCashRefundShift\(obligation,order\?\.bar_id\|\|null\)/);
+  assert.match(orders,/client\.rpc\('cash_workspace',\{p_school:obligation\.school_id\}\)/);
+  assert.match(orders,/cashReturnSubmit\.disabled=true/);
+  assert.match(html,/id="staff-cash-go-cash"/);
 });
 
 test('pending cash-refund RPC is scoped to school and cannot be called by anonymous users',()=>{

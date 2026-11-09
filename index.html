@@ -56,18 +56,19 @@
     <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Sezioni principali" hidden></nav>
 
     <dialog id="notifications-dialog" class="ba-dialog notice-dialog" aria-labelledby="notifications-heading">
-      <div class="dialog-header"><h2 id="notifications-heading">Notifiche</h2>
+      <div class="dialog-header notice-header"><div><p class="notice-eyebrow">CENTRO AVVISI</p><h2 id="notifications-heading">Notifiche</h2><p class="notice-header-subtitle">Ordini, gruppi e aggiornamenti importanti.</p></div>
         <button id="notifications-close" class="icon-button dialog-close" type="button" aria-label="Chiudi notifiche">✕</button></div>
       <p id="notifications-feedback" class="feedback" role="status" aria-live="polite"></p>
-      <div id="notifications-list" class="notice-list"></div>
+      <div class="notice-toolbar"><span id="notifications-summary">I tuoi avvisi</span><div class="button-row"><button id="notifications-mark-all" type="button" class="button button-ghost button-small" hidden>Segna tutte come lette</button><button id="notifications-refresh" type="button" class="button button-ghost button-small">Aggiorna</button></div></div>
+      <div id="notifications-list" class="notice-list" role="list" aria-label="Elenco notifiche"></div>
       <details class="disclosure notice-settings">
-        <summary>Preferenze e notifiche del dispositivo</summary>
+        <summary><span>Preferenze e notifiche push</span><small>Personalizza gli avvisi sul tuo dispositivo</small></summary>
         <div class="disclosure-body">
+          <p id="notifications-device-state" class="notice-device-state" role="status">Verifica delle notifiche del dispositivo…</p>
           <div class="button-row">
             <button id="notifications-permission" type="button" class="button button-outline button-small">Avvisi del browser</button>
             <button id="notifications-push" type="button" class="button button-outline button-small">Attiva le push</button>
             <button id="notifications-push-disable" type="button" class="button button-ghost button-small">Disattiva su questo dispositivo</button>
-            <button id="notifications-refresh" type="button" class="button button-ghost button-small">Aggiorna</button>
           </div>
           <form id="notification-preferences-form" class="check-list">
             <fieldset><legend>Cosa vuoi ricevere</legend>
@@ -239,7 +240,7 @@
         <div class="staff-toolbar" role="search">
           <div class="staff-search">
             <label for="staff-search" class="sr-only">Cerca numero o prodotto</label>
-            <input id="staff-search" type="search" placeholder="Numero o prodotto" autocomplete="off" />
+            <input id="staff-search" type="search" placeholder="Cerca numero o prodotto…" autocomplete="off" aria-keyshortcuts="Control+k Meta+k" />
           </div>
           <div class="staff-board-filters">
             <label for="staff-slot-filter"><span class="sr-only">Fascia di ritiro</span>
@@ -254,6 +255,7 @@
             </label>
           </div>
           <button type="button" class="button button-primary staff-scan-button" id="staff-scan-open">Scansiona QR</button>
+          <a href="#cash-workspace" class="button button-outline staff-cash-shortcut">Apri cassa</a>
           <button type="button" class="button button-ghost button-small" id="staff-refresh">Aggiorna</button>
           <p id="staff-live-status" class="live-status" role="status" aria-live="polite">Collegamento…</p>
         </div>
@@ -276,7 +278,7 @@
         </div>
         <section id="staff-cash-refunds-panel" class="panel" aria-labelledby="staff-cash-refunds-title" hidden>
           <div class="panel-head"><h2 id="staff-cash-refunds-title">Restituzioni da registrare</h2></div>
-          <p class="help">Il rimborso di contanti o POS non avviene in automatico. Dopo aver restituito il denaro, registra l’uscita con un turno di cassa aperto.</p>
+          <p class="help">Il rimborso di contanti o POS non avviene automaticamente. Un Barista con un turno aperto per il bar dell'ordine può registrare la restituzione dopo averla effettuata.</p>
           <p id="staff-cash-refunds-feedback" class="feedback" role="status" aria-live="polite"></p>
           <div id="staff-cash-refunds-list" class="row-list"></div>
         </section>
@@ -748,6 +750,7 @@
           <h2 id="staff-cash-return-title">Registra la restituzione</h2>
           <p id="staff-cash-return-summary" class="dialog-summary"></p>
           <p class="help">Registra un’uscita nel turno di cassa. Non esegue uno storno sul terminale POS esterno: fallo prima, se serve.</p>
+          <p class="alert alert-warning" id="staff-cash-return-shift-help" hidden>Per registrare la restituzione devi prima aprire il turno di cassa del bar corretto. L'apertura richiede un profilo Barista autorizzato.</p>
           <div class="field"><label for="staff-cash-return-reason">Motivo o riferimento</label>
             <textarea id="staff-cash-return-reason" rows="3" required minlength="8" maxlength="300" placeholder="Es. rimborso consegnato al banco"></textarea></div>
           <label class="check" for="staff-cash-return-confirm">
@@ -757,6 +760,7 @@
           <p id="staff-cash-return-feedback" class="feedback" role="status" aria-live="polite"></p>
           <div class="dialog-actions">
             <button id="staff-cash-return-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-cash-go-cash" type="button" class="button button-outline" hidden>Vai alla cassa</button>
             <button id="staff-cash-return-submit" type="submit" class="button button-primary">Registra</button>
           </div>
         </form>
@@ -905,6 +909,13 @@
                 <p id="ops-position-status" class="help" role="status" aria-live="polite"></p>
               </div>
               <div class="field"><label for="ops-radius">Raggio consentito (m)</label><input type="number" id="ops-radius" min="100" max="10000" value="1000" required /></div>
+              <div class="field-wide location-policy">
+                <label class="location-policy-toggle" for="ops-require-geolocation">
+                  <span><strong>Verifica posizione alla prenotazione</strong><small id="ops-geolocation-help">Se attiva, il cliente deve essere vicino alla scuola per inviare l'ordine; nei gruppi il controllo riguarda soltanto la conferma del coordinatore.</small></span>
+                  <input id="ops-require-geolocation" type="checkbox" checked aria-describedby="ops-geolocation-help" />
+                </label>
+                <p class="help">L'accesso ai menu e agli ordini di gruppo è sempre libero da vincoli di posizione. La scelta vale per tutti i bar della scuola.</p>
+              </div>
               <div class="field"><label for="ops-accuracy">Tolleranza precisione GPS (m)</label><input type="number" id="ops-accuracy" min="10" max="1000" step="1" value="100" required aria-describedby="ops-accuracy-help" /><p id="ops-accuracy-help" class="help">Precisione minima richiesta al telefono alla conferma. Più alta è, più facile è confermare, meno è sicura la verifica.</p></div>
               <div class="field"><label for="ops-horizon">Prenotabile fino a (giorni)</label><input type="number" id="ops-horizon" min="1" max="365" value="30" required /></div>
               <div class="field"><label for="ops-cutoff">Annullabile fino a (minuti prima)</label><input type="number" id="ops-cutoff" min="0" max="1440" value="10" required /></div>
