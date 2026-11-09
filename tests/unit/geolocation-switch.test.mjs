@@ -16,7 +16,7 @@ test('school GPS is enabled by default and any read error fails closed',async()=
 test('both confirmation flows rely on the DB policy and send null GPS when disabled',()=>{
  const individual=readFileSync(new URL('../../src/js/features/orders/orders.js',import.meta.url),'utf8');
  const groups=readFileSync(new URL('../../src/js/features/groups/groups.js',import.meta.url),'utf8');
- const sql=readFileSync(new URL('../../supabase/migrations/20261109135108_school_geolocation_toggle.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../../supabase/migrations/20261109141732_school_geolocation_toggle.sql',import.meta.url),'utf8');
  assert.match(individual,/const requireGPS=await schoolRequiresGeolocation/);
  assert.match(individual,/p_latitude:loc\?\.coords\.latitude\?\?null/);
  assert.match(groups,/if\(await schoolRequiresGeolocation\(client,detail\.school_id\)\)/);

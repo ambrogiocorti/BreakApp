@@ -25,11 +25,11 @@ produrre addebiti reali.
 
 | Area | Stato | Prova richiesta per il via libera |
 |---|---|---|
-| Migrazioni Supabase | Da applicare e verificare sull'istanza ospitata | CI SQL verde, backup prima della migrazione, test Admin scuola A/B |
-| Deploy frontend e Edge | Da pubblicare con i cambi di questo ramo | Nuova versione visibile su URL ufficiale, RPC e dispatcher coerenti |
+| Migrazioni Supabase | Applicate in `breakapp-dev` il 9/11, controlli SQL in CI verdi | Prova manuale Admin scuola A/B e politica GPS con telefono reale |
+| Deploy frontend e Edge | `push-dispatch` v13 distribuito sul DEV; frontend da unire/pubblicare | Nuova versione visibile su URL ufficiale, RPC e dispatcher coerenti |
 | Stripe DEMO | Sandbox da verificare end-to-end | Carte di test e webhook firmati, nessun addebito live per DEMO |
 | Stripe scuole reali | Configurazione merchant e legittimazione da verificare | Account connesso abilitato, pagamenti/rimborsi reali riconciliati |
-| Push desktop/Android/iOS | Codice predisposto; consegna fisica non collaudata | VAPID + job attivo e test con app aperta/chiusa, permessi revocati, account alternati |
+| Push desktop/Android/iOS | Cron Supabase e chiamate HTTP 200 osservati; consegna fisica non collaudata | Notifiche davvero recapitate con app aperta/chiusa, permessi revocati, account alternati |
 | Offline banco | Automatismi e coda esistono; prove fisiche da completare | Tablet disconnesso, cambio dispositivo, incassi, doppio pagamento, replay e conflitti |
 | Cassa e rimborsi | Vincolo turno implementato; flusso fisico da provare | Barista apre/chiude cassa, restituzione tracciata, POS manuale, riconciliazione Admin |
 | Multi-scuola e sicurezza | Test già presenti; accettazione da aggiornare | Audit RLS/ruoli/2FA, accessi incrociati negativi e dati sensibili |

@@ -1,4 +1,5 @@
 -- Only the private dispatcher can claim these details. Send a useful,
+-- Version aligned with the hosted Supabase migration history.
 -- non-sensitive push and open its corresponding section in the PWA.
 do $push_context$
 declare v_def text;
