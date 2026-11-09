@@ -40,6 +40,8 @@ export function initializeOrders(client) {
     if(actionDialog.open)return Promise.resolve(false);
     actionSummary.textContent=message;
     actionDialog.showModal();
+    // Confirm is the expected answer at the counter: Enter or Space confirms.
+    document.querySelector('#staff-action-approve')?.focus();
     return new Promise(resolve=>{activeDecision=resolve;});
   }
   function finishStaffDecision(result){
@@ -640,6 +642,19 @@ export function initializeOrders(client) {
     }
     if(feedback.dataset.type!=='error'&&/^Caricamento/.test(feedback.textContent))report(feedback,'');
   }
+  // Pickup with payment at the counter: one confirmation, then the same two
+  // server steps as before (record the payment, then deliver). The server
+  // still refuses delivery of an unpaid order.
+  async function collectAndDeliver(o,method,how){
+    const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});
+    if(balance.error)return balance;
+    if(!await decideStaffAction(`Ordine #${o.display_no}: hai ricevuto ${formatEuro(balance.data.due_cents)} ${how} e consegnato tutti i prodotti? Conferma soltanto dopo aver verificato l'incasso.`))return null;
+    const paid=await client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
+    if(paid.error)return paid;
+    const delivered=await client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
+    if(delivered.error)return {error:new Error('Incasso registrato, consegna non registrata: '+delivered.error.message+' Premi «Consegna» sull’ordine.')};
+    return delivered;
+  }
   function action(box,label,callback,{primary=false}={}){
     const button=elem('button',label,primary?'button button-primary':'button button-outline button-small');
     button.type='button';
@@ -844,7 +859,7 @@ export function initializeOrders(client) {
       for(const o of stage.orders){
         shown++;
         const box=elem('article','','order-card staff-order-card');
-        box.dataset.status=o.status;
+        box.dataset.status=o.status;box.dataset.orderId=o.id;
         const pay=paymentState(o,{staff:true});
         box.dataset.payment=pay.tone;
         const top=elem('div','','ticket-head');
@@ -861,17 +876,16 @@ export function initializeOrders(client) {
         box.append(foot);
         const actions=elem('div','','order-actions');
         if(o.status==='confirmed'){
-          action(actions,'Prepara',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'preparing'}),{primary:true});
-          action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}));
+          // One tap to the pickup shelf; «In preparazione» stays for longer jobs.
+          action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}),{primary:true});
+          action(actions,'In preparazione',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'preparing'}));
         }
         if(o.status==='preparing')action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}),{primary:true});
         if(o.status==='ready'&&o.payment_status==='due'){
-          for(const [label,method] of [['Incassa contanti','cash'],['POS esterno','external_pos']]){
-            action(actions,label,async()=>{
-              const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});if(balance.error)return balance;
-              if(!await decideStaffAction(`Hai incassato realmente ${formatEuro(balance.data.due_cents)} tramite ${label}? Conferma soltanto dopo aver verificato l'incasso.`))return null;
-              return client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
-            },{primary:method==='cash'});
+          actions.append(elem('p','Incassa e consegna','order-actions-caption'));
+          for(const [label,method,how] of [['Contanti','cash','in contanti'],['POS','external_pos','con il POS esterno']]){
+            action(actions,label,()=>collectAndDeliver(o,method,how),{primary:method==='cash'});
+            actions.lastElementChild.setAttribute('aria-label',label+': incassa e consegna l’ordine '+o.display_no);
           }
         }
         if(o.status==='ready'&&o.payment_status==='paid'){
@@ -957,6 +971,21 @@ export function initializeOrders(client) {
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
+  // Number + Enter jumps to that order and focuses its main button, so the
+  // whole pickup is «numero, Invio, Invio, Invio» from the keyboard.
+  document.querySelector('#staff-search').addEventListener('keydown',event=>{
+    if(event.key!=='Enter')return;
+    const wanted=event.currentTarget.value.trim().replace(/^#/,'');
+    if(!/^\d+$/.test(wanted))return;
+    event.preventDefault();
+    const target=staffOrders.find(o=>String(o.display_no)===wanted&&(!staffContextSchool||o.school_id===staffContextSchool)&&['confirmed','preparing','ready'].includes(o.status));
+    if(!target){report(staffFeedback,'Nessun ordine da gestire con numero '+wanted+'.',true);return;}
+    const lane=target.status==='ready'?'ready':target.status==='preparing'?'preparing':'pending';
+    if(selectedLane!==lane){selectedLane=lane;drawStaff();}
+    const card=staffList.querySelector(`[data-order-id="${target.id}"]`);
+    card?.scrollIntoView({block:'center'});
+    card?.querySelector('.order-actions .button-primary')?.focus();
+  });
   document.addEventListener('keydown',event=>{
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'&&
        !staffPanel.hidden&&!event.altKey){
