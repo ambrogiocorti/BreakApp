@@ -15,7 +15,9 @@ try{
   const browser=await engine.launch();
   for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
    const page=await browser.newPage({viewport});
-   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+   // The demo harness points auth at demo.invalid; WebKit reports that blocked
+   // fetch as a page error. Anything else still fails the test.
+   const errors=[];page.on('pageerror',e=>{if(!e.message.includes('demo.invalid'))errors.push(e.message);});
    await page.goto(origin+'/__demo?as=bartender#staff-orders-section');
    await page.waitForFunction(()=>window.demo?.ready);
    const card=no=>page.locator(`.staff-order-card:has(.ticket-no:text-is("#${no}"))`);
