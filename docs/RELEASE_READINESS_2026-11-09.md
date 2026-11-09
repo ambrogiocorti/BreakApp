@@ -28,9 +28,9 @@ produrre addebiti reali.
 |---|---|---|
 | Migrazioni Supabase | Applicate in `breakapp-dev` il 9/11, controlli SQL in CI verdi | Prova manuale Admin scuola A/B e politica GPS con telefono reale |
 | Deploy frontend e Edge | `push-dispatch` v13 distribuito sul DEV; frontend da unire/pubblicare | Nuova versione visibile su URL ufficiale, RPC e dispatcher coerenti |
-| Stripe DEMO | Sandbox da verificare end-to-end | Carte di test e webhook firmati, nessun addebito live per DEMO |
+| Stripe DEMO | Merchant distinto da ITSOS associato; `charges_enabled` e `payouts_enabled` attivi nel DB DEV | Checkout e rimborso con carte TEST e webhook firmati, nessun addebito live per DEMO |
 | Stripe scuole reali | Configurazione merchant e legittimazione da verificare | Account connesso abilitato, pagamenti/rimborsi reali riconciliati |
-| Push desktop/Android/iOS | Cron Supabase e chiamate HTTP 200 osservati; consegna fisica non collaudata | Notifiche davvero recapitate con app aperta/chiusa, permessi revocati, account alternati |
+| Push desktop/Android/iOS | Cron Supabase e chiamate HTTP 200 osservati; **0 sottoscrizioni attive** al controllo del 9/11 | Attivare una sottoscrizione TEST, verificare recapito con app aperta/chiusa, permessi revocati e account alternati |
 | Offline banco | Automatismi e coda esistono; prove fisiche da completare | Tablet disconnesso, cambio dispositivo, incassi, doppio pagamento, replay e conflitti |
 | Cassa e rimborsi | Vincolo turno implementato; flusso fisico da provare | Barista apre/chiude cassa, restituzione tracciata, POS manuale, riconciliazione Admin |
 | Multi-scuola e sicurezza | Test già presenti; accettazione da aggiornare | Audit RLS/ruoli/2FA, accessi incrociati negativi e dati sensibili |
