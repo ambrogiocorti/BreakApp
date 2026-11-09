@@ -1,6 +1,6 @@
 # Stato della piattaforma
 
-## Matrice di avanzamento — 8 novembre 2026
+## Matrice di avanzamento — 9 novembre 2026
 
 Stati: **COMPLETATO E VERIFICATO** (codice, database, test automatici e prova nell'ambiente pertinente), **IMPLEMENTATO MA NON ANCORA VERIFICATO** (codice presente, manca una prova end-to-end reale), **NON COMPLETATO**. La presenza del codice da sola non basta per il primo stato. Unico progetto Supabase: `breakapp-dev` (piano Free). Nessun pagamento LIVE.
 
@@ -9,10 +9,10 @@ Stati: **COMPLETATO E VERIFICATO** (codice, database, test automatici e prova ne
 | Ruoli e contesto scuola | IMPLEMENTATO MA NON ANCORA VERIFICATO | Vincolo DB «una scuola e un ruolo» applicato l'8/11 (PR #94, confermato dal titolare); prova con l'account Admin DEMO reale da fare | P0 | Unit `role-workspace`, `single-school-context`, DB `one-school-one-role`, e2e `workspace` | PR #97 |
 | 2FA Admin/Super Admin | IMPLEMENTATO MA NON ANCORA VERIFICATO | Prova manuale con TOTP reale da ripetere dopo #97 | P0 | Unit `superadmin-exclusive`, e2e `auth` | Collaudo manuale |
 | Ingresso gruppi senza GPS | COMPLETATO E VERIFICATO (DB + CI) | Prova su telefono fisico | P1 | DB `group-join-anywhere`, e2e `groups` | Integrato con #95 |
-| GPS alla conferma (individuale e coordinatore) | IMPLEMENTATO MA NON ANCORA VERIFICATO | GPS fisico non provato | P1 | e2e `checkout` con posizione simulata | Collaudo su telefono |
+| GPS alla conferma (individuale e coordinatore) | IMPLEMENTATO MA NON ANCORA VERIFICATO | Tolleranza di precisione per scuola decisa dall'Admin (10–1000 m, default 100; DEMO 1000) dal 09/11, PR #99; ordine DEMO 13 confermato con GPS reale | P1 | e2e `checkout`, unit `school-accuracy` | Collaudo coordinatore gruppo |
 | Coordinate scuola modificabili dall'Admin | IMPLEMENTATO MA NON ANCORA VERIFICATO | Latitudine, longitudine e raggio esistevano; aggiunti indirizzo, posizione del dispositivo, controllo su mappa esterna e storico. Migrazione applicata; mappa interattiva non inclusa | P1 | Unit `school-location` | PR #97 |
-| Stripe DEMO | NON COMPLETATO | Nessun merchant TEST associato alla DEMO (causa dell'errore non-2xx) | P0 | — | Account Connect TEST da creare (azione del titolare) |
-| Stripe stato merchant | IMPLEMENTATO MA NON ANCORA VERIFICATO | Endpoint da iscrivere a `account.updated` | P1 | Unit `stripe-account-status`, DB `stripe-account-status` | PR #97 |
+| Stripe DEMO | COMPLETATO E VERIFICATO (TEST, 09/11) | Merchant TEST `acct_1UZeSR2RLtok3htO` attivo; ordine 16 da 3,00 € pagato con carta di prova e confermato dal webhook firmato. Rimborso online in DEMO da provare | P0 | Prova reale TEST dall'interfaccia | Rimborso ordine 16 |
+| Stripe stato merchant | COMPLETATO E VERIFICATO (TEST, 08/11) | Eventi `account.updated` firmati ricevuti; abilitazione DEMO registrata | P1 | Unit `stripe-account-status`, DB `stripe-account-status`, eventi reali | — |
 | Stripe individuale TEST | COMPLETATO E VERIFICATO (ITSOS, 04/11) | Prova da interfaccia cliente/staff | P1 | Unit, DB, prova reale TEST | Ripetere nella DEMO |
 | Stripe gruppi e rimborso a terzi | IMPLEMENTATO MA NON ANCORA VERIFICATO | Scenario Anna/Luca solo in test DB, mai con Stripe TEST reale | P1 | DB `group-refunds` | Collaudo TEST dopo merchant DEMO |
 | Scorte concorrenti | COMPLETATO E VERIFICATO (DB) | — | P2 | DB `orders-smoke` | — |
@@ -22,7 +22,7 @@ Stati: **COMPLETATO E VERIFICATO** (codice, database, test automatici e prova ne
 | Backup | IMPLEMENTATO MA NON ANCORA VERIFICATO | Restore completo su progetto separato mai eseguito | P2 | Workflow backup | Prova di ripristino |
 | Hosting | COMPLETATO E VERIFICATO (GitHub Pages) | CSP via meta (PR #94); Cloudflare solo come piano futuro | P2 | Workflow `github-pages` | — |
 
-Blocchi esterni: account Connect TEST per la DEMO e iscrizione a `account.updated` (dashboard Stripe del titolare); telefoni e tablet fisici; consulenza legale/fiscale (GDPR minori, corrispettivi, contratti).
+Blocchi esterni: telefoni e tablet fisici; consulenza legale/fiscale (GDPR minori, corrispettivi, contratti).
 
 ## Esperienza cliente — 5 novembre 2026
 
