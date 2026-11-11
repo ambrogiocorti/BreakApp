@@ -42,6 +42,9 @@ body:not([data-workspace="true"]) .site-header { background: transparent; }
 .auth-back-action { justify-self: start; min-height: var(--control-h-sm); text-decoration: none; color: var(--ink-2); font-weight: 600; font-size: var(--text-md); }
 .guest-access-form > p { font-size: var(--text-sm); color: var(--ink-3); }
 .guest-access-form .button { width: 100%; }
+.auth-legal { margin: 0; font-size: var(--text-sm); line-height: 1.4; color: var(--ink-3); }
+.auth-legal a { color: var(--ink-2); text-underline-offset: .15em; }
+.auth-legal a:hover { color: var(--lavagna); }
 .access-note { max-width: 25rem; text-align: center; font-size: var(--text-sm); color: var(--ink-3); }
 #auth-feedback:empty { display: none; }
 
