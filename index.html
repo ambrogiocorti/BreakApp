@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151a18" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="BreakApp: prenota la merenda e ritirala al bar della scuola." />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%icon-placeholder.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%apple-touch-icon.png" />
+    <title>Accedi · BreakApp</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Vai al contenuto</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#accesso" aria-label="BreakApp, pagina iniziale">
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i></span>
+          <span class="brand-name">BreakApp</span>
+        </a>
+        <div id="workspace-breadcrumb" class="workspace-breadcrumb" hidden></div>
+        <nav aria-label="Azioni dell’account" class="header-actions">
+          <a id="header-menu-link" class="header-link" href="#menu" hidden>Menu</a>
+          <a id="header-profile-link" class="header-link" href="#accesso" hidden>Profilo</a>
+          <button type="button" class="icon-button notice-button" id="notifications-toggle"
+            aria-label="Apri notifiche" title="Notifiche" hidden>♧<span id="notifications-unread" class="notice-count" hidden></span></button>
+          <button type="button" class="icon-button" id="theme-toggle" aria-label="Passa al tema scuro" title="Cambia tema">☾</button>
+          <a id="workspace-account" class="workspace-account" href="#accesso" aria-label="Apri profilo e sicurezza" hidden><span id="workspace-account-avatar">B</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <aside id="workspace-sidebar" class="workspace-sidebar" hidden aria-label="Navigazione">
+      <div class="sidebar-head">
+        <a class="workspace-sidebar-brand" href="#" aria-label="BreakApp, inizio">
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i></span>
+          <span class="brand-name">BreakApp</span>
+        </a>
+        <button type="button" id="workspace-drawer-close" class="icon-button sidebar-close" aria-label="Chiudi il menu">✕</button>
+      </div>
+      <div class="workspace-context">
+        <label for="workspace-context-select">Stai lavorando come</label>
+        <select id="workspace-context-select" aria-label="Scuola e ruolo attivi"></select>
+        <strong id="workspace-context-name"></strong>
+        <span id="workspace-school-label" class="workspace-school-label"></span>
+      </div>
+      <nav id="app-desktop-nav" class="app-desktop-nav" aria-label="Sezioni del ruolo" hidden></nav>
+      <div class="workspace-sidebar-bottom">
+        <a href="#accesso" class="workspace-identity-card" aria-label="Il tuo profilo"><span id="workspace-avatar" class="workspace-avatar">B</span><span class="workspace-identity-text"><strong id="workspace-identity-role"></strong><span id="workspace-identity" class="workspace-identity"></span></span></a>
+        <button id="workspace-signout" type="button" class="workspace-signout">Esci</button>
+      </div>
+    </aside>
+    <div id="workspace-scrim" class="workspace-scrim" hidden></div>
+    <nav id="app-mobile-nav" class="app-mobile-nav" aria-label="Sezioni principali" hidden></nav>
+
+    <dialog id="notifications-dialog" class="ba-dialog notice-dialog" aria-labelledby="notifications-heading">
+      <div class="dialog-header notice-header"><div><p class="notice-eyebrow">CENTRO AVVISI</p><h2 id="notifications-heading">Notifiche</h2><p class="notice-header-subtitle">Ordini, gruppi e aggiornamenti importanti.</p></div>
+        <button id="notifications-close" class="icon-button dialog-close" type="button" aria-label="Chiudi notifiche">✕</button></div>
+      <p id="notifications-feedback" class="feedback" role="status" aria-live="polite"></p>
+      <div class="notice-toolbar"><span id="notifications-summary">I tuoi avvisi</span><div class="button-row"><button id="notifications-mark-all" type="button" class="button button-ghost button-small" hidden>Segna tutte come lette</button><button id="notifications-refresh" type="button" class="button button-ghost button-small">Aggiorna</button></div></div>
+      <div id="notifications-list" class="notice-list" role="list" aria-label="Elenco notifiche"></div>
+      <details class="disclosure notice-settings">
+        <summary><span>Preferenze e notifiche push</span><small>Personalizza gli avvisi sul tuo dispositivo</small></summary>
+        <div class="disclosure-body">
+          <p id="notifications-device-state" class="notice-device-state" role="status">Verifica delle notifiche del dispositivo…</p>
+          <div class="button-row">
+            <button id="notifications-permission" type="button" class="button button-outline button-small">Avvisi del browser</button>
+            <button id="notifications-push" type="button" class="button button-outline button-small">Attiva le push</button>
+            <button id="notifications-push-disable" type="button" class="button button-ghost button-small">Disattiva su questo dispositivo</button>
+          </div>
+          <form id="notification-preferences-form" class="check-list">
+            <fieldset><legend>Cosa vuoi ricevere</legend>
+              <p class="help">Gli avvisi restano sempre qui. Queste scelte valgono per tutti i tuoi dispositivi.</p>
+              <label class="check"><input id="notice-browser-alerts" type="checkbox" checked /> Avvisi mentre l’app è aperta</label>
+              <label class="check"><input id="notice-push-orders" type="checkbox" checked /> Ordini, pagamenti e rimborsi</label>
+              <label class="check"><input id="notice-push-groups" type="checkbox" checked /> Gruppi</label>
+              <label class="check"><input id="notice-push-support" type="checkbox" checked /> Assistenza</label>
+              <label class="check"><input id="notice-push-announcements" type="checkbox" checked /> Annunci della scuola</label>
+              <button class="button button-outline button-small" type="submit">Salva preferenze</button>
+            </fieldset>
+          </form>
+        </div>
+      </details>
+    </dialog>
+
+    <p id="demo-notice" class="demo-notice" role="note" hidden>Ambiente dimostrativo — pagamenti di prova, nessun addebito reale.</p>
+
+    <main id="main-content" class="app-main">
+      <div id="workspace-page-head" class="workspace-page-head" hidden>
+        <div class="page-head-text">
+          <p class="workspace-eyebrow" id="workspace-page-section"></p>
+          <h1 id="workspace-page-title" tabindex="-1">BreakApp</h1>
+          <p id="workspace-page-subtitle" class="workspace-page-subtitle"></p>
+        </div>
+        <span class="workspace-page-role" id="workspace-page-role"></span>
+      </div>
+
+      <section class="access-section" id="accesso" aria-label="Accesso e profilo">
+        <div class="access-layout">
+          <div class="auth-card">
+            <div id="signed-out-view">
+              <div id="login-panel" class="login-panel">
+                <div class="login-brand" aria-hidden="true"><span class="brand-symbol"><i></i><i></i></span><span class="brand-name">BreakApp</span></div>
+                <h1 id="access-heading">Accedi</h1>
+                <p class="auth-subtitle">Prenota la merenda e ritirala al bar della scuola.</p>
+                <form id="auth-form" class="auth-form" novalidate>
+                  <div class="field">
+                    <label for="auth-email">Indirizzo email</label>
+                    <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="nome@scuola.it" required />
+                  </div>
+                  <div class="field">
+                    <label for="auth-password">Password</label>
+                    <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required />
+                  </div>
+                  <button class="button button-primary button-large ba-block" id="login-button" type="submit">Accedi</button>
+                </form>
+                <div class="auth-divider"><span>oppure</span></div>
+                <div class="social-actions">
+                  <button type="button" id="google-button" class="button button-outline social-button" aria-describedby="social-auth-status"><svg viewBox="0 0 24 24" aria-hidden="true" class="provider-mark"><path fill="#4285f4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.61 4.61 0 0 1-2 3.03v2.52h3.23c1.89-1.74 2.99-4.3 2.99-7.38Z"/><path fill="#34a853" d="M12 22c2.7 0 4.96-.9 6.61-2.39l-3.23-2.52c-.9.6-2.05.97-3.38.97-2.6 0-4.81-1.76-5.6-4.12H3.06v2.6A10 10 0 0 0 12 22Z"/><path fill="#fbbc05" d="M6.4 13.94a6 6 0 0 1 0-3.88v-2.6H3.06a10 10 0 0 0 0 9.08Z"/><path fill="#ea4335" d="M12 5.94c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.58 9.58 0 0 0 12 2a10 10 0 0 0-8.94 5.46l3.34 2.6A5.99 5.99 0 0 1 12 5.94Z"/></svg>Google</button>
+                  <button type="button" id="microsoft-button" class="button button-outline social-button" aria-describedby="social-auth-status"><svg viewBox="0 0 24 24" aria-hidden="true" class="provider-mark"><path fill="#f25022" d="M2 2h9v9H2z"/><path fill="#7fba00" d="M13 2h9v9h-9z"/><path fill="#00a4ef" d="M2 13h9v9H2z"/><path fill="#ffb900" d="M13 13h9v9h-9z"/></svg>Microsoft</button>
+                </div>
+                <p id="social-auth-status" class="social-auth-status" role="status" aria-live="polite" hidden></p>
+                <div class="auth-footer">
+                  <p class="auth-signup">Prima volta? <button class="auth-inline-action" id="signup-button" type="button">Crea un account</button></p>
+                  <button id="guest-open" class="auth-guest-action" type="button" hidden>Entra come ospite <span aria-hidden="true">→</span></button>
+                </div>
+                <p class="auth-legal">Continuando accetti i <a href="termini.html">Termini d’uso</a> e dichiari di aver letto l’<a href="privacy.html">Informativa privacy</a>.</p>
+              </div>
+            </div>
+            <div id="signed-in-view" class="profile" hidden>
+              <section class="profile-block profile-identity" aria-labelledby="profile-identity-title">
+                <h2 id="profile-identity-title" class="sr-only">Account</h2>
+                <span id="profile-avatar" class="profile-avatar" aria-hidden="true"></span>
+                <div class="profile-identity-text">
+                  <span class="label">Accesso effettuato come</span>
+                  <strong id="user-email"></strong>
+                </div>
+                <button type="button" id="logout-button" class="button button-outline button-small">Esci dall’account</button>
+              </section>
+              <section id="workspace-profile-switcher" class="profile-block workspace-profile-switcher" hidden aria-labelledby="profile-context-title">
+                <h2 id="profile-context-title">Scuola e ruolo</h2>
+                <label for="workspace-profile-context-select" class="sr-only">Cambia scuola o ruolo</label>
+                <select id="workspace-profile-context-select" aria-label="Cambia scuola e ruolo dal Profilo"></select>
+                <p class="help">Cambi solo la vista: le autorizzazioni restano quelle assegnate al tuo account.</p>
+              </section>
+              <section class="profile-block school-access-overview" aria-labelledby="profile-schools-title">
+                <div class="block-head">
+                  <h2 id="profile-schools-title">Le tue scuole</h2>
+                  <button type="button" id="refresh-access-button" class="button button-ghost button-small">Aggiorna</button>
+                </div>
+                <p id="school-access-status" class="school-access-status feedback" role="status" aria-live="polite">Verifica autorizzazioni…</p>
+                <div id="school-access-list" class="school-access-list"></div>
+              </section>
+              <section id="admin-mfa" class="profile-block admin-security" hidden aria-labelledby="profile-mfa-title">
+                <h2 id="profile-mfa-title">Verifica in due passaggi</h2>
+                <p id="mfa-status" class="school-access-status feedback" role="status" aria-live="polite">Controllo dello stato 2FA…</p>
+                <button id="mfa-enroll-button" type="button" class="button button-primary" hidden>Attiva la verifica con QR</button>
+                <div id="mfa-qr-panel" class="admin-qr" hidden>
+                  <p>Apri Google Authenticator o Microsoft Authenticator e inquadra il codice.</p>
+                  <img id="mfa-qr" alt="QR personale per attivare la verifica in due passaggi" width="180" height="180" />
+                  <p class="help">Il QR è legato al tuo account: non condividerlo e non salvarlo in una chat.</p>
+                </div>
+                <form id="mfa-code-form" class="inline-form" hidden>
+                  <div class="field">
+                    <label for="mfa-code">Codice a 6 cifre</label>
+                    <input id="mfa-code" name="mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required />
+                  </div>
+                  <button id="mfa-code-button" type="submit" class="button button-primary">Verifica</button>
+                </form>
+                <div id="mfa-lost-panel" class="callout" hidden>
+                  <strong>Hai perso l’accesso all’app Authenticator?</strong>
+                  <p>Il QR originale non si può recuperare e il fattore non si reimposta con la sola password. Chiedi a un responsabile della piattaforma di rimuovere il vecchio fattore, poi ricarica lo stato.</p>
+                  <button type="button" id="mfa-refresh-button" class="button button-outline button-small">Ricarica lo stato</button>
+                </div>
+              </section>
+              <section class="profile-block" aria-labelledby="profile-theme-title">
+                <h2 id="profile-theme-title">Aspetto</h2>
+                <div id="theme-choice" class="segmented" role="radiogroup" aria-labelledby="profile-theme-title">
+                  <label><input type="radio" name="theme-choice" value="light" /> <span>Chiaro</span></label>
+                  <label><input type="radio" name="theme-choice" value="dark" /> <span>Scuro</span></label>
+                  <label><input type="radio" name="theme-choice" value="system" /> <span>Come il dispositivo</span></label>
+                </div>
+              </section>
+              <section class="profile-block profile-links" aria-labelledby="profile-help-title">
+                <h2 id="profile-help-title">Aiuto</h2>
+                <a class="row-link" href="#support-center"><span>Assistenza e segnalazioni</span><span aria-hidden="true">→</span></a>
+                <a class="row-link" href="privacy.html"><span>Informativa privacy</span><span aria-hidden="true">→</span></a>
+                <a class="row-link" href="termini.html"><span>Termini d’uso</span><span aria-hidden="true">→</span></a>
+                <a class="row-link" href="mailto:corti.ambro@gmail.com"><span>Scrivi all’assistenza</span><span aria-hidden="true">→</span></a>
+              </section>
+            </div>
+            <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
+            <div id="environment-status" class="status-box" role="status" aria-live="polite" hidden></div>
+          </div>
+          <p class="access-note">Versione di prova · i pagamenti online sono in modalità test</p>
+        </div>
+      </section>
+
+      <section class="menu-section" id="menu" hidden aria-label="Menu del bar">
+        <div class="menu-place">
+          <details id="menu-place" class="menu-place-picker">
+            <summary>
+              <span class="menu-place-text"><span class="label">Ordini da</span><strong id="menu-place-label">Scegli scuola e bar</strong></span>
+              <span class="menu-place-change">Cambia</span>
+            </summary>
+            <div class="menu-toolbar">
+              <div class="field"><label for="menu-school">Scuola</label><select id="menu-school" aria-label="Seleziona scuola"></select></div>
+              <div class="field"><label for="menu-bar">Bar</label><select id="menu-bar" aria-label="Seleziona bar"></select></div>
+              <button id="menu-refresh" class="button button-ghost button-small" type="button">Aggiorna il menu</button>
+            </div>
+          </details>
+        </div>
+        <div id="menu-service-alert" class="alert alert-warning service-customer-alert" role="status" aria-live="polite" hidden></div>
+        <div class="market-workbench">
+          <aside class="market-sidebar" aria-label="Cerca e filtra">
+            <div class="menu-search">
+              <label for="menu-search" class="sr-only">Cerca nel menu</label>
+              <input id="menu-search" type="search" placeholder="Cerca nel menu" autocomplete="off" />
+            </div>
+            <div id="menu-categories" class="menu-categories" role="group" aria-label="Categorie"></div>
+          </aside>
+          <div class="market-results">
+            <p id="menu-status" class="menu-status" role="status" aria-live="polite">Caricamento del menu…</p>
+            <div id="menu-grid" class="menu-grid" aria-live="polite">
+              <p class="menu-empty">I prodotti del bar appariranno qui.</p>
+            </div>
+            <p class="help menu-disclaimer">Prezzo e disponibilità vengono confermati quando prenoti. Gli allergeni sono dichiarati dal bar.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="orders" class="orders-section" aria-label="I miei ordini" hidden>
+        <div class="page-toolbar">
+          <p id="orders-feedback" class="feedback" role="status" aria-live="polite"></p>
+          <button type="button" class="button button-ghost button-small" id="orders-refresh">Aggiorna</button>
+        </div>
+        <div id="customer-service-notices" class="notice-strip"></div>
+        <div id="orders-list" class="orders-list"></div>
+      </section>
+
+      <section id="staff-orders-section" class="staff-section" aria-label="Banco" hidden>
+        <div class="staff-toolbar" role="search">
+          <div class="staff-search">
+            <label for="staff-search" class="sr-only">Cerca numero o prodotto</label>
+            <input id="staff-search" type="search" placeholder="N. ordine + Invio, o prodotto…" autocomplete="off" aria-keyshortcuts="Control+k Meta+k" />
+          </div>
+          <div class="staff-board-filters">
+            <label for="staff-slot-filter"><span class="sr-only">Fascia di ritiro</span>
+              <select id="staff-slot-filter"><option value="all">Tutte le fasce</option></select>
+            </label>
+            <label for="staff-visibility-filter"><span class="sr-only">Quali ordini</span>
+              <select id="staff-visibility-filter">
+                <option value="active">Da gestire</option>
+                <option value="closed">Conclusi e rimborsi</option>
+                <option value="all">Tutti</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" class="button button-primary staff-scan-button" id="staff-scan-open">Scansiona QR</button>
+          <a href="#cash-workspace" class="button button-outline staff-cash-shortcut">Apri cassa</a>
+          <button type="button" class="button button-ghost button-small" id="staff-refresh">Aggiorna</button>
+          <p id="staff-live-status" class="live-status" role="status" aria-live="polite">Collegamento…</p>
+        </div>
+        <p id="staff-orders-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <div class="service-floor">
+          <div class="service-queue">
+            <div id="staff-lane-tabs" class="lane-tabs" role="tablist" aria-label="Stato degli ordini"></div>
+            <div id="staff-orders-list" class="staff-board" aria-label="Ordini per stato"></div>
+          </div>
+          <aside class="service-console" aria-label="Produzione">
+            <details id="staff-production-panel" class="staff-production-panel" open>
+              <summary>
+                <span id="staff-production-title">Da preparare</span>
+                <strong id="staff-production-total" class="staff-production-total">0 pezzi</strong>
+              </summary>
+              <p class="help">Pezzi da preparare, sommando gli ordini per fascia scelta.</p>
+              <div id="staff-production-list" class="staff-production-list"></div>
+            </details>
+          </aside>
+        </div>
+        <section id="staff-cash-refunds-panel" class="panel" aria-labelledby="staff-cash-refunds-title" hidden>
+          <div class="panel-head"><h2 id="staff-cash-refunds-title">Restituzioni da registrare</h2></div>
+          <p class="help">Il rimborso di contanti o POS non avviene automaticamente. Un Barista con un turno aperto per il bar dell'ordine può registrare la restituzione dopo averla effettuata.</p>
+          <p id="staff-cash-refunds-feedback" class="feedback" role="status" aria-live="polite"></p>
+          <div id="staff-cash-refunds-list" class="row-list"></div>
+        </section>
+        <details id="group-staff-panel" class="panel panel-disclosure" hidden>
+          <summary><span>Ordini di gruppo</span><small>Ritiro unico dal coordinatore</small></summary>
+          <div class="panel-body">
+            <p class="help">Consegna solo al coordinatore, con saldo a zero e tutti i prodotti pronti.</p>
+            <form id="group-staff-scan-form" class="inline-form">
+              <div class="field">
+                <label for="group-staff-token">Codice del gruppo</label>
+                <input id="group-staff-token" placeholder="Incolla il codice o scansiona il QR" required autocomplete="off" />
+              </div>
+              <button class="button button-primary" type="submit">Avvia il ritiro</button>
+            </form>
+            <p id="group-staff-feedback" class="feedback" role="status" aria-live="polite"></p>
+            <div class="block-head"><h3>Gruppi della scuola</h3><button class="button button-ghost button-small" type="button" id="group-staff-refresh">Aggiorna</button></div>
+            <div id="group-staff-list" class="row-list"></div>
+            <div id="group-staff-active" class="group-staff-active" hidden></div>
+          </div>
+        </details>
+      </section>
+
+      <section id="groups" class="groups-section" hidden aria-labelledby="groups-heading">
+        <div class="group-page-heading">
+          <h2 id="groups-heading" tabindex="-1" class="sr-only">I miei gruppi</h2>
+        </div>
+        <p id="groups-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <div id="groups-overview" class="groups-overview">
+          <div class="group-entry-grid">
+            <details id="groups-create-disclosure" class="action-disclosure group-action-card">
+              <summary><span class="action-icon" aria-hidden="true">+</span><span><strong>Crea un gruppo</strong><small>Raccogli gli ordini della classe</small></span></summary>
+              <form id="groups-create-form" class="group-create-form form-grid">
+                <div class="field field-wide">
+                  <label for="groups-create-title">Nome del gruppo</label>
+                  <input id="groups-create-title" required minlength="3" maxlength="100" placeholder="Es. Merenda 4A" />
+                </div>
+                <div class="field"><label for="groups-school">Scuola</label><select id="groups-school" required data-hide-single></select></div>
+                <div class="field"><label for="groups-bar">Bar</label><select id="groups-bar" required></select></div>
+                <div class="field field-wide"><label for="groups-window">Ritiro</label><select id="groups-window" required></select></div>
+                <details class="disclosure field-wide">
+                  <summary>Opzioni di accesso</summary>
+                  <div class="disclosure-body form-grid">
+                    <div class="field"><label for="groups-entry-mode">Chi entra con l’invito</label><select id="groups-entry-mode"><option value="open">Entra subito</option><option value="approval">Serve la tua approvazione</option></select></div>
+                    <div class="field"><label for="groups-limit">Massimo partecipanti <span class="optional">facoltativo</span></label><input id="groups-limit" type="number" min="1" max="100" placeholder="Nessun limite" /></div>
+                  </div>
+                </details>
+                <div class="group-form-actions field-wide"><p class="help">Creare il gruppo non riserva prodotti.</p><button class="button button-primary" type="submit">Crea gruppo</button></div>
+              </form>
+            </details>
+            <details id="groups-join-disclosure" class="action-disclosure group-action-card">
+              <summary><span class="action-icon" aria-hidden="true">→</span><span><strong>Entra con un invito</strong><small>Usa il link di un compagno</small></span></summary>
+              <form id="groups-join-form" class="group-join-form">
+                <div class="field"><label for="groups-invite-token">Link o codice invito</label><input id="groups-invite-token" required placeholder="Incolla il link" autocomplete="off" /></div>
+                <p class="help">Puoi partecipare da qualsiasi luogo. La posizione verrà verificata solo quando il coordinatore confermerà la prenotazione.</p>
+                <button class="button button-primary" type="submit">Entra nel gruppo</button>
+              </form>
+            </details>
+          </div>
+          <section class="group-list-panel" aria-labelledby="groups-list-title">
+            <div class="block-head">
+              <h3 id="groups-list-title">I tuoi gruppi</h3>
+              <button type="button" id="groups-refresh" class="button button-ghost button-small">Aggiorna</button>
+            </div>
+            <div id="groups-list" class="row-list group-list" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <article id="group-detail" class="group-detail" hidden>
+          <button type="button" id="group-back" class="back-link">← I tuoi gruppi</button>
+          <header class="group-detail-head">
+            <div>
+              <h3 id="group-detail-title" tabindex="-1">Gruppo</h3>
+              <p id="group-detail-meta" class="group-detail-meta"></p>
+            </div>
+            <div id="group-aggregate" class="group-aggregate"></div>
+          </header>
+          <div id="group-progress" class="group-progress" hidden></div>
+          <div id="group-invite" class="group-invite" hidden>
+            <span class="group-invite-description"><strong>Invita i compagni</strong><small>Chi ha il link può entrare nel gruppo.</small></span>
+            <button id="group-invite-copy" type="button" class="button button-outline button-small">Copia link</button>
+            <input id="group-invite-link" aria-label="Link di invito al gruppo" readonly hidden />
+          </div>
+          <section id="group-personal" class="group-block" hidden aria-labelledby="group-personal-title">
+            <div class="block-head">
+              <h4 id="group-personal-title">Il tuo ordine</h4>
+              <span id="group-personal-state" class="status" data-tone="neutral"></span>
+            </div>
+            <form id="group-cart-form">
+              <div id="group-products" class="group-products"></div>
+              <div class="group-cart-actions">
+                <p id="group-draft-total" class="group-draft-total" aria-live="polite"></p>
+                <button class="button button-outline" type="submit">Salva</button>
+              </div>
+            </form>
+            <div id="group-ready-summary" class="group-ready-summary" hidden></div>
+            <button id="group-ready" type="button" class="button button-primary">Ho finito</button>
+          </section>
+          <div id="group-confirm-panel" class="group-block group-confirm" hidden>
+            <h4>Conferma l’ordine del gruppo</h4>
+            <p class="help">Controlliamo posizione, disponibilità e scorte. Il ritiro sarà unico, dal coordinatore.</p>
+            <label id="group-accept-unready-label" class="check"><input id="group-accept-unready" type="checkbox" /> Conferma anche se qualcuno non ha finito</label>
+            <div id="group-confirm-location" class="location-check" data-state="idle"></div>
+            <button type="button" id="group-confirm" class="button button-primary">Conferma ordine di gruppo</button>
+          </div>
+          <div id="group-confirmed-panel" class="group-block" hidden>
+            <h4>Ordine confermato</h4>
+            <div id="group-confirmed-summary" class="group-confirmed-summary"></div>
+            <div id="group-ticket-qr" class="group-ticket" aria-label="QR di ritiro del coordinatore"></div>
+            <p id="group-ticket-token" class="help mono"></p>
+            <button type="button" id="group-cancel-confirmed" class="button button-danger-outline button-small" hidden>Annulla l’intero ordine</button>
+          </div>
+          <details id="group-coordinator-panel" class="disclosure group-disclosure" hidden>
+            <summary>Partecipanti <span id="group-members-count"></span></summary>
+            <div id="group-members" class="row-list"></div>
+          </details>
+          <details id="group-payments-panel" class="disclosure group-disclosure" hidden>
+            <summary>Pagamento online</summary>
+            <p class="help">Puoi pagare per intero le tue righe o quelle dei compagni.</p>
+            <div id="group-payable-list" class="row-list"></div>
+            <button id="group-pay-selected" type="button" class="button button-primary">Paga le righe selezionate</button>
+          </details>
+          <details id="group-manage" class="disclosure group-disclosure" hidden>
+            <summary>Impostazioni del gruppo</summary>
+            <div class="group-manage-fields">
+              <fieldset class="settings-group"><legend>Ingresso</legend>
+                <label class="check"><input type="checkbox" id="group-accepting" /> Accetta nuovi partecipanti</label>
+                <label class="check"><input type="checkbox" id="group-approval" /> Approvo io chi entra</label>
+                <div class="field"><label for="group-limit">Massimo partecipanti</label><input id="group-limit" type="number" min="1" max="100" placeholder="Nessun limite" /></div>
+                <div class="button-row">
+                  <button type="button" id="group-save-settings" class="button button-outline button-small">Salva</button>
+                  <button type="button" id="group-rotate-invite" class="button button-ghost button-small">Nuovo link di invito</button>
+                </div>
+              </fieldset>
+              <fieldset class="settings-group"><legend>Ritiro</legend>
+                <div class="field"><label for="group-reschedule-window">Fascia di ritiro</label><select id="group-reschedule-window"></select></div>
+                <button type="button" id="group-reschedule" class="button button-outline button-small">Cambia fascia</button>
+              </fieldset>
+              <fieldset class="settings-group"><legend>Coordinamento</legend>
+                <div class="field"><label for="group-transfer-member">Nuovo coordinatore</label><select id="group-transfer-member"></select></div>
+                <button type="button" id="group-transfer" class="button button-outline button-small">Passa il coordinamento</button>
+              </fieldset>
+              <fieldset class="settings-group settings-danger"><legend>Annulla</legend>
+                <button type="button" id="group-cancel" class="button button-danger-outline button-small">Annulla il gruppo</button>
+              </fieldset>
+            </div>
+          </details>
+          <button type="button" id="group-leave" class="button button-ghost button-small group-leave" hidden>Esci dal gruppo</button>
+        </article>
+      </section>
+
+      <section id="school-reports" class="reports-section" hidden aria-label="Report">
+        <form id="reports-form" class="page-toolbar filter-bar">
+          <div class="field"><label for="reports-from">Dal</label><input id="reports-from" type="date" required /></div>
+          <div class="field"><label for="reports-to">Al</label><input id="reports-to" type="date" required /></div>
+          <button type="submit" class="button button-primary">Calcola</button>
+        </form>
+        <p id="reports-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <div id="reports-metrics" class="stat-row"></div>
+        <p id="reports-order-count" class="help"></p>
+        <div class="split">
+          <section class="panel" aria-labelledby="reports-products-title">
+            <div class="panel-head">
+              <h2 id="reports-products-title">Prodotti più richiesti</h2>
+              <div class="button-row export-actions">
+                <button type="button" data-export="csv" class="button button-outline button-small" disabled>CSV</button>
+                <button type="button" data-export="xlsx" class="button button-outline button-small" disabled>Excel</button>
+                <button type="button" data-export="pdf" class="button button-outline button-small" disabled>PDF</button>
+              </div>
+            </div>
+            <div id="reports-products" class="rank-list"></div>
+            <p class="help">I report sono rendiconti interni, non documenti fiscali.</p>
+          </section>
+          <form id="announcement-form" class="panel form-stack" aria-labelledby="announcement-title-label">
+            <div class="panel-head"><h2 id="announcement-title-label">Annuncio alla scuola</h2></div>
+            <div class="field"><label for="announcement-title">Titolo</label><input id="announcement-title" required minlength="3" maxlength="120" /></div>
+            <div class="field"><label for="announcement-body">Messaggio</label><textarea id="announcement-body" required minlength="3" maxlength="800" rows="4"></textarea></div>
+            <button type="submit" class="button button-primary">Pubblica</button>
+          </form>
+        </div>
+        <section id="fiscal-documents" class="panel fiscal-panel" aria-labelledby="fiscal-title">
+          <div class="panel-head">
+            <h2 id="fiscal-title">Scontrini da emettere</h2>
+            <div class="button-row">
+              <label class="sr-only" for="fiscal-status">Mostra</label>
+              <select id="fiscal-status"><option value="to_issue">Da emettere</option><option value="issued">Già emessi</option><option value="">Tutti</option></select>
+              <button type="button" id="fiscal-refresh" class="button button-outline button-small">Aggiorna</button>
+              <button type="button" id="fiscal-export" class="button button-outline button-small" disabled>CSV</button>
+            </div>
+          </div>
+          <p class="help">Ogni incasso o rimborso registrato nell’app crea qui una riga, con importo e prodotti. Emetti lo scontrino (o lo scontrino di reso) con il registratore del bar e segnalo come emesso. Il periodo è quello scelto sopra, al massimo 3 mesi.</p>
+          <p id="fiscal-summary" class="help" role="status" aria-live="polite"></p>
+          <div id="fiscal-list" class="fiscal-list"></div>
+        </section>
+      </section>
+
+      <section id="cash-workspace" class="cash-section" hidden aria-label="Cassa e turni">
+        <div class="page-toolbar">
+          <div class="field field-inline"><label for="cash-bar">Bar</label><select id="cash-bar"></select></div>
+          <button type="button" id="cash-refresh" class="button button-ghost button-small">Aggiorna</button>
+        </div>
+        <div class="cash-status" aria-live="polite">
+          <p id="cash-current" class="cash-current"></p>
+          <p id="cash-unassigned" class="alert alert-warning" role="status"></p>
+          <p id="cash-feedback" class="feedback" role="status" aria-live="polite"></p>
+        </div>
+        <div class="cash-forms">
+          <form id="cash-open-form" class="panel form-stack"><h2>Apri il turno</h2>
+            <div class="field"><label for="cash-opening">Fondo cassa ricevuto (€)</label><input id="cash-opening" inputmode="decimal" required value="0,00" /></div>
+            <button type="submit" class="button button-primary">Apri il turno</button></form>
+          <form id="cash-movement-form" class="panel form-stack" hidden><h2>Movimento di contanti</h2>
+            <div class="field"><label for="cash-action">Tipo</label><select id="cash-action"><option value="withdrawal">Prelievo o uscita</option><option value="deposit">Versamento o entrata</option></select></div>
+            <div class="field"><label for="cash-amount">Importo (€)</label><input id="cash-amount" inputmode="decimal" required /></div>
+            <div class="field"><label for="cash-reason">Motivo</label><textarea id="cash-reason" minlength="10" maxlength="500" required rows="2"></textarea></div>
+            <button type="submit" class="button button-outline">Registra movimento</button></form>
+          <form id="cash-close-form" class="panel form-stack" hidden><h2>Chiudi il turno</h2>
+            <div class="field"><label for="cash-counted">Contanti contati (€)</label><input id="cash-counted" inputmode="decimal" required /></div>
+            <div class="field"><label for="cash-close-reason">Motivo <span class="optional">obbligatorio se c’è una differenza</span></label><textarea id="cash-close-reason" maxlength="500" rows="2"></textarea></div>
+            <button type="submit" class="button button-primary">Conferma chiusura</button></form>
+          <form id="cash-adjust-form" class="panel form-stack" hidden><h2>Rettifica una chiusura</h2>
+            <div class="field"><label for="cash-adjust-session">Chiusura</label><select id="cash-adjust-session" required></select></div>
+            <div class="field"><label for="cash-adjust-amount">Importo con segno (€)</label><input id="cash-adjust-amount" inputmode="decimal" required placeholder="-0,50" /></div>
+            <div class="field"><label for="cash-adjust-reason">Motivo</label><textarea id="cash-adjust-reason" required minlength="10" maxlength="500" rows="2"></textarea></div>
+            <button type="submit" class="button button-primary">Aggiungi rettifica</button></form>
+        </div>
+        <div class="split">
+          <section class="panel" aria-labelledby="cash-history-title"><div class="panel-head"><h2 id="cash-history-title">Turni e chiusure</h2></div><div id="cash-history" class="row-list"></div></section>
+          <section class="panel" aria-labelledby="cash-entries-title"><div class="panel-head"><h2 id="cash-entries-title">Ultimi movimenti</h2></div><div id="cash-entries" class="row-list ledger"></div></section>
+        </div>
+      </section>
+
+      <section id="offline-review" class="review-section" hidden aria-label="Revisione operazioni offline">
+        <div class="page-toolbar">
+          <p class="help page-intro">Operazioni registrate dai Baristi senza rete. Dopo l’approvazione devi ancora contabilizzare la vendita; le eccedenze restano visibili come conflitti di magazzino.</p>
+          <button type="button" id="offline-review-refresh" class="button button-ghost button-small">Aggiorna</button>
+        </div>
+        <p id="offline-review-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <section class="panel" aria-labelledby="offline-review-events-title"><div class="panel-head"><h2 id="offline-review-events-title">Da esaminare</h2></div>
+          <div id="offline-review-list" class="row-list" aria-live="polite"></div></section>
+        <section class="panel" aria-labelledby="offline-review-conflicts-title"><div class="panel-head"><h2 id="offline-review-conflicts-title">Conflitti di magazzino</h2></div>
+          <div id="offline-stock-conflicts" class="row-list" aria-live="polite"></div></section>
+      </section>
+
+      <section id="support-center" class="support-center" aria-label="Assistenza" hidden>
+        <div class="page-toolbar">
+          <p id="support-feedback" role="status" aria-live="polite" class="feedback"></p>
+          <button type="button" id="support-refresh" class="button button-ghost button-small">Aggiorna</button>
+        </div>
+        <div class="support-grid">
+          <section class="panel support-list-panel" aria-labelledby="support-list-title">
+            <div class="panel-head"><h2 id="support-list-title">Le tue richieste</h2></div>
+            <div id="support-ticket-list" class="row-list"></div>
+          </section>
+          <section class="panel support-conversation" id="support-detail-panel" hidden aria-labelledby="support-detail-title">
+            <div class="panel-head"><h2 id="support-detail-title">Conversazione</h2><p id="support-detail-status" class="help"></p></div>
+            <div id="support-thread" class="support-thread" aria-live="polite"></div>
+            <form id="support-reply-form" class="form-stack">
+              <div class="field"><label for="support-reply-body">Rispondi</label><textarea id="support-reply-body" maxlength="4000" rows="3" required></textarea></div>
+              <div class="field"><label for="support-reply-file">Foto <span class="optional">facoltativa · JPG, PNG o WebP fino a 4 MB</span></label><input id="support-reply-file" type="file" accept="image/jpeg,image/png,image/webp" /></div>
+              <button type="submit" class="button button-primary" id="support-reply-button">Invia</button>
+            </form>
+            <form id="support-reopen-form" class="form-stack" hidden>
+              <div class="field"><label for="support-reopen-reason">Perché vuoi riaprirla?</label><textarea id="support-reopen-reason" rows="2" required minlength="8" maxlength="1000"></textarea></div>
+              <button class="button button-outline" type="submit">Chiedi di riaprire</button>
+            </form>
+            <div id="support-admin-actions" class="form-stack" hidden>
+              <div class="field"><label for="support-admin-state">Stato della richiesta</label>
+                <select id="support-admin-state">
+                  <option value="open">Aperta</option>
+                  <option value="in_progress">In lavorazione</option>
+                  <option value="awaiting_customer">In attesa di risposta</option>
+                  <option value="resolved">Risolta</option>
+                  <option value="closed">Chiusa</option>
+                </select></div>
+              <button type="button" id="support-admin-save" class="button button-outline">Salva stato</button>
+              <div id="support-reopen-requests" class="row-list"></div>
+            </div>
+          </section>
+          <details class="panel panel-disclosure support-new" id="support-new-panel">
+            <summary><span>Nuova richiesta</span><small>Ordine, pagamento, prodotto o servizio</small></summary>
+            <form id="support-create-form" class="panel-body form-grid">
+              <div class="field"><label for="support-school">Scuola</label><select id="support-school" required data-hide-single></select></div>
+              <div class="field"><label for="support-category">Argomento</label>
+                <select id="support-category">
+                  <option value="order">Ordine</option>
+                  <option value="product">Prodotto</option>
+                  <option value="payment">Pagamento</option>
+                  <option value="service">Servizio del bar</option>
+                  <option value="other">Altro</option>
+                </select></div>
+              <div class="field"><label for="support-order-reference">Ordine <span class="optional">facoltativo</span></label>
+                <select id="support-order-reference"><option value="">Nessun ordine</option></select></div>
+              <div class="field"><label for="support-group-reference">Gruppo <span class="optional">facoltativo</span></label>
+                <select id="support-group-reference"><option value="">Nessun gruppo</option></select></div>
+              <div id="support-group-options" class="form-grid field-wide" hidden>
+                <div class="field"><label for="support-group-visibility">Chi vede la conversazione</label>
+                  <select id="support-group-visibility"><option value="group">Tutto il gruppo: funzionamento del gruppo</option><option value="personal">Solo tu: tuoi prodotti o pagamenti</option></select></div>
+                <div class="field"><label for="support-group-line">Tuo prodotto <span class="optional">solo richieste private</span></label>
+                  <select id="support-group-line"><option value="">Nessuno</option></select></div>
+                <div class="field"><label for="support-group-payment">Tuo pagamento <span class="optional">solo richieste private</span></label>
+                  <select id="support-group-payment"><option value="">Nessuno</option></select></div>
+              </div>
+              <div class="field field-wide"><label for="support-subject">Oggetto</label>
+                <input id="support-subject" minlength="4" maxlength="160" required placeholder="Es. Prodotto mancante" /></div>
+              <div class="field field-wide"><label for="support-message">Cosa è successo?</label>
+                <textarea id="support-message" rows="4" required maxlength="4000" minlength="1"></textarea></div>
+              <div class="field field-wide"><label for="support-create-file">Foto <span class="optional">facoltativa · JPG, PNG o WebP fino a 4 MB</span></label>
+                <input id="support-create-file" type="file" accept="image/jpeg,image/png,image/webp" /></div>
+              <div class="field-wide"><button class="button button-primary" id="support-create-button" type="submit">Invia richiesta</button></div>
+            </form>
+          </details>
+        </div>
+      </section>
+
+      <section id="offline-terminal" class="offline-section" hidden aria-label="Modalità offline">
+        <p id="offline-status" class="alert offline-status" role="status" aria-live="polite"></p>
+        <div class="offline-grid">
+          <section class="panel offline-lock" aria-labelledby="offline-lock-title">
+            <div class="panel-head"><h2 id="offline-lock-title">Dispositivo</h2></div>
+            <p id="offline-lease-summary" class="offline-lease">Nessun dispositivo autorizzato.</p>
+            <form id="offline-activate-form" class="form-stack">
+              <div class="field"><label for="offline-activate-pin">Scegli un PIN (6–12 cifre)</label>
+                <input id="offline-activate-pin" type="password" inputmode="numeric" autocomplete="new-password" minlength="6" maxlength="12" required pattern="[0-9]{6,12}"/></div>
+              <button type="submit" class="button button-primary">Autorizza questo dispositivo</button>
+            </form>
+            <form id="offline-unlock-form" class="form-stack" hidden>
+              <div class="field"><label for="offline-unlock-pin">PIN del dispositivo</label>
+                <input id="offline-unlock-pin" type="password" inputmode="numeric" autocomplete="off" minlength="6" maxlength="12" required pattern="[0-9]{6,12}"/></div>
+              <button type="submit" class="button button-primary">Sblocca</button>
+            </form>
+            <button id="offline-lock" type="button" class="button button-outline button-small">Blocca ora</button>
+          </section>
+          <section class="panel offline-sale" aria-labelledby="offline-sale-title">
+            <div class="panel-head"><h2 id="offline-sale-title">Vendita al banco in contanti</h2>
+              <button id="offline-refresh-catalog" type="button" class="button button-ghost button-small">Aggiorna catalogo</button></div>
+            <p class="help">Aggiorna il catalogo finché sei online. La vendita viene salvata cifrata, senza dati personali, e verificata alla riconnessione.</p>
+            <form id="offline-entry-form" class="form-stack" hidden>
+              <div class="field"><label for="offline-sale-bar">Bar</label><select id="offline-sale-bar" required></select></div>
+              <div class="form-grid">
+                <div class="field"><label for="offline-sale-product">Prodotto</label><select id="offline-sale-product" required></select></div>
+                <div class="field"><label for="offline-sale-quantity">Quantità</label><input id="offline-sale-quantity" type="number" min="1" max="1000" step="1" value="1" required/></div>
+              </div>
+              <button id="offline-add-item" type="button" class="button button-outline button-small">Aggiungi</button>
+              <div id="offline-sale-items" class="row-list" aria-live="polite"></div>
+              <div class="field"><label for="offline-entry-amount">Totale incassato (€)</label><input id="offline-entry-amount" inputmode="decimal" value="0,00" readonly required/></div>
+              <div class="field"><label for="offline-entry-note">Nota interna <span class="optional">senza dati personali</span></label><input id="offline-entry-note" maxlength="120" placeholder="Es. vendita banco"/></div>
+              <div class="button-row">
+                <button type="submit" class="button button-primary">Incassa e salva offline</button>
+                <button id="offline-entry-online" type="button" class="button button-outline">Incassa ora online</button>
+              </div>
+            </form>
+          </section>
+          <section class="panel offline-pickups" aria-labelledby="offline-pickups-title">
+            <div class="panel-head"><h2 id="offline-pickups-title">Ritiri senza rete</h2>
+              <button id="offline-refresh-manifest" type="button" class="button button-ghost button-small">Scarica ordini pronti</button></div>
+            <p class="help">Scarica gli ordini pronti prima di perdere la rete. Una consegna resta in sospeso finché il server non la verifica. Non usare il POS esterno offline.</p>
+            <p id="offline-manifest-summary" class="feedback" role="status">Ordini non ancora scaricati.</p>
+            <form id="offline-pickup-form" class="form-stack" hidden>
+              <div class="field"><label for="offline-pickup-token">Codice QR dell’ordine</label>
+                <input id="offline-pickup-token" type="text" autocomplete="off" required placeholder="Incolla il codice del QR"/></div>
+              <button id="offline-pickup-find" type="button" class="button button-outline button-small">Cerca nell’archivio</button>
+              <div id="offline-pickup-preview" role="status" class="help"></div>
+              <button type="submit" class="button button-primary">Conferma consegna</button>
+            </form>
+          </section>
+          <section class="panel offline-queue-card" aria-labelledby="offline-queue-title">
+            <div class="panel-head"><h2 id="offline-queue-title">Operazioni da inviare</h2></div>
+            <p class="help">Le operazioni coerenti vengono contabilizzate; quelle dubbie passano alla revisione dell’Admin. La conferma digitale non sostituisce lo scontrino fiscale.</p>
+            <div class="button-row offline-queue-actions">
+              <button id="offline-sync" type="button" class="button button-primary">Invia al server</button>
+              <button id="offline-refresh" type="button" class="button button-ghost button-small">Aggiorna</button>
+            </div>
+            <div id="offline-queue" class="row-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="bar-operations" class="service-section" aria-label="Servizio e orari" hidden>
+        <div class="page-toolbar">
+          <div class="field field-inline"><label for="service-bar">Bar</label><select id="service-bar" aria-label="Bar da gestire"></select></div>
+          <button class="button button-ghost button-small" id="service-refresh" type="button">Aggiorna</button>
+        </div>
+        <p id="service-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <div id="service-state-summary" class="service-state" role="status"></div>
+        <div class="service-admin-grid">
+          <section class="panel" aria-labelledby="service-pause-title">
+            <div class="panel-head"><h2 id="service-pause-title">Pausa prenotazioni</h2></div>
+            <p class="help">Blocca solo le nuove prenotazioni: gli ordini confermati restano validi e il menu resta visibile.</p>
+            <form id="service-pause-form" class="form-stack">
+              <div class="field"><label for="service-pause-reason">Motivo <span class="optional">visibile agli studenti</span></label>
+                <input id="service-pause-reason" type="text" maxlength="500" placeholder="Es. preparazione in ritardo" /></div>
+              <div class="button-row">
+                <button class="button button-primary" id="service-pause-button" type="submit">Metti in pausa</button>
+                <button class="button button-outline" id="service-resume-button" type="button">Riprendi</button>
+              </div>
+            </form>
+          </section>
+          <section class="panel" id="service-weekly-panel" hidden aria-labelledby="service-weekly-title">
+            <div class="panel-head"><h2 id="service-weekly-title">Orari della settimana</h2></div>
+            <p class="help">Un intervallo per riga. Lascia vuoto per un giorno di chiusura. Le fasce future incompatibili bloccano la modifica.</p>
+            <form id="service-weekly-form" class="form-stack">
+              <div class="field"><label for="service-weekday">Giorno</label>
+                <select id="service-weekday">
+                  <option value="1">Lunedì</option><option value="2">Martedì</option>
+                  <option value="3">Mercoledì</option><option value="4">Giovedì</option>
+                  <option value="5">Venerdì</option><option value="6">Sabato</option>
+                  <option value="0">Domenica</option>
+                </select></div>
+              <div class="field"><label for="service-weekly-periods">Orari</label>
+                <textarea id="service-weekly-periods" rows="3" placeholder="08:00-10:00&#10;10:30-13:00"></textarea></div>
+              <button class="button button-primary" type="submit">Salva orari</button>
+            </form>
+            <div id="service-weekly-list" class="row-list" aria-live="polite"></div>
+          </section>
+          <section class="panel" aria-labelledby="service-closure-title">
+            <div class="panel-head"><h2 id="service-closure-title">Chiusura straordinaria</h2></div>
+            <p class="help">Prima vedi quali ordini sono coinvolti. Nessun rimborso risulta completato senza una transazione reale.</p>
+            <form id="service-closure-form" class="form-stack">
+              <div class="form-grid form-grid-3">
+                <div class="field"><label for="service-closure-date">Data</label><input id="service-closure-date" type="date" required /></div>
+                <div class="field"><label for="service-closure-start">Dalle</label><input id="service-closure-start" type="time" value="00:00" required /></div>
+                <div class="field"><label for="service-closure-end">Alle</label><input id="service-closure-end" type="time" value="23:59" required /></div>
+              </div>
+              <div class="field"><label for="service-closure-kind">Tipo</label>
+                <select id="service-closure-kind">
+                  <option value="extraordinary">Straordinaria (Admin e Barista)</option>
+                  <option value="planned">Programmata (solo Admin)</option>
+                </select></div>
+              <div class="field"><label for="service-closure-reason">Motivo</label>
+                <textarea id="service-closure-reason" rows="2" minlength="3" maxlength="500" required></textarea></div>
+              <button type="button" class="button button-outline" id="service-closure-preview">Vedi ordini coinvolti</button>
+              <div id="service-closure-impact" class="service-impact" aria-live="polite"></div>
+              <button type="submit" class="button button-danger" id="service-closure-confirm" disabled>Conferma chiusura</button>
+            </form>
+          </section>
+          <section class="panel" aria-labelledby="service-closures-title">
+            <div class="panel-head"><h2 id="service-closures-title">Chiusure registrate</h2></div>
+            <p class="help">Riaprire non ripristina gli ordini già annullati.</p>
+            <div id="service-closures-list" class="row-list"></div>
+          </section>
+          <section class="panel" aria-labelledby="service-events-title">
+            <div class="panel-head"><h2 id="service-events-title">Cronologia</h2></div>
+            <div id="service-events-list" class="row-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <dialog id="customer-qr-dialog" class="ba-dialog qr-dialog" aria-labelledby="customer-qr-title">
+        <form method="dialog" class="ba-dialog-close"><button type="submit" class="icon-button dialog-close" aria-label="Chiudi">✕</button></form>
+        <h2 id="customer-qr-title">Mostra al bar</h2>
+        <p id="customer-qr-meta" class="qr-meta"></p>
+        <div id="customer-qr-code" class="qr-code" role="img" aria-label="Codice QR personale per il ritiro"></div>
+        <p class="help">Mostralo solo al personale del bar. Il ritiro è possibile quando l’ordine è pronto e pagato.</p>
+      </dialog>
+      <dialog id="staff-scan-dialog" class="ba-dialog qr-dialog" aria-labelledby="staff-scan-title">
+        <form method="dialog" class="ba-dialog-close"><button type="submit" class="icon-button dialog-close" aria-label="Chiudi">✕</button></form>
+        <h2 id="staff-scan-title">Ritiro</h2>
+        <p class="help">Inquadra il QR del cliente oppure cerca il numero dell’ordine.</p>
+        <button type="button" id="staff-start-camera" class="button button-primary button-large ba-block">Apri fotocamera</button>
+        <video id="staff-camera-video" class="staff-camera-video" autoplay muted playsinline hidden></video>
+        <form id="staff-number-form" class="staff-number-form inline-form">
+          <div class="field">
+            <label for="staff-number-input">Numero ordine</label>
+            <input id="staff-number-input" type="number" inputmode="numeric" min="1" step="1" required placeholder="Es. 123" />
+          </div>
+          <button type="submit" class="button button-outline">Cerca</button>
+        </form>
+        <p id="staff-scan-status" role="status" aria-live="polite" class="feedback"></p>
+        <div id="staff-scan-result" class="scan-result"></div>
+      </dialog>
+
+      <dialog id="staff-action-confirm" class="ba-dialog confirm-dialog" aria-labelledby="staff-action-title">
+        <form id="staff-action-form">
+          <h2 id="staff-action-title">Confermi?</h2>
+          <p id="staff-action-summary"></p>
+          <div class="dialog-actions">
+            <button id="staff-action-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-action-approve" type="submit" class="button button-primary">Conferma</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="staff-cash-return-dialog" class="ba-dialog" aria-labelledby="staff-cash-return-title">
+        <form id="staff-cash-return-form" class="form-stack">
+          <h2 id="staff-cash-return-title">Registra la restituzione</h2>
+          <p id="staff-cash-return-summary" class="dialog-summary"></p>
+          <p class="help">Registra un’uscita nel turno di cassa. Non esegue uno storno sul terminale POS esterno: fallo prima, se serve.</p>
+          <p class="alert alert-warning" id="staff-cash-return-shift-help" hidden>Per registrare la restituzione devi prima aprire il turno di cassa del bar corretto. L'apertura richiede un profilo Barista autorizzato.</p>
+          <div class="field"><label for="staff-cash-return-reason">Motivo o riferimento</label>
+            <textarea id="staff-cash-return-reason" rows="3" required minlength="8" maxlength="300" placeholder="Es. rimborso consegnato al banco"></textarea></div>
+          <label class="check" for="staff-cash-return-confirm">
+            <input type="checkbox" id="staff-cash-return-confirm" required />
+            Confermo di aver già restituito realmente l’intero importo.
+          </label>
+          <p id="staff-cash-return-feedback" class="feedback" role="status" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button id="staff-cash-return-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-cash-go-cash" type="button" class="button button-outline" hidden>Vai alla cassa</button>
+            <button id="staff-cash-return-submit" type="submit" class="button button-primary">Registra</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="staff-refund-dialog" class="ba-dialog" aria-labelledby="staff-refund-title">
+        <form id="staff-refund-form" class="form-stack">
+          <h2 id="staff-refund-title">Rimborsa l’ordine</h2>
+          <p id="staff-refund-summary" class="dialog-summary"></p>
+          <p class="help">I pagamenti online tornano al pagatore originale, con conferma di Stripe. Contanti e POS esterno vanno restituiti al banco e registrati a parte.</p>
+          <div class="field"><label for="staff-refund-reason">Motivo</label>
+            <textarea id="staff-refund-reason" required minlength="8" maxlength="300" rows="3" placeholder="Perché rimborsi l’ordine?"></textarea></div>
+          <label class="check" for="staff-refund-confirm">
+            <input id="staff-refund-confirm" type="checkbox" required /> Rimborso l’intero importo ancora disponibile.
+          </label>
+          <p id="staff-refund-feedback" class="feedback" role="status" aria-live="polite"></p>
+          <div class="dialog-actions">
+            <button id="staff-refund-cancel" type="button" class="button button-outline">Annulla</button>
+            <button id="staff-refund-submit" type="submit" class="button button-danger">Rimborsa</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="product-dialog" class="ba-dialog sheet product-sheet" aria-labelledby="product-name">
+        <form method="dialog" class="ba-dialog-close"><button class="icon-button dialog-close" type="submit" aria-label="Chiudi">✕</button></form>
+        <img id="product-image" class="product-dialog-image" alt="" hidden />
+        <h2 id="product-name"></h2>
+        <p id="product-price" class="ba-price"></p>
+        <p id="product-description" class="product-description"></p>
+        <dl class="product-facts">
+          <div><dt>Ingredienti</dt><dd id="product-ingredients"></dd></div>
+          <div><dt>Allergeni</dt><dd id="product-allergens"></dd></div>
+        </dl>
+        <div class="product-add-row">
+          <div class="field qty-field"><label for="product-quantity">Quantità</label>
+            <input type="number" id="product-quantity" min="1" max="1000" step="1" value="1" inputmode="numeric"/></div>
+          <button type="button" id="product-add" class="button button-primary button-large">Aggiungi</button>
+        </div>
+      </dialog>
+      <dialog id="cart-dialog" class="ba-dialog sheet" aria-labelledby="cart-heading">
+        <form method="dialog" class="ba-dialog-close"><button class="icon-button dialog-close" type="submit" aria-label="Chiudi carrello">✕</button></form>
+        <h2 id="cart-heading">Carrello</h2>
+        <div id="cart-lines" class="cart-lines"></div>
+        <p id="cart-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <button type="button" class="button button-primary button-large ba-block" id="cart-checkout" disabled>Scegli il ritiro</button>
+      </dialog>
+      <dialog id="order-stepper" class="ba-dialog sheet" aria-labelledby="stepper-title">
+        <form method="dialog" class="ba-dialog-close"><button class="icon-button dialog-close" type="submit" aria-label="Chiudi">✕</button></form>
+        <span id="order-step-label" class="step-label">Passaggio 1 di 2</span>
+        <h2 id="stepper-title">Quando ritiri?</h2>
+        <section data-step="2" aria-label="Ritiro" hidden>
+          <label for="order-window" class="field-label">Fascia di ritiro</label>
+          <select id="order-window" required></select>
+          <p class="help">Ritiri al banco, mostrando il QR dell’ordine.</p>
+        </section>
+        <section data-step="4" aria-label="Riepilogo" hidden>
+          <div id="order-review" class="order-review"></div>
+          <div id="order-location" class="location-check" data-state="idle">
+            <p class="location-why">Alla conferma ti chiediamo la posizione, una volta sola, per verificare che tu sia a scuola.</p>
+          </div>
+        </section>
+        <p id="order-checkout-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button type="button" class="button button-outline" id="order-back" hidden>Indietro</button>
+          <button type="button" class="button button-primary" id="order-next">Continua</button>
+          <button type="button" class="button button-primary" id="order-submit" hidden>Conferma prenotazione</button>
+        </div>
+      </dialog>
+
+      <section id="admin-catalog" class="catalog-section" aria-label="Catalogo" hidden>
+        <div class="page-toolbar">
+          <div class="field field-inline"><label for="catalog-school">Scuola</label><select id="catalog-school" aria-label="Scuola da amministrare" data-hide-single></select></div>
+          <div class="field field-inline"><label for="catalog-bar">Bar</label><select id="catalog-bar" aria-label="Bar da amministrare"></select></div>
+          <button id="catalog-refresh" type="button" class="button button-ghost button-small">Aggiorna</button>
+        </div>
+        <p id="catalog-status" class="feedback" role="status" aria-live="polite">Caricamento…</p>
+        <div class="catalog-columns">
+          <section class="panel catalog-categories" aria-labelledby="catalog-categories-title">
+            <div class="panel-head"><h2 id="catalog-categories-title">Categorie</h2></div>
+            <form id="catalog-category-form" class="inline-form">
+              <div class="field">
+                <label for="catalog-category-name">Nuova categoria</label>
+                <input id="catalog-category-name" type="text" placeholder="Es. Panini" required minlength="2" maxlength="120" />
+              </div>
+              <div class="button-row">
+                <button id="catalog-category-submit" type="submit" class="button button-primary">Aggiungi</button>
+                <button id="catalog-category-cancel" type="button" class="button button-ghost" hidden>Annulla</button>
+              </div>
+            </form>
+            <div id="catalog-categories-list" class="row-list catalog-list"></div>
+          </section>
+          <section class="panel catalog-products" aria-labelledby="catalog-products-title">
+            <div class="panel-head"><h2 id="catalog-products-title">Prodotti</h2></div>
+            <details class="disclosure catalog-product-editor" id="catalog-product-editor">
+              <summary>Nuovo prodotto</summary>
+              <form id="catalog-product-form" class="disclosure-body form-grid">
+                <div class="field"><label for="catalog-product-category">Categoria</label><select id="catalog-product-category" required></select></div>
+                <div class="field"><label for="catalog-product-name">Nome</label><input id="catalog-product-name" type="text" placeholder="Es. Focaccia" minlength="2" maxlength="160" required /></div>
+                <div class="field"><label for="catalog-product-price">Prezzo del bar (€)</label><input id="catalog-product-price" type="text" inputmode="decimal" placeholder="2,50" required /></div>
+                <div class="field field-wide"><label for="catalog-product-description">Descrizione</label><textarea id="catalog-product-description" rows="2" maxlength="1500"></textarea></div>
+                <div class="field field-wide"><label for="catalog-product-ingredients">Ingredienti <span class="optional">obbligatori per pubblicare</span></label><textarea id="catalog-product-ingredients" rows="3" maxlength="3000" placeholder="Copia l’elenco dalla scheda del fornitore"></textarea></div>
+                <fieldset class="product-allergens field-wide">
+                  <legend>Allergeni presenti</legend>
+                  <p class="help">Segui l’etichetta o la scheda del fornitore. Nessuna selezione non significa «senza allergeni».</p>
+                  <div id="catalog-product-allergens" class="allergen-options"></div>
+                </fieldset>
+                <div class="field field-wide"><label for="catalog-product-image">Foto <span class="optional">JPG, PNG o WebP fino a 2 MB</span></label><input id="catalog-product-image" type="file" accept="image/jpeg,image/png,image/webp" /></div>
+                <div id="catalog-product-preview" class="product-preview field-wide" hidden></div>
+                <label class="check product-remove-image field-wide"><input id="catalog-product-remove-image" type="checkbox" /> Rimuovi la foto attuale</label>
+                <div class="button-row field-wide">
+                  <button id="catalog-product-submit" type="submit" class="button button-primary">Aggiungi prodotto</button>
+                  <button id="catalog-product-cancel" type="button" class="button button-ghost" hidden>Annulla</button>
+                </div>
+              </form>
+            </details>
+            <div id="catalog-products-list" class="row-list catalog-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="school-staff" class="school-staff-section" aria-label="Personale" hidden>
+        <div id="school-staff-root" class="school-admin-root"></div>
+      </section>
+
+      <section id="school-promotions" class="school-promotions-section" aria-label="Promozioni" hidden>
+        <p id="school-promotions-status" class="feedback" role="status" aria-live="polite"></p>
+        <div id="school-promotions-root" class="school-admin-root"></div>
+      </section>
+
+      <section id="admin-order-setup" class="setup-section" aria-label="Regole di prenotazione" hidden>
+        <div class="page-toolbar">
+          <div class="field field-inline"><label for="ops-school">Scuola</label><select id="ops-school" data-hide-single></select></div>
+          <div class="field field-inline"><label for="ops-bar">Bar</label><select id="ops-bar"></select></div>
+          <button type="button" class="button button-ghost button-small" id="ops-refresh">Aggiorna</button>
+        </div>
+        <p id="ops-status" class="feedback" role="status" aria-live="polite"></p>
+        <div class="setup-grid">
+          <section class="panel" aria-labelledby="ops-rules-title">
+            <div class="panel-head"><h2 id="ops-rules-title">Posizione e regole</h2></div>
+            <p class="help">Usa le coordinate reali dell’ingresso della scuola: servono alla verifica della posizione alla conferma.</p>
+            <form id="ops-school-form" class="form-grid">
+              <div class="field field-wide"><label for="ops-address">Indirizzo visualizzato <span class="optional">facoltativo</span></label><input type="text" id="ops-address" minlength="3" maxlength="200" autocomplete="street-address" placeholder="Via, numero civico, città" /></div>
+              <div class="field"><label for="ops-latitude">Latitudine</label><input type="number" id="ops-latitude" step="any" min="-90" max="90" required /></div>
+              <div class="field"><label for="ops-longitude">Longitudine</label><input type="number" id="ops-longitude" step="any" min="-180" max="180" required /></div>
+              <div class="field-wide location-tools">
+                <button type="button" class="button button-outline button-small" id="ops-use-position">Usa la posizione di questo dispositivo</button>
+                <a id="ops-map-link" class="text-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Controlla il punto sulla mappa</a>
+                <p id="ops-position-status" class="help" role="status" aria-live="polite"></p>
+              </div>
+              <div class="field"><label for="ops-radius">Raggio consentito (m)</label><input type="number" id="ops-radius" min="100" max="10000" value="1000" required /></div>
+              <div class="field-wide location-policy">
+                <label class="location-policy-toggle" for="ops-require-geolocation">
+                  <span><strong>Verifica posizione alla prenotazione</strong><small id="ops-geolocation-help">Se attiva, il cliente deve essere vicino alla scuola per inviare l'ordine; nei gruppi il controllo riguarda soltanto la conferma del coordinatore.</small></span>
+                  <input id="ops-require-geolocation" type="checkbox" checked aria-describedby="ops-geolocation-help" />
+                </label>
+                <p class="help">L'accesso ai menu e agli ordini di gruppo è sempre libero da vincoli di posizione. La scelta vale per tutti i bar della scuola.</p>
+              </div>
+              <div class="field"><label for="ops-accuracy">Tolleranza precisione GPS (m)</label><input type="number" id="ops-accuracy" min="10" max="1000" step="1" value="100" required aria-describedby="ops-accuracy-help" /><p id="ops-accuracy-help" class="help">Precisione minima richiesta al telefono alla conferma. Più alta è, più facile è confermare, meno è sicura la verifica.</p></div>
+              <div class="field"><label for="ops-horizon">Prenotabile fino a (giorni)</label><input type="number" id="ops-horizon" min="1" max="365" value="30" required /></div>
+              <div class="field"><label for="ops-cutoff">Annullabile fino a (minuti prima)</label><input type="number" id="ops-cutoff" min="0" max="1440" value="10" required /></div>
+              <div class="field"><label for="ops-max-unpaid">Ordini non pagati per persona</label><input type="number" id="ops-max-unpaid" min="1" max="50" value="3" required /></div>
+              <fieldset class="field price-policy"><legend>Commissioni dei pagamenti online</legend><label class="price-policy-option"><input type="radio" name="ops-price-policy" value="none" checked /> Nessuno sconto e nessun aumento: tutti pagano il prezzo del bar</label><label class="price-policy-option"><input type="radio" name="ops-price-policy" value="counter_discount" /> Sconto a chi paga al banco in contanti o con il POS del bar</label><label class="price-policy-option"><input type="radio" name="ops-price-policy" value="price_increase" /> Aumento di tutti i prezzi per coprire la commissione di Stripe</label><div class="field"><label for="ops-price-percent">Percentuale (%)</label><input type="number" id="ops-price-percent" min="0" max="20" step="0.5" value="0" inputmode="decimal" aria-describedby="ops-price-percent-help" /></div><p id="ops-price-percent-help" class="help">Stripe trattiene 1,5% + 0,25 € per ogni pagamento online: su un ordine da 2,50 € sono circa 0,29 €, cioè l’11,5%. Lo sconto al banco va da 0,5 a 10%. L’aumento va da 0,5 a 20%, vale per tutti i prodotti e per chiunque, anche per chi paga al banco, e i prezzi sono arrotondati per eccesso ai 5 centesimi. La legge non permette di far pagare di più solo a chi paga con carta.</p></fieldset>
+              <div class="field"><label for="ops-approval-items">Approvazione oltre (prodotti) <span class="optional">vuoto: mai</span></label><input type="number" id="ops-approval-items" min="1" step="1" /></div>
+              <div class="field"><label for="ops-approval-eur">Approvazione oltre (€) <span class="optional">vuoto: mai</span></label><input type="number" id="ops-approval-eur" step="0.01" min="0.01" /></div>
+              <div class="field-wide"><button type="submit" class="button button-primary">Salva regole</button></div>
+            </form>
+          </section>
+          <section class="panel" aria-labelledby="ops-slots-title">
+            <div class="panel-head"><h2 id="ops-slots-title">Fasce di ritiro</h2></div>
+            <p class="help">Valgono per un bar e un giorno.</p>
+            <form id="ops-slot-form" class="form-grid form-grid-3">
+              <div class="field"><label for="ops-slot-date">Giorno</label><input type="date" id="ops-slot-date" required /></div>
+              <div class="field"><label for="ops-slot-start">Dalle</label><input type="time" id="ops-slot-start" required /></div>
+              <div class="field"><label for="ops-slot-end">Alle</label><input type="time" id="ops-slot-end" required /></div>
+              <div class="field-wide"><button type="submit" class="button button-primary">Aggiungi fascia</button></div>
+            </form>
+            <div id="ops-slot-list" class="row-list catalog-list"></div>
+          </section>
+          <section class="panel" aria-labelledby="ops-stock-title">
+            <div class="panel-head"><h2 id="ops-stock-title">Scorte del giorno</h2></div>
+            <p class="help">Vuoto: senza limite. Zero: esaurito. Le quantità già prenotate non si possono togliere.</p>
+            <form id="ops-stock-form" class="form-grid form-grid-3">
+              <div class="field"><label for="ops-stock-date">Giorno</label><input type="date" id="ops-stock-date" required /></div>
+              <div class="field"><label for="ops-product">Prodotto</label><select id="ops-product" required></select></div>
+              <div class="field"><label for="ops-capacity">Quantità</label><input type="number" id="ops-capacity" min="0" step="1" placeholder="Senza limite" /></div>
+              <div class="field-wide"><button type="submit" class="button button-primary">Salva scorta</button></div>
+            </form>
+            <div id="ops-stock-list" class="row-list catalog-list"></div>
+          </section>
+          <section class="panel" id="school-settings-panel" hidden aria-labelledby="school-settings-title">
+            <div class="panel-head"><h2 id="school-settings-title">Regole della scuola</h2></div>
+            <p id="school-settings-status" class="feedback" role="status" aria-live="polite"></p>
+            <div id="school-settings-root" class="school-settings-root"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="admin-overview" class="overview-section" hidden aria-labelledby="dashboard-title">
+        <h2 id="dashboard-title" class="sr-only">Panoramica della scuola</h2>
+        <div class="overview-bar">
+          <p id="dashboard-subtitle" class="overview-period">Oggi nella tua scuola</p>
+          <div class="button-row">
+            <a href="#staff-orders-section" class="button button-primary button-small">Apri il banco</a>
+            <button id="dashboard-refresh" class="button button-ghost button-small" type="button"><span data-icon="Refresh"></span>Aggiorna</button>
+            <span id="dashboard-export"></span>
+          </div>
+        </div>
+        <div id="dashboard-metrics" class="stat-row" aria-live="polite"></div>
+        <div class="overview-grid">
+          <section class="panel" aria-labelledby="dashboard-recent-title">
+            <div class="panel-head"><h2 id="dashboard-recent-title">Ultimi ordini</h2><a href="#staff-orders-section" class="text-link">Banco <span data-icon="ArrowRight"></span></a></div>
+            <div id="dashboard-recent-orders" class="row-list"></div>
+          </section>
+          <section class="panel" aria-labelledby="dashboard-status-title">
+            <div class="panel-head"><h2 id="dashboard-status-title">Ordini in corso</h2></div>
+            <div id="dashboard-order-status" class="dashboard-order-status"></div>
+            <nav class="shortcut-list" aria-label="Scorciatoie">
+              <a href="#workflow-center">Richieste e modifiche <span data-icon="ArrowRight"></span></a>
+              <a href="#admin-catalog">Catalogo <span data-icon="ArrowRight"></span></a>
+              <a href="#warehouse-inventory">Scorte di oggi <span data-icon="ArrowRight"></span></a>
+              <a href="#school-reports">Report <span data-icon="ArrowRight"></span></a>
+            </nav>
+          </section>
+        </div>
+        <p id="dashboard-feedback" class="feedback dashboard-feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="warehouse-inventory" class="inventory-section" hidden aria-label="Scorte">
+        <div class="page-toolbar">
+          <div class="field field-inline"><label for="warehouse-bar">Bar</label><select id="warehouse-bar"></select></div>
+          <div class="field field-inline"><label for="warehouse-date">Giorno</label><input id="warehouse-date" type="date" required /></div>
+          <button type="button" class="button button-ghost button-small" id="warehouse-refresh">Aggiorna</button>
+        </div>
+        <p id="warehouse-feedback" class="feedback" role="status" aria-live="polite"></p>
+        <div class="panel inventory-ledger">
+          <div class="inventory-head" aria-hidden="true"><span>Prodotto</span><span>Prenotati</span><span>Disponibilità</span></div>
+          <div id="warehouse-items" class="warehouse-items"></div>
+        </div>
+        <p class="help">Le quantità già prenotate restano riservate: il server non consente disponibilità negative.</p>
+      </section>
+
+      <section id="platform-overview" class="overview-section" hidden aria-labelledby="platform-heading">
+        <h2 id="platform-heading" class="sr-only">Panoramica della piattaforma</h2>
+        <div class="overview-bar">
+          <time id="platform-date" class="overview-period"></time>
+          <div class="button-row">
+            <a href="#workflow-center" class="button button-primary button-small"><span data-icon="Plus"></span>Nuova scuola</a>
+            <button id="platform-refresh" type="button" class="button button-ghost button-small"><span data-icon="Refresh"></span>Aggiorna</button>
+          </div>
+        </div>
+        <div id="platform-metrics" class="stat-row platform-metrics" aria-busy="true"></div>
+        <div class="overview-grid">
+          <section class="panel" aria-labelledby="platform-schools-title">
+            <div class="panel-head"><h2 id="platform-schools-title">Scuole <span id="platform-school-count" class="count-pill"></span></h2><a href="#platform-schools" class="text-link">Tutte <span data-icon="ArrowRight"></span></a></div>
+            <div id="platform-school-list" class="platform-school-roster"></div>
+          </section>
+          <section class="panel" aria-labelledby="platform-network-title">
+            <div class="panel-head"><h2 id="platform-network-title">Stato della rete</h2></div>
+            <div id="platform-network"></div>
+            <nav class="shortcut-list" aria-label="Scorciatoie">
+              <a href="#platform-configuration"><span data-icon="SlidersHorizontal"></span> Configura un bar <span data-icon="ArrowRight"></span></a>
+              <a href="#platform-schools"><span data-icon="Building2"></span> Gestisci le scuole <span data-icon="ArrowRight"></span></a>
+              <a href="#accesso"><span data-icon="ShieldCheck"></span> Sicurezza dell’account <span data-icon="ArrowRight"></span></a>
+            </nav>
+          </section>
+        </div>
+        <p id="platform-feedback" class="feedback dashboard-feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="platform-schools" class="directory-section" hidden aria-labelledby="platform-schools-heading">
+        <h2 id="platform-schools-heading" class="sr-only">Elenco delle scuole</h2>
+        <div class="page-toolbar directory-toolbar">
+          <label class="search-field"><span data-icon="Search"></span><input id="platform-school-search" type="search" placeholder="Cerca scuola o bar" aria-label="Cerca una scuola o un bar" /></label>
+          <div class="field field-inline directory-filter"><label for="platform-school-filter">Stato</label><select id="platform-school-filter"><option value="all">Tutte</option><option value="active">Attive</option><option value="paused">Sospese</option></select></div>
+          <a href="#workflow-center" class="button button-primary button-small"><span data-icon="Plus"></span>Nuova scuola</a>
+        </div>
+        <p id="platform-directory-count" class="directory-count help" role="status" aria-live="polite"></p>
+        <div id="platform-directory-list" class="panel table-panel"></div>
+        <p id="platform-directory-feedback" class="feedback dashboard-feedback" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="platform-configuration" class="config-section" hidden aria-labelledby="platform-configuration-heading">
+        <h2 id="platform-configuration-heading" class="sr-only">Configurazione della scuola</h2>
+        <div class="platform-pilot-tools" id="platform-pilot-tools" hidden>
+          <div class="page-toolbar pilot-context">
+            <div class="field field-inline"><label for="pilot-school">Scuola</label><select id="pilot-school" required></select></div>
+            <div class="field field-inline"><label for="pilot-bar">Bar</label><select id="pilot-bar" required></select></div>
+            <button id="pilot-reload" class="button button-ghost button-small" type="button"><span data-icon="Refresh"></span>Aggiorna</button>
+          </div>
+          <details class="panel panel-disclosure readiness-details"><summary><span>Pronto per il servizio?</span> <span id="pilot-readiness-count" class="count-pill"></span></summary><div id="pilot-readiness" class="panel-body pilot-readiness" role="status" aria-live="polite"></div></details>
+          <p id="pilot-status" class="feedback" role="status" aria-live="polite"></p>
+          <div id="pilot-tabs" class="workspace-tabs" role="tablist" aria-label="Configurazione del bar"><button id="pilot-tab-catalog" type="button" role="tab" aria-controls="pilot-panel-catalog" aria-selected="true">Catalogo</button><button id="pilot-tab-people" type="button" role="tab" aria-controls="pilot-panel-people" aria-selected="false" tabindex="-1">Personale</button><button id="pilot-tab-service" type="button" role="tab" aria-controls="pilot-panel-service" aria-selected="false" tabindex="-1">Orari e ritiri</button><button id="pilot-tab-stock" type="button" role="tab" aria-controls="pilot-panel-stock" aria-selected="false" tabindex="-1">Scorte e allergeni</button><button id="pilot-tab-payments" type="button" role="tab" aria-controls="pilot-panel-payments" aria-selected="false" tabindex="-1">Pagamenti</button></div>
+          <div class="pilot-grid" id="pilot-panel-catalog" role="tabpanel" aria-labelledby="pilot-tab-catalog" tabindex="0">
+            <section class="panel" id="pilot-categories-card" aria-labelledby="pilot-categories-title">
+              <div class="panel-head"><h3 id="pilot-categories-title">Categorie</h3></div>
+              <form id="pilot-category-form" class="form-stack">
+                <div class="field"><label for="pilot-category-edit">Modifica</label><select id="pilot-category-edit"></select></div>
+                <div class="field"><label for="pilot-category-name">Nome</label><input id="pilot-category-name" type="text" minlength="2" maxlength="120" required placeholder="Es. Panini" /></div>
+                <label class="check" for="pilot-category-active"><input id="pilot-category-active" type="checkbox" checked /> Visibile nel menu</label>
+                <button class="button button-primary" type="submit">Salva categoria</button>
+              </form>
+              <div id="pilot-category-list" class="row-list"></div>
+            </section>
+            <section class="panel" id="pilot-products-card" aria-labelledby="pilot-products-title">
+              <div class="panel-head"><h3 id="pilot-products-title">Prodotti e prezzi</h3></div>
+              <form id="pilot-product-form" class="form-grid">
+                <div class="field field-wide"><label for="pilot-product-edit">Modifica</label><select id="pilot-product-edit"></select></div>
+                <div class="field"><label for="pilot-product-category">Categoria</label><select id="pilot-product-category" required></select></div>
+                <div class="field"><label for="pilot-product-name">Nome</label><input id="pilot-product-name" required minlength="2" maxlength="160" placeholder="Es. Panino mozzarella" /></div>
+                <div class="field"><label for="pilot-product-price">Prezzo (€)</label><input id="pilot-product-price" inputmode="decimal" required placeholder="2,50" /></div>
+                <div class="field field-wide"><label for="pilot-product-description">Descrizione</label><textarea id="pilot-product-description" rows="2" maxlength="1500"></textarea></div>
+                <div class="field field-wide"><label for="pilot-product-ingredients">Ingredienti</label><textarea id="pilot-product-ingredients" rows="3" maxlength="3000" placeholder="Dalla scheda del fornitore"></textarea></div>
+                <fieldset class="field-wide"><legend>Allergeni presenti</legend>
+                  <div id="pilot-product-allergens" class="pilot-allergen-grid allergen-options"></div>
+                </fieldset>
+                <div class="field field-wide"><label for="pilot-product-image">Foto <span class="optional">facoltativa, fino a 2 MB</span></label><input id="pilot-product-image" type="file" accept="image/jpeg,image/png,image/webp" /></div>
+                <label class="check field-wide" for="pilot-product-active"><input id="pilot-product-active" type="checkbox" checked /> Pubblicato</label>
+                <div class="field-wide"><button class="button button-primary" type="submit">Salva prodotto</button></div>
+              </form>
+              <div id="pilot-product-list" class="row-list"></div>
+            </section>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-people" role="tabpanel" aria-labelledby="pilot-tab-people" tabindex="0" hidden>
+            <section class="panel" aria-labelledby="pilot-staff-title">
+              <div class="panel-head"><h3 id="pilot-staff-title">Personale</h3></div>
+              <p class="help">Puoi aggiungere anche chi non ha ancora fatto il primo accesso: verrà collegato alla scuola quando entra con questa email. Gli studenti si registrano da soli. Nessuna credenziale viene condivisa.</p>
+              <form id="pilot-staff-form" class="form-grid">
+                <div class="field"><label for="pilot-staff-email">Email</label><input id="pilot-staff-email" type="email" autocomplete="off" required placeholder="persona@scuola.it" /></div>
+                <div class="field"><label for="pilot-staff-role">Ruolo</label>
+                  <select id="pilot-staff-role">
+                    <option value="school_admin">Admin scuola (con 2FA)</option>
+                    <option value="bartender">Barista</option>
+                    <option value="warehouse_manager">Magazziniere</option>
+                  </select></div>
+                <div class="field-wide"><button class="button button-primary" type="submit">Aggiungi</button></div>
+              </form>
+              <div id="pilot-staff-notice" class="alert staff-invite-notice" role="status" hidden></div>
+              <div id="pilot-staff-list" class="row-list staff-list"></div>
+            </section>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-service" role="tabpanel" aria-labelledby="pilot-tab-service" tabindex="0" hidden>
+            <section class="panel" aria-labelledby="pilot-hours-title">
+              <div class="panel-head"><h3 id="pilot-hours-title">Orari della settimana</h3></div>
+              <p class="help">Un intervallo per riga, per esempio 08:00-11:30. Vuoto: chiuso.</p>
+              <form id="pilot-hours-form" class="form-stack">
+                <div class="field"><label for="pilot-weekday">Giorno</label>
+                  <select id="pilot-weekday">
+                    <option value="1">Lunedì</option><option value="2">Martedì</option>
+                    <option value="3">Mercoledì</option><option value="4">Giovedì</option>
+                    <option value="5">Venerdì</option><option value="6">Sabato</option>
+                    <option value="0">Domenica</option>
+                  </select></div>
+                <div class="field"><label for="pilot-periods">Orari</label><textarea id="pilot-periods" rows="3" placeholder="08:00-11:30&#10;12:00-13:00"></textarea></div>
+                <button class="button button-primary" type="submit">Salva orari</button>
+              </form>
+              <div id="pilot-hours-list" class="row-list"></div>
+            </section>
+            <section class="panel" aria-labelledby="pilot-windows-title">
+              <div class="panel-head"><h3 id="pilot-windows-title">Fasce di ritiro</h3></div>
+              <p class="help">Devono rientrare negli orari e nel periodo prenotabile della scuola.</p>
+              <form id="pilot-window-form" class="form-grid form-grid-3">
+                <div class="field"><label for="pilot-window-date">Giorno</label><input id="pilot-window-date" type="date" required /></div>
+                <div class="field"><label for="pilot-window-start">Dalle</label><input id="pilot-window-start" type="time" required /></div>
+                <div class="field"><label for="pilot-window-end">Alle</label><input id="pilot-window-end" type="time" required /></div>
+                <div class="field-wide"><button class="button button-primary" type="submit">Crea fascia</button></div>
+              </form>
+              <div id="pilot-windows-list" class="row-list"></div>
+            </section>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-stock" role="tabpanel" aria-labelledby="pilot-tab-stock" tabindex="0" hidden>
+            <section class="panel" aria-labelledby="pilot-stock-title">
+              <div class="panel-head"><h3 id="pilot-stock-title">Scorte del giorno</h3></div>
+              <p class="help">Vuoto: senza limite. Altrimenti inserisci una quantità reale.</p>
+              <form id="pilot-stock-form" class="form-grid form-grid-3">
+                <div class="field"><label for="pilot-stock-product">Prodotto</label><select id="pilot-stock-product" required></select></div>
+                <div class="field"><label for="pilot-stock-date">Giorno</label><input id="pilot-stock-date" type="date" required /></div>
+                <div class="field"><label for="pilot-stock-capacity">Quantità</label><input id="pilot-stock-capacity" type="number" min="0" step="1" placeholder="Senza limite"/></div>
+                <div class="field-wide"><button class="button button-primary" type="submit">Salva scorta</button></div>
+              </form>
+              <div id="pilot-stock-summary" class="row-list"></div>
+            </section>
+            <section class="panel" aria-labelledby="pilot-food-title">
+              <div class="panel-head"><h3 id="pilot-food-title">Ingredienti e allergeni</h3></div>
+              <p class="help">Compila dalla scheda del fornitore. Nessuna allergia viene esclusa in automatico.</p>
+              <form id="pilot-food-form" class="form-stack">
+                <div class="field"><label for="pilot-food-product">Prodotto</label><select id="pilot-food-product" required></select></div>
+                <div class="field"><label for="pilot-ingredients">Ingredienti</label><textarea id="pilot-ingredients" rows="4" minlength="3" maxlength="3000" required></textarea></div>
+                <fieldset><legend>Allergeni presenti</legend>
+                  <div id="pilot-allergens" class="pilot-allergen-grid allergen-options"></div>
+                </fieldset>
+                <button class="button button-primary" type="submit">Salva</button>
+              </form>
+            </section>
+          </div>
+          <div class="pilot-grid" id="pilot-panel-payments" role="tabpanel" aria-labelledby="pilot-tab-payments" tabindex="0" hidden>
+            <section class="panel" aria-labelledby="pilot-stripe-title">
+              <div class="panel-head"><h3 id="pilot-stripe-title">Pagamenti online · ambiente di test</h3></div>
+              <p class="help">Apre il modulo ufficiale Stripe per il conto di test già associato alla scuola selezionata. Non crea e non associa un nuovo conto.</p>
+              <button id="pilot-stripe-onboarding" type="button" class="button button-outline">Completa l’attivazione Stripe di test</button>
+              <p id="pilot-stripe-feedback" class="feedback" role="status" aria-live="polite"></p>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+    <dialog id="platform-school-state-dialog" class="ba-dialog platform-dialog" aria-labelledby="platform-school-state-title"><form id="platform-school-state-form" class="form-stack"><div class="dialog-header"><h2 id="platform-school-state-title">Stato della scuola</h2><button type="button" id="platform-school-state-close" class="icon-button dialog-close" aria-label="Chiudi"><span data-icon="Close"></span></button></div><p id="platform-school-state-description"></p><div class="field"><label for="platform-school-state-reason">Motivo</label><textarea id="platform-school-state-reason" required minlength="8" maxlength="500" rows="3" placeholder="Perché cambi lo stato della scuola?"></textarea></div><p id="platform-school-state-feedback" class="feedback" role="status" aria-live="polite"></p><div class="dialog-actions"><button type="button" id="platform-school-state-cancel" class="button button-outline">Annulla</button><button id="platform-school-state-submit" type="submit" class="button button-primary">Conferma</button></div></form></dialog>
+    <dialog id="app-confirm-dialog" class="ba-dialog confirm-dialog" aria-labelledby="app-confirm-title" aria-describedby="app-confirm-message">
+      <form id="app-confirm-form" class="form-stack" method="dialog">
+        <h2 id="app-confirm-title">Confermi?</h2>
+        <p id="app-confirm-message"></p>
+        <div id="app-confirm-field" class="field" hidden>
+          <label id="app-confirm-label" for="app-confirm-input">Motivo</label>
+          <textarea id="app-confirm-input" rows="3"></textarea>
+        </div>
+        <p id="app-confirm-error" class="feedback" data-type="error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="app-confirm-cancel" type="button" class="button button-outline">Annulla</button>
+          <button id="app-confirm-ok" type="submit" class="button button-primary" value="ok">Conferma</button>
+        </div>
+      </form>
+    </dialog>
+    <div id="cart-strip" class="cart-strip" hidden>
+      <button type="button" id="cart-open" class="cart-button">
+        <span class="cart-count-badge"><span id="cart-count">0</span> <span class="cart-count-label">articoli</span></span>
+        <span class="cart-button-label">Vedi carrello</span>
+        <strong id="cart-total">€ 0,00</strong>
+      </button>
+    </div>
+    <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+    <script src="/vendor/qrcode.min.js" defer></script>
+    <script type="module" src="/src/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,83 @@
+// Static shell only. Financial events and same-day manifests use the encrypted IndexedDB vault.
+const CACHE_NAME = 'breakapp-shell-v12';
+const BASE_PATH = new URL('./', self.location.href).pathname;
+const SHELL_URL = BASE_PATH;
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add(SHELL_URL)));
+  self.skipWaiting();
+});
+self.addEventListener('activate', (event) => {
+  event.waitUntil(Promise.all([
+    caches.keys().then((names) => Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)))),
+    self.clients.claim()
+  ]));
+});
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (request.mode === 'navigate') {
+    // Only the app shell is cached: standalone pages (privacy, termini) must never replace it.
+    const isShell = url.pathname === SHELL_URL || url.pathname === BASE_PATH + 'index.html';
+    event.respondWith(fetch(request).then((response) => {
+      if (response.ok && isShell) {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(SHELL_URL, copy)));
+      }
+      return response;
+    }).catch(() => caches.match(SHELL_URL)));
+    return;
+  }
+  if (url.pathname.startsWith(BASE_PATH+'assets/') || url.pathname === BASE_PATH+'icon-placeholder.svg') {
+    event.respondWith(caches.match(request).then((cached) => cached || fetch(request).then((response) => {
+      if (response.ok) {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)));
+      }
+      return response;
+    })));
+  }
+});
+
+// Foreground-initiated notifications: clicking opens an app-controlled URL.
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  const raw=event.notification.data?.url||BASE_PATH;
+  let target;
+  try{target=new URL(raw,self.location.origin);}
+  catch{target=new URL(BASE_PATH,self.location.origin);}
+  if(target.origin!==self.location.origin)target=new URL(BASE_PATH,self.location.origin);
+  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
+    const open=clients.find(c=>c.url.startsWith(self.location.origin+BASE_PATH));
+    if(open){
+      const targetClient=typeof open.navigate==='function'?await open.navigate(target.href):open;
+      await (targetClient||open).focus();return;
+    }
+    await self.clients.openWindow(target.href);
+  }));
+});
+
+// True background push: service worker can run while app tabs are closed.
+// No order/payment mutations are performed from the notification payload.
+self.addEventListener('push',event=>{
+ let data={title:'BreakApp',body:'Hai un nuovo avviso',url:BASE_PATH,tag:'breakapp-push'};
+ try{
+   if(event.data){
+     const value=event.data.json();
+     if(typeof value.title==='string')data.title=value.title.slice(0,70);
+     if(typeof value.body==='string')data.body=value.body.slice(0,200);
+     if(typeof value.url==='string')data.url=value.url;
+     if(typeof value.tag==='string'&&/^breakapp-notice-[0-9a-f-]{36}$/i.test(value.tag))data.tag=value.tag;
+   }
+ }catch{/* retain safe generic message */}
+ let url=new URL(BASE_PATH,self.location.origin);
+ try{
+   const candidate=new URL(data.url,new URL(BASE_PATH,self.location.origin));
+   if(candidate.origin===self.location.origin&&candidate.pathname.startsWith(BASE_PATH))
+     url=candidate;
+ }catch{/* retain internal URL */}
+ event.waitUntil(self.registration.showNotification(data.title,{
+  body:data.body,icon:BASE_PATH+'icon-placeholder.svg',
+  tag:data.tag,renotify:false,data:{url:url.href}
+ }));
+});

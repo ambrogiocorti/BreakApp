@@ -1,0 +1,68 @@
+/* Phone-only refresh (decision of 9 Nov 2026): the approved mock-ups apply to
+   phones only. Tablets and computers keep the current look, so every rule
+   here stays inside this media query. The logo is unchanged. */
+@media (max-width: 719px) {
+  :root { --on-tuorlo: #2b1f00; }
+
+  /* Menu: the place picker becomes a lavagna header card ------------------ */
+  .menu-place-picker {
+    border: 0; border-radius: 0 0 28px 28px;
+    margin-inline: calc(-1 * var(--gutter)); margin-top: calc(-1 * var(--space-2));
+    background: var(--lavagna); color: var(--lavagna-ink);
+  }
+  .menu-place-picker > summary { min-height: 72px; padding-inline: calc(var(--gutter) + var(--space-1)); }
+  .menu-place-text .label { color: inherit; opacity: .8; font-size: var(--text-sm); }
+  .menu-place-text strong { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 750; letter-spacing: -0.01em; }
+  .menu-place-change { color: var(--lavagna-ink); border: 1.5px solid currentColor; border-radius: var(--radius-pill); padding: 6px 14px; opacity: .9; }
+  .menu-place-picker[open] { padding-bottom: var(--space-3); }
+  .menu-place-picker .menu-toolbar { padding-inline: var(--gutter); }
+  .menu-place-picker .menu-toolbar label { color: inherit; }
+
+  /* Category chips: the selected one in ink, like the mock-up. */
+  .menu-category-chip { min-height: 40px; border-radius: var(--radius-pill); }
+  .menu-category-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--canvas); }
+
+  /* Product cards ------------------------------------------------------- */
+  .menu-product-card { border-radius: 20px; padding: 14px; gap: 14px; }
+  .menu-product-media,
+  .menu-product-media[data-tone] { border-radius: 16px; background: var(--lavagna-soft); color: var(--lavagna); font-weight: 800; }
+  .menu-product-title { font-size: 1.0625rem; }
+  .menu-product-price { color: var(--lavagna); font-weight: 700; }
+  .menu-product-add { width: 44px; height: 44px; border-radius: 14px; }
+
+  /* Cart bar: yolk, the one thing to act on now ------------------------- */
+  .cart-button {
+    min-height: 60px; border-radius: 18px; padding: 0 20px 0 var(--space-3);
+    background: var(--tuorlo); color: var(--on-tuorlo);
+    box-shadow: 0 8px 24px rgb(28 25 23 / 0.18);
+  }
+  .cart-button:hover { background: var(--tuorlo); filter: brightness(1.03); }
+  .cart-count-badge { min-height: 30px; border-radius: 10px; background: var(--on-tuorlo); color: var(--tuorlo); }
+  .cart-button-label { font-size: var(--text-base); }
+
+  /* My orders: a ready order stands out --------------------------------- */
+  .customer-order[data-status="ready"] { border: 2px solid var(--tuorlo); box-shadow: 0 0 0 4px var(--tuorlo-soft); }
+  .order-card { border-radius: 20px; }
+
+  /* Pickup QR: a receipt with the order number in large type ------------ */
+  #customer-qr-dialog { background: var(--canvas); }
+  #customer-qr-dialog .qr-meta {
+    font-size: 3.5rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; color: var(--lavagna);
+  }
+  #customer-qr-dialog .qr-code { border: 1px solid var(--line); border-radius: 16px; }
+  #customer-qr-dialog .help { width: 100%; max-width: none; padding-top: var(--space-4); border-top: 2px dashed var(--line-strong); }
+
+  /* Bartender toolbar: search and scan on one line, the rest below -------- */
+  .staff-toolbar { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .staff-search { grid-column: 1 / 3; grid-row: 1; }
+  .staff-scan-button { grid-column: 3; grid-row: 1; }
+  .staff-board-filters { grid-column: 1 / -1; grid-row: 2; }
+  .staff-toolbar .live-status { grid-column: 1; grid-row: 3; }
+  .staff-cash-shortcut { grid-column: 2; grid-row: 3; min-height: 40px; }
+  #staff-refresh { grid-column: 3; grid-row: 3; }
+
+  /* Bartender cards ----------------------------------------------------- */
+  .staff-order-card { border-radius: 16px; }
+  .staff-order-card .ticket-no { font-size: 1.75rem; font-weight: 800; color: var(--lavagna); }
+  .staff-order-card[data-status="ready"] .order-actions .button-primary { background: var(--tuorlo); border-color: var(--tuorlo); color: var(--on-tuorlo); }
+}

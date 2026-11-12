@@ -1,0 +1,169 @@
+/* Reset, typography and native controls. Many screens are rendered by legacy
+   controllers with plain elements (label > input, article, h3, p), so the
+   defaults here must already look finished. */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--canvas);
+  scroll-padding-top: calc(var(--topbar-h) + var(--space-4));
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+}
+[hidden] { display: none !important; }
+img, svg, video, canvas { display: block; max-width: 100%; }
+img { height: auto; }
+h1, h2, h3, h4, h5, p, ul, ol, dl, dd, figure, fieldset { margin: 0; }
+ul, ol { padding-left: 1.25rem; }
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--ink);
+  text-wrap: balance;
+}
+h1 { font-size: var(--text-2xl); letter-spacing: -0.02em; }
+h2 { font-size: var(--text-lg); }
+h3 { font-size: var(--text-base); }
+h4 { font-size: var(--text-md); }
+p { max-width: 72ch; }
+small { font-size: var(--text-sm); }
+strong, b { font-weight: 650; }
+a { color: var(--lavagna); text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+hr { border: 0; border-top: 1px solid var(--line); margin: var(--space-4) 0; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; overflow-wrap: anywhere; }
+::selection { background: var(--tuorlo-soft); color: var(--ink); }
+
+button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button { cursor: pointer; }
+button:disabled, input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; }
+
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* Native fields: everything gets the same 44 px control. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+select,
+textarea {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-base);
+  line-height: 1.35;
+  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+textarea { min-height: 5.5rem; resize: vertical; }
+select {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 52%, calc(100% - 13px) 52%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  text-overflow: ellipsis;
+}
+input:hover:not(:disabled):not(:focus), select:hover:not(:disabled):not(:focus), textarea:hover:not(:disabled):not(:focus) { border-color: var(--ink-3); }
+input:focus-visible, select:focus-visible, textarea:focus-visible,
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 28%, transparent);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }
+input[readonly] { background: var(--surface-sunken); }
+input:disabled, select:disabled, textarea:disabled { background: var(--surface-sunken); color: var(--ink-3); }
+input[type="search"]::-webkit-search-decoration { appearance: none; }
+input[type="file"] {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--text-md);
+}
+input[type="file"]::file-selector-button {
+  margin-right: var(--space-3);
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+input[type="checkbox"], input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  flex: none;
+  accent-color: var(--lavagna);
+}
+input[type="number"] { font-variant-numeric: tabular-nums; }
+
+/* Labels that wrap their control (pattern used by several controllers). */
+label { font-size: var(--text-md); font-weight: 600; color: var(--ink-2); }
+label:has(> input:not([type="checkbox"]):not([type="radio"]), > select, > textarea) {
+  display: grid;
+  gap: var(--space-1);
+}
+label:has(> input[type="checkbox"], > input[type="radio"]) {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+fieldset { min-width: 0; padding: 0; border: 0; }
+legend { padding: 0; margin-bottom: var(--space-2); font-weight: 650; font-size: var(--text-md); color: var(--ink); }
+
+table { width: 100%; border-collapse: collapse; font-size: var(--text-md); }
+th, td { padding: var(--space-3); text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: var(--text-sm); font-weight: 650; color: var(--ink-3); }
+tbody tr:hover { background: var(--surface-hover); }
+
+dl { display: grid; gap: var(--space-2); }
+dt { font-size: var(--text-sm); color: var(--ink-3); font-weight: 600; }
+dd { margin: 0; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: fixed;
+  top: var(--space-2); left: var(--space-2);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--lavagna);
+  color: var(--lavagna-ink);
+  font-weight: 650;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

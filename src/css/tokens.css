@@ -1,0 +1,136 @@
+/* BreakApp design tokens · "lavagna e tuorlo".
+   Lavagna: the dark green of a school blackboard, used for primary actions and
+   the navigation. Tuorlo: a warm yolk yellow, used sparingly for the brand mark,
+   the active marker and the cart. Everything else is warm paper and ink. */
+@import '@fontsource-variable/bricolage-grotesque/wght.css';
+@import '@fontsource-variable/atkinson-hyperlegible-next/wght.css';
+
+:root {
+  color-scheme: light;
+  --font-ui: 'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', var(--font-ui);
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --canvas: #f6f4ef;
+  --surface: #ffffff;
+  --surface-sunken: #efece5;
+  --surface-hover: #f1eee7;
+  --line: #e2ddd3;
+  --line-strong: #cbc4b7;
+
+  /* Ink */
+  --ink: #1c1917;
+  --ink-2: #4a4540;
+  --ink-3: #6b645c;
+  --ink-inverse: #fbfaf7;
+
+  /* Brand */
+  --lavagna: #1d4b40;
+  --lavagna-hover: #173d34;
+  --lavagna-ink: #ffffff;
+  --lavagna-soft: #e3ece8;
+  --lavagna-line: #b7cdc4;
+  --tuorlo: #f2b92b;
+  --tuorlo-soft: #fcf0cf;
+  --tuorlo-ink: #3d2c00;
+
+  /* Status */
+  --success: #157347;
+  --success-soft: #e2f2e9;
+  --warning: #9a4a07;
+  --warning-soft: #fdf0dc;
+  --danger: #b3261e;
+  --danger-soft: #fbe6e3;
+  --info: #1f5c99;
+  --info-soft: #e3edf8;
+
+  --focus: #1f5c99;
+  --focus-ring: 0 0 0 3px var(--canvas), 0 0 0 5px var(--focus);
+  --scrim: rgb(20 18 16 / 0.45);
+
+  /* Type scale */
+  --text-xs: 0.75rem;   /* 12 */
+  --text-sm: 0.8125rem; /* 13 */
+  --text-md: 0.875rem;  /* 14 */
+  --text-base: 1rem;    /* 16 */
+  --text-lg: 1.125rem;  /* 18 */
+  --text-xl: 1.25rem;   /* 20 */
+  --text-2xl: 1.5rem;   /* 24 */
+  --text-3xl: 1.875rem; /* 30 */
+  --text-4xl: 2.25rem;  /* 36 */
+
+  /* Spacing (4 px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-float: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px rgb(28 25 23 / 0.10);
+  --shadow-sheet: 0 -2px 8px rgb(28 25 23 / 0.06), 0 16px 48px rgb(28 25 23 / 0.18);
+
+  --control-h: 44px;
+  --control-h-sm: 36px;
+  --sidebar-w: 248px;
+  --topbar-h: 56px;
+  --tabbar-h: 64px;
+  --content-max: 1180px;
+  --gutter: var(--space-4);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #141917;
+  --surface: #1c2220;
+  --surface-sunken: #111513;
+  --surface-hover: #242b28;
+  --line: #2e3633;
+  --line-strong: #46504c;
+
+  --ink: #eef0ec;
+  --ink-2: #c3c9c4;
+  --ink-3: #98a19c;
+  --ink-inverse: #141917;
+
+  --lavagna: #7cc4a8;
+  --lavagna-hover: #95d3ba;
+  --lavagna-ink: #0d1f19;
+  --lavagna-soft: #1f342d;
+  --lavagna-line: #2f5246;
+  --tuorlo: #f2c04a;
+  --tuorlo-soft: #3a2f12;
+  --tuorlo-ink: #fbe7b0;
+
+  --success: #6fd09b;
+  --success-soft: #173326;
+  --warning: #f3b36b;
+  --warning-soft: #3a2a14;
+  --danger: #ff8f84;
+  --on-danger: #2a0f0c;
+  --danger-soft: #3d1c19;
+  --info: #8ebcf0;
+  --info-soft: #182b40;
+
+  --focus: #f2c04a;
+  --scrim: rgb(0 0 0 / 0.6);
+  --shadow-float: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.4);
+  --shadow-sheet: 0 16px 48px rgb(0 0 0 / 0.55);
+}
+
+@media (min-width: 720px) {
+  :root { --gutter: var(--space-6); }
+}
+@media (min-width: 1280px) {
+  :root { --gutter: var(--space-8); }
+}

@@ -1,0 +1,33 @@
+name: Encrypted daily database backup
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Prepare PostgreSQL 17 backup tools
+        run: |
+          docker build -t breakapp-backup-17 - <<'DOCKER'
+          FROM postgres:17
+          RUN apt-get update -qq && apt-get install -y -qq gnupg && rm -rf /var/lib/apt/lists/*
+          DOCKER
+      - name: Export, encrypt and validate the database archive
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_BACKUP_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/encrypted-backup"
+          docker run --rm --user "$(id -u):$(id -g)" -e SUPABASE_DB_URL -e BACKUP_PASSPHRASE -v "$GITHUB_WORKSPACE:/work:ro" -v "$RUNNER_TEMP/encrypted-backup:/backups" breakapp-backup-17 bash -c 'bash /work/scripts/backup-database.sh /backups && for archive in /backups/*.dump.gpg; do bash /work/scripts/verify-backup.sh "$archive"; done'
+      - name: Store only encrypted archives outside the primary database
+        uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-breakapp-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/encrypted-backup/
+          retention-days: 30
+          if-no-files-found: error

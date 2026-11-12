@@ -1,0 +1,74 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const orders = await readFile('src/js/features/orders/orders.js','utf8');
+const html = await readFile('index.html','utf8');
+const pilot = await readFile('src/js/features/shell/platform-pilot.js','utf8');
+const migration = await readFile('supabase/migrations/20261029191506_allow_bartender_individual_refund.sql','utf8');
+const cashMigration = await readFile('supabase/migrations/20261030171145_staff_pending_cash_refunds.sql','utf8');
+
+test('refunds are started from a selected staff order, without manual UUID',()=>{
+  assert.match(html,/id="staff-refund-dialog"/);
+  assert.match(html,/id="staff-refund-confirm"/);
+  assert.match(orders,/Rimborsa ordine numero/);
+  assert.match(orders,/request_completed_order_refund/);
+  assert.match(orders,/p_kind:'individual',p_order:o.id,p_key:key/);
+  assert.doesNotMatch(html,/id="pilot-refund-order"/);
+  assert.doesNotMatch(pilot,/pilot-refund-form/);
+});
+
+test('only paid completed staff orders expose the refund button',()=>{
+  assert.match(orders,/o.payment_status==='paid'&&\['delivered','no_show'\].includes\(o.status\)/);
+  assert.match(orders,/staffSchools.includes\(o.school_id\)/);
+  assert.match(orders,/stripeRefundKeys.get\(o.id\)\|\|crypto.randomUUID\(\)/);
+});
+
+test('the mobile bartender board renders only the selected lane',()=>{
+  assert.match(orders,/const compactStaffMedia=matchMedia\('\(max-width: 1023px\)'\)/);
+  assert.match(orders,/if\(compactStaffMedia\.matches&&stage\.key!==selectedLane\)continue/);
+  assert.match(orders,/compactStaffMedia\.addEventListener\?\.\('change',drawStaff\)/);
+});
+
+test('database checks tenant membership, completion state and request reason',()=>{
+  assert.match(migration,/app_private.can_serve_group_bar/);
+  assert.match(migration,/p_kind = 'individual'/);
+  assert.match(migration,/app_private.can_manage_support_school/);
+  assert.match(migration,/delivered', 'no_show'/);
+  assert.match(migration,/app_private.assert_no_pending_checkout/);
+  assert.match(migration,/p_key IS NULL/);
+});
+
+test('staff can register actual cash/POS return only after explicit confirmation',()=>{
+  assert.match(html,/id="staff-cash-refunds-list"/);
+  assert.match(html,/id="staff-cash-return-dialog"/);
+  assert.match(html,/id="staff-cash-return-confirm"[^>]*required/);
+  assert.match(html,/id="staff-cash-return-reason"[^>]*required minlength="8"/);
+  assert.match(orders,/client\.rpc\('list_staff_pending_cash_refunds',\{p_school:schoolId\}\)/);
+  assert.match(orders,/client\.rpc\('confirm_cash_refund_return'/);
+  assert.match(orders,/p_refund:obligation\.id,p_reason:cashReturnReason\.value\.trim\(\)/);
+  assert.match(orders,/cashReturnForm\.reportValidity\(\)/);
+  assert.match(orders,/staffSchools\.includes\(obligation\.school_id\)/);
+  assert.match(orders,/Nessuna restituzione al banco da registrare/);
+  assert.doesNotMatch(html,/id="staff-cash-return-refund-id"/);
+});
+
+test('cash refund completion is not falsely described as an automatic POS refund',()=>{
+  assert.match(html,/Non esegue uno storno sul terminale POS esterno/);
+  assert.match(html,/Confermo di aver già restituito realmente/);
+  assert.match(orders,/Il sistema non può accreditare automaticamente contanti/);
+  assert.match(orders,/checkCashRefundShift\(obligation,order\?\.bar_id\|\|null\)/);
+  assert.match(orders,/client\.rpc\('cash_workspace',\{p_school:obligation\.school_id\}\)/);
+  assert.match(orders,/cashReturnSubmit\.disabled=true/);
+  assert.match(html,/id="staff-cash-go-cash"/);
+});
+
+test('pending cash-refund RPC is scoped to school and cannot be called by anonymous users',()=>{
+  assert.match(cashMigration,/auth\.uid\(\) IS NULL/);
+  assert.match(cashMigration,/app_private\.can_serve_group_bar\(p_school\)/);
+  assert.match(cashMigration,/WHERE school_id=p_school AND status='pending'/);
+  assert.match(cashMigration,/REVOKE ALL ON FUNCTION public\.list_staff_pending_cash_refunds\(uuid\) FROM PUBLIC, anon/);
+  assert.match(cashMigration,/GRANT EXECUTE ON FUNCTION public\.list_staff_pending_cash_refunds\(uuid\) TO authenticated/);
+  assert.match(cashMigration,/has_more/);
+  assert.match(orders,/results\.some\(r=>r\.data\?\.has_more\)/);
+});

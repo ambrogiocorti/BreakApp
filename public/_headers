@@ -1,0 +1,9 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(self), microphone=(), payment=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://ynvswdyirngvdpudcikl.supabase.co; connect-src 'self' https://ynvswdyirngvdpudcikl.supabase.co wss://ynvswdyirngvdpudcikl.supabase.co
+
+# Hosted QR reading needs same-origin camera. Product images are loaded from
+# the explicitly authorized BreakApp Supabase Storage origin only.

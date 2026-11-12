@@ -1,0 +1,56 @@
+name: Workspace Chromium smoke
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'src/js/features/shell/**'
+      - 'src/js/features/auth/**'
+      - 'src/js/features/groups/**'
+      - 'src/js/features/orders/**'
+      - 'src/js/core/geolocation.js'
+      - 'src/css/login.css'
+      - 'src/css/customer-experience.css'
+      - 'tests/e2e/auth.mjs'
+      - 'tests/e2e/guest.mjs'
+      - 'tests/e2e/workspace*.mjs'
+      - 'tests/e2e/groups*.mjs'
+      - 'tests/e2e/checkout*.mjs'
+      - '.github/workflows/workspace-chromium.yml'
+permissions:
+  contents: read
+jobs:
+  workspace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Workspace fixture on desktop, tablet and mobile viewports
+        env:
+          WORKSPACE_BROWSER: chromium
+        run: node tests/e2e/workspace.mjs
+      - name: Sign-in layout and guest recovery on small screens
+        env:
+          AUTH_BROWSER: chromium
+          GUEST_BROWSER: chromium
+        run: |
+          node tests/e2e/auth.mjs
+          node tests/e2e/guest.mjs
+      - name: Group overview, cart and location controls
+        env:
+          GROUP_BROWSER: chromium
+        run: node tests/e2e/groups.mjs
+      - name: Booking and cancellable location request
+        env:
+          CHECKOUT_BROWSER: chromium
+        run: node tests/e2e/checkout.mjs

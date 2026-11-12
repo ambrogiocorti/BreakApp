@@ -1,0 +1,71 @@
+/* Privacy and terms pages. Standalone: they load before (and without) the app bundle. */
+:root {
+  color-scheme: light;
+  --canvas: #f6f4ef;
+  --surface: #ffffff;
+  --line: #e2ddd3;
+  --ink: #1c1917;
+  --ink-2: #4a4540;
+  --ink-3: #6b645c;
+  --lavagna: #1d4b40;
+  --lavagna-soft: #e3ece8;
+  --tuorlo-soft: #fcf0cf;
+  --tuorlo-ink: #3d2c00;
+  --focus: #1d4b40;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --canvas: #141513;
+    --surface: #1c1e1b;
+    --line: #34372f;
+    --ink: #f1efe9;
+    --ink-2: #cdc9bf;
+    --ink-3: #a29d92;
+    --lavagna: #8fc9b6;
+    --lavagna-soft: #1f2d28;
+    --tuorlo-soft: #3a3016;
+    --tuorlo-ink: #f6dc94;
+    --focus: #8fc9b6;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font: 1rem/1.6 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.legal { max-width: 44rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+.legal-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.legal-brand { font-weight: 700; letter-spacing: -0.01em; }
+a { color: var(--lavagna); text-underline-offset: 0.15em; }
+a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+.back { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+h1 { font-size: clamp(1.6rem, 5vw, 2.1rem); line-height: 1.2; margin: 0 0 0.25rem; }
+h2 { font-size: 1.15rem; margin: 2rem 0 0.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.updated { color: var(--ink-3); margin: 0 0 1.25rem; font-size: 0.95rem; }
+.draft {
+  background: var(--tuorlo-soft);
+  color: var(--tuorlo-ink);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.5rem;
+}
+.draft strong { display: block; }
+.lead { font-size: 1.05rem; color: var(--ink-2); }
+ul { padding-left: 1.25rem; }
+li { margin: 0.35rem 0; }
+mark { background: var(--tuorlo-soft); color: var(--tuorlo-ink); padding: 0 0.2em; border-radius: 3px; }
+table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.5rem 0.5rem 0.5rem 0; border-bottom: 1px solid var(--line); }
+th { color: var(--ink-3); font-weight: 600; }
+.legal-foot { margin-top: 2.5rem; color: var(--ink-3); font-size: 0.95rem; }
+@media (max-width: 30rem) {
+  table, thead, tbody, tr, th, td { display: block; }
+  thead { position: absolute; left: -9999px; }
+  tr { border-bottom: 1px solid var(--line); padding: 0.5rem 0; }
+  td { border: 0; padding: 0.1rem 0; }
+  td:first-child { font-weight: 700; }
+}

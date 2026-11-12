@@ -1,0 +1,213 @@
+name: BreakApp database integration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/sql/**'
+      - 'supabase/migrations/**'
+      - 'tests/db/**'
+      - '.github/workflows/database.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Bootstrap Supabase Auth stub
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/bootstrap.sql
+      - name: Apply migrations 01, 03, 04, 05 and 06
+        run: |
+          for file in supabase/sql/01_breakapp_foundations.sql supabase/sql/03_catalog_admin.sql supabase/sql/04_individual_orders_core.sql supabase/sql/05_food_info_media.sql supabase/sql/06_fix_storage_object_scope.sql; do
+            docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
+          done
+      - name: Test isolation, idempotence and stock
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/orders-smoke.sql
+      - name: Test catalog metadata and tenant media permissions
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/catalog-media.sql
+      - name: Apply service migration 07 after legacy fixtures
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/07_bar_service_calendar.sql
+      - name: Apply calendar safety migration 08
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/08_calendar_safety_guards.sql
+      - name: Test opening hours, pause, closures and customer notices
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/service-calendar.sql
+      - name: Apply support tickets migration 09
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/09_support_tickets.sql
+      - name: Test support privacy, MFA, messages, reopen and Storage
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/support-tickets.sql
+      - name: Apply role workspace security migration 10
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/10_workspace_platform_identity.sql
+      - name: Test platform role and MFA
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/workspace-role.sql
+      - name: Apply exclusive Super Admin order guard
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/11_superadmin_not_customer.sql
+      - name: Test Super Admin customer-order prohibition
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/superadmin-not-customer.sql
+      - name: Apply pilot platform provisioning migration
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/12_pilot_superadmin_operations.sql
+      - name: Test privileged staff and service setup
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/platform-pilot.sql
+
+      - name: Apply platform catalogue migration 13
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/13_platform_catalog.sql
+      - name: Test platform product/catalogue management
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/platform-catalog.sql
+      - name: Apply group drafts migration 14
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/14_group_drafts.sql
+      - name: Test group membership, privacy and draft stock invariants
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-drafts.sql
+      - name: Apply realtime notifications migration 15
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/15_realtime_notices.sql
+      - name: Test realtime notification privacy and triggers
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/realtime-notices.sql
+      - name: Apply secure payment, offline and push foundations 16
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/16_payments_offline_push_foundations.sql
+      - name: Test exclusive offline barista lease and quarantined sync
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-security.sql
+      - name: Apply signed Stripe checkout migration 17
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/17_stripe_checkout_individual.sql
+      - name: Test Stripe checkout ownership and idempotent settlement
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-individual.sql
+      - name: Apply Web Push dispatcher migration 18
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/18_web_push_dispatch.sql
+      - name: Test Web Push enqueue and dispatcher privileges
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/push-dispatch.sql
+      - name: Apply one-owner-per-endpoint push migration 24
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/24_push_device_ownership.sql
+      - name: Test transfer to another user does not leak queued alerts
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/push-device-ownership.sql
+      - name: Apply verified Stripe refund migration 19
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/19_full_stripe_refunds.sql
+      - name: Test refund AAL2 authorization and original payment integrity
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-refunds.sql
+      - name: Apply cash / checkout double-charge guard 20
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/20_checkout_expiry_reconciliation.sql
+      - name: Test cash refusal until signed Stripe expiry
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-expiry-cash.sql
+      - name: Revoke unnecessary anonymous EXECUTE from cash-overlap trigger
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/22_revoke_cash_trigger_execute.sql
+      - name: Race two PostgreSQL customers against last remaining stock unit
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/orders-concurrency.sql
+      - name: Apply FK B-tree coverage migration 23
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/23_fk_index_coverage.sql
+      - name: Assert every application foreign key has an index
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply group draft lifecycle management migration 25
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/25_group_draft_lifecycle.sql
+      - name: Verify coordinator transfer, invite rotation, role permissions and cancellation
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-lifecycle.sql
+      - name: Apply offline Admin review migration 26
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/26_offline_admin_review.sql
+      - name: Verify offline review MFA, school isolation, audit and non-booking
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-admin-review.sql
+      - name: Verify offline review foreign key index coverage
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply confirmed group transactional order migration 27
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/27_confirmed_group_orders.sql
+      - name: Verify group stock, role guards, QR lease, cash and delivery
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-confirmed-orders.sql
+      - name: Verify group order FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply multipayer group Stripe migration 28
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/28_group_stripe_payments.sql
+      - name: Verify payer attribution, idempotence, webhook and paid group confirmation
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-stripe-payments.sql
+      - name: Verify group Stripe claim FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply itemized online and offline cash ledger migration 29
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/29_offline_cash_stock_reconciliation.sql
+      - name: Verify encrypted sale replay, stock guard, cash ledger and inventory audit
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-cash-ledger.sql
+      - name: Verify offline financial FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply historical group-line refunds and lifecycle migration 30
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/30_group_refund_lifecycle.sql
+      - name: Verify original payer refunds, late signed checkout, and 24h expiry
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-refunds.sql
+      - name: Verify refund ledger FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply same-day offline pickup and cash/Stripe collision migration 31
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < supabase/sql/31_offline_order_pickups.sql
+      - name: Verify offline ready manifest, QR delivery, cash and duplicate Stripe refund
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/offline-order-pickups.sql
+      - name: Verify offline pickup ledger FK indexes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Apply timestamped operational migrations
+        run: |
+          for file in supabase/migrations/*.sql; do
+            if grep -qxF "$(basename "$file")" supabase/hosted-only-migrations.txt; then
+              echo "Skip hosted-only migration $file"; continue
+            fi
+            docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < "$file"
+          done
+      - name: Verify signed Stripe account status updates
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-account-status.sql
+      - name: Verify group entry from anywhere and GPS on final confirmation
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/group-join-anywhere.sql
+      - name: Test physical cash counts, immutable closings and revoked offline event recovery
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/cash-sessions.sql
+      - name: Test internal registration limits and server-side Authenticator enrollment guard
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/auth-registration-mfa.sql
+      - name: Test complete school reports and tenant announcement recipients
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/reports-announcements.sql
+      - name: Test private runtime credentials and bounded refund retries
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/runtime-refund-retries.sql
+      - name: Test notification preferences, persistent notices and exhausted push leases
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/notification-preferences.sql
+      - name: Test timed reminders, balances, paid members, closing recipients and batch idempotence
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/pickup-reminders.sql
+      - name: Audit SECURITY DEFINER, RLS, service-only RPCs and cross-school writes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/security-gates.sql
+      - name: Verify signed async checkout failures, group release and late settlement
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-async-failure.sql
+      - name: Verify current Stripe refund state, leases and out-of-order events
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/stripe-refund-observations.sql
+      - name: Complete approval, amendment, payer refund, guest, coupon and onboarding workflows
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/complete-workflows.sql
+      - name: Staff invitations before first sign-in, school/role limits and activation codes
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/school-staff-invites.sql
+      - name: Verify per-school GPS policy, MFA, audit and tenant isolation
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/school-geolocation-policy.sql
+      - name: One school and one role per account, legacy assignment and onboarding checks
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/one-school-one-role.sql
+      - name: Students order and join groups only in their own school
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/customer-single-school.sql
+      - name: Discount for paying at the counter, refunds and offline manifest
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/counter-discount.sql
+      - name: Test fiscal documents ledger
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fiscal-documents.sql
+      - name: Snapshot and restore disposable database into a separate empty DB
+        run: |
+          PG_CONTAINER="${{ job.services.postgres.id }}"
+          docker exec "$PG_CONTAINER" pg_dump -U postgres -d postgres --format=custom > "$RUNNER_TEMP/breakapp-ci.pgdump"
+          docker exec "$PG_CONTAINER" createdb -U postgres breakapp_restore
+          docker exec -i "$PG_CONTAINER" pg_restore -U postgres --clean --if-exists --single-transaction -d breakapp_restore < "$RUNNER_TEMP/breakapp-ci.pgdump"
+      - name: Verify restored records, RLS, privileges and FK indexes
+        run: |
+          PG_CONTAINER="${{ job.services.postgres.id }}"
+          docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_restore -v ON_ERROR_STOP=1 < tests/db/restore-verification.sql
+          docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_restore -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql
+      - name: Encrypt and restore a backup using the production scripts
+        run: |
+          PG_CONTAINER="${{ job.services.postgres.id }}"
+          docker exec -u root "$PG_CONTAINER" sh -c 'apt-get update -qq && apt-get install -y -qq gnupg > /dev/null'
+          docker cp scripts/backup-database.sh "$PG_CONTAINER:/tmp/backup-database.sh"
+          docker cp scripts/verify-backup.sh "$PG_CONTAINER:/tmp/verify-backup.sh"
+          docker exec "$PG_CONTAINER" createdb -U postgres breakapp_encrypted_restore
+          docker exec -e SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1/postgres -e BACKUP_PASSPHRASE=ci-disposable-test-key-with-over-32-characters "$PG_CONTAINER" bash /tmp/backup-database.sh /tmp/encrypted-backup
+          docker exec -e RESTORE_TEST_DB_URL=postgresql://postgres:postgres@127.0.0.1/breakapp_encrypted_restore -e BACKUP_PASSPHRASE=ci-disposable-test-key-with-over-32-characters "$PG_CONTAINER" bash -c 'for file in /tmp/encrypted-backup/*.dump.gpg; do bash /tmp/verify-backup.sh "$file"; done'
+          docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_encrypted_restore -v ON_ERROR_STOP=1 < tests/db/restore-verification.sql
+          docker exec -i "$PG_CONTAINER" psql -U postgres -d breakapp_encrypted_restore -v ON_ERROR_STOP=1 < tests/db/fk-index-coverage.sql

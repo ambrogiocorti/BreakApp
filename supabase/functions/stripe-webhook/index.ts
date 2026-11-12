@@ -1,0 +1,190 @@
+// Supabase Edge Function: stripe-webhook
+// Must be deployed verify_jwt=false: Stripe cannot send a Supabase JWT.
+// Authentication is Stripe-Signature verification over RAW body bytes;
+// STRIPE_WEBHOOK_SECRET is stored in Supabase Edge Function secrets only.
+import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
+const respond=(value:unknown,status:number)=>new Response(JSON.stringify(value),{
+ status,headers:{'content-type':'application/json','cache-control':'no-store'}
+});
+const hex=(bytes:Uint8Array)=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+const equal=(a:string,b:string)=>{
+ if(a.length!==b.length)return false;
+ let diff=0;
+ for(let i=0;i<a.length;i++)diff|=a.charCodeAt(i)^b.charCodeAt(i);
+ return diff===0;
+};
+async function verify(raw:string,signature:string,secret:string):Promise<boolean>{
+ const values:Record<string,string[]>={};
+ for(const part of signature.split(',')){
+  const i=part.indexOf('=');if(i<1)continue;
+  const k=part.slice(0,i),v=part.slice(i+1);
+  (values[k]||=[]).push(v);
+ }
+ const timestamp=Number(values.t?.[0]);
+ const candidates=values.v1||[];
+ if(!Number.isSafeInteger(timestamp)||candidates.length===0||
+  Math.abs(Date.now()/1000-timestamp)>300)return false;
+ const encoder=new TextEncoder();
+ const key=await crypto.subtle.importKey('raw',encoder.encode(secret),
+  {name:'HMAC',hash:'SHA-256'},false,['sign']);
+ const digest=hex(new Uint8Array(await crypto.subtle.sign('HMAC',key,
+  encoder.encode(timestamp+'.'+raw))));
+ return candidates.some(value=>equal(digest,value));
+}
+Deno.serve(async request=>{
+ if(request.method!=='POST')return respond({error:'Metodo non consentito'},405);
+ try{
+  const secret=Deno.env.get('STRIPE_WEBHOOK_SECRET');
+  if(!secret)return respond({error:'Webhook non configurato'},503);
+  const signature=request.headers.get('stripe-signature')||'';
+  const raw=await request.text();
+  if(raw.length>262144)return respond({error:'Evento troppo grande'},413);
+  if(!await verify(raw,signature,secret))
+   return respond({error:'Firma Stripe non valida'},400);
+  const evt=JSON.parse(raw) as Record<string,any>;
+  if(!/^evt_[A-Za-z0-9]+$/.test(evt.id||'')||evt.livemode!==false)
+   return respond({error:'Evento Stripe non valido per il test'},400);
+  if(evt.type==='account.updated'){
+    // Connect event for a school merchant: only an already associated account
+    // is updated (the RPC never creates associations); stale snapshots are skipped.
+    const account=evt.data?.object;
+    if(!account||account.object!=='account'||!/^acct_[A-Za-z0-9]+$/.test(evt.account||'')||
+      account.id!==evt.account||!Number.isSafeInteger(evt.created)||evt.created<=0||
+      typeof account.charges_enabled!=='boolean'||typeof account.payouts_enabled!=='boolean'||
+      typeof account.details_submitted!=='boolean')
+      return respond({error:'Evento account incompleto o incongruente'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data,error}=await admin.rpc('apply_signed_stripe_account_status',{
+      p_event:evt.id,p_account:evt.account,p_created:evt.created,
+      p_charges:account.charges_enabled,p_payouts:account.payouts_enabled,
+      p_details:account.details_submitted
+    });
+    if(error)return respond({error:'Stato merchant non registrato'},500);
+    return respond({received:true,result:data},200);
+  }
+  if(evt.type==='checkout.session.async_payment_failed'){
+    const session=evt.data?.object;
+    if(!session||session.object!=='checkout.session'||session.mode!=='payment'||
+      session.payment_status!=='unpaid'||session.currency!=='eur'||
+      !Number.isSafeInteger(session.amount_total)||session.amount_total<=0||
+      !/^cs_test_[A-Za-z0-9]+$/.test(session.id||'')||
+      !/^pi_[A-Za-z0-9]+$/.test(session.payment_intent||'')||
+      !/^acct_[A-Za-z0-9]+$/.test(evt.account||'')||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.client_reference_id||'')||
+      session.metadata?.attempt_id!==session.client_reference_id)
+      return respond({error:'Evento Checkout fallito non valido'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data,error}=await admin.rpc('reconcile_signed_async_checkout_failure',{
+      p_event_id:evt.id,p_stripe_account:evt.account,p_session:session.id,
+      p_intent:session.payment_intent,p_attempt:session.client_reference_id,
+      p_amount:session.amount_total,p_currency:session.currency
+    });
+    // A non-2xx response lets Stripe retry when the ledger could not commit.
+    if(error)return respond({error:'Fallimento Checkout non riconciliato'},500);
+    return respond({received:true,result:data},200);
+  }
+  if(evt.type==='checkout.session.expired'){
+    const expired=evt.data?.object;
+    if(!expired||expired.object!=='checkout.session'||
+      expired.status!=='expired'||expired.payment_status!=='unpaid'||
+      expired.metadata?.attempt_id!==expired.client_reference_id||
+      !/^[0-9a-f-]{36}$/i.test(expired.client_reference_id||'')||
+      !/^cs_(test|live)_[A-Za-z0-9]+$/.test(expired.id||'')||
+      !/^acct_[A-Za-z0-9]+$/.test(evt.account||''))
+      return respond({error:'Evento scadenza Checkout non valido'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    const {data:kind,error:kindError}=await admin.rpc('stripe_payment_attempt_kind',{
+      p_attempt:expired.client_reference_id
+    });
+    if(kindError||!['group','individual'].includes(kind))
+      return respond({error:'Tentativo Stripe sconosciuto'},500);
+    const {data,error}=kind==='group'
+      ?await admin.rpc('reconcile_signed_group_checkout_expiry',{
+        p_event_id:evt.id,p_account:evt.account,
+        p_session:expired.id,p_attempt:expired.client_reference_id
+       })
+      :await admin.rpc('reconcile_signed_checkout_expiry',{
+        p_event_id:evt.id,p_stripe_account:evt.account,
+        p_session:expired.id,p_attempt:expired.client_reference_id
+       });
+    if(error)return respond({error:'Scadenza non riconciliata'},500);
+    return respond({received:true,result:data},200);
+  }
+  if(['refund.created','refund.updated','refund.failed'].includes(evt.type)){
+    const refund=evt.data?.object;
+    if(!refund||refund.object!=='refund'||
+      !['pending','requires_action','succeeded','failed','canceled'].includes(refund.status)||
+      (evt.type==='refund.failed'&&refund.status!=='failed')||
+      !/^re_[A-Za-z0-9]+$/.test(refund.id||'')||
+      !/^pi_[A-Za-z0-9]+$/.test(refund.payment_intent||'')||
+      !/^acct_[A-Za-z0-9]+$/.test(evt.account||'')||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(refund.metadata?.breakapp_refund_id||'')||
+      !Number.isSafeInteger(refund.amount)||refund.amount<=0||refund.currency!=='eur')
+      return respond({error:'Evento rimborso incompleto o incongruente'},400);
+    const url=Deno.env.get('SUPABASE_URL'),
+      key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if(!url||!key)return respond({error:'Backend non configurato'},503);
+    const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+    // Persist the signed snapshot first. The scheduled worker retrieves the
+    // current provider status; event delivery order is not authoritative.
+    const {data,error}=await admin.rpc('enqueue_signed_refund_observation',{
+      p_event:evt.id,p_event_type:evt.type,p_account:evt.account,
+      p_refund:refund.metadata.breakapp_refund_id,p_provider_refund:refund.id,
+      p_intent:refund.payment_intent,p_amount:refund.amount,p_currency:refund.currency,
+      p_snapshot_status:refund.status
+    });
+    if(error)return respond({error:'Evento rimborso non accodato'},500);
+    return respond({received:true,result:data},200);
+  }
+  if(!['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(evt.type))
+   return respond({received:true,handled:false},200);
+  const session=evt.data?.object;
+  if(evt.type==='checkout.session.completed'&&session?.payment_status!=='paid')
+   return respond({received:true,handled:false,deferred:true},200);
+  if(!session||session.object!=='checkout.session'||
+   session.mode!=='payment'||session.payment_status!=='paid'||
+   session.currency!=='eur'||session.amount_total<=0||
+   typeof session.payment_intent!=='string'||session.metadata?.attempt_id!==session.client_reference_id||
+   !/^acct_[A-Za-z0-9]+$/.test(evt.account||''))
+   return respond({error:'Evento pagamento incompleto o incongruente'},400);
+  const url=Deno.env.get('SUPABASE_URL'),
+   key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if(!url||!key)return respond({error:'Backend non configurato'},503);
+  const admin=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
+  const {data:kind,error:kindError}=await admin.rpc('stripe_payment_attempt_kind',{
+   p_attempt:session.metadata.attempt_id
+  });
+  if(kindError||!['group','individual'].includes(kind))
+   return respond({error:'Tentativo di pagamento non registrato'},500);
+  const verified={
+   p_event_id:evt.id,p_session:session.id,p_intent:session.payment_intent,
+   p_attempt:session.metadata.attempt_id,p_amount:session.amount_total,
+   p_currency:session.currency,p_paid:true,
+   p_payload:{event_id:evt.id,event_type:evt.type,session_id:session.id,
+    account:evt.account,amount_total:session.amount_total,currency:session.currency}
+  };
+  const {data,error}=kind==='group'
+   ?await admin.rpc('finalize_verified_group_checkout',{
+      ...verified,p_account:evt.account
+    })
+   :await admin.rpc('finalize_verified_checkout',{
+      ...verified,p_event_account:evt.account
+    });
+  if(error){
+   // Stripe retries non-2xx responses. Never acknowledge uncommitted ledger.
+   return respond({error:'Registrazione transazione non riuscita'},500);
+  }
+  return respond({received:true,result:data},200);
+ }catch{
+  return respond({error:'Evento non elaborabile'},500);
+ }
+});

@@ -1,0 +1,122 @@
+/* Login, guest access and profile. */
+
+/* Signed out: one compact card, centred, scrolls normally on short screens. */
+.access-section { display: grid; gap: var(--space-4); }
+.access-layout { display: grid; gap: var(--space-4); justify-items: center; width: 100%; }
+body:not([data-workspace="true"]) .access-section { min-height: calc(100dvh - var(--topbar-h) - var(--space-8)); align-content: center; padding-block: var(--space-2) var(--space-6); }
+body:not([data-workspace="true"]) .site-header .brand { visibility: hidden; }
+body:not([data-workspace="true"]) .site-header { background: transparent; }
+
+.auth-card {
+  display: grid; gap: var(--space-4);
+  width: min(100%, 25rem);
+  padding: var(--space-6) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+@media (min-width: 480px) { .auth-card { padding: var(--space-8) var(--space-8) var(--space-6); } }
+.login-panel, .auth-alt-panel { display: grid; gap: var(--space-4); }
+.login-brand { min-height: 0; margin-bottom: var(--space-1); }
+.login-brand .brand-symbol { width: 36px; height: 36px; border-radius: 10px; }
+.login-brand .brand-symbol i { height: 16px; width: 6px; }
+.login-panel h1, .auth-alt-panel h1 { font-size: var(--text-3xl); }
+.auth-subtitle { margin-top: calc(-1 * var(--space-3)); color: var(--ink-2); font-size: var(--text-md); }
+.auth-form, .guest-access-form, .guest-recovery-form { display: grid; gap: var(--space-3); }
+.auth-form .button-primary { margin-top: var(--space-1); }
+.auth-divider { display: flex; align-items: center; gap: var(--space-3); color: var(--ink-3); font-size: var(--text-sm); }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.social-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.social-button { gap: var(--space-2); }
+.provider-mark { width: 18px; height: 18px; }
+.social-auth-status { font-size: var(--text-sm); color: var(--ink-3); }
+.auth-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--line); font-size: var(--text-md); color: var(--ink-2); }
+.auth-signup { margin: 0; }
+.auth-inline-action, .auth-guest-action, .auth-back-action {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  min-height: var(--control-h); padding: 0; border: 0; background: transparent;
+  color: var(--lavagna); font-weight: 700; font-size: inherit; text-decoration: underline; text-underline-offset: .2em; text-decoration-thickness: 1px;
+}
+.auth-guest-action { text-decoration: none; }
+.auth-guest-action:hover, .auth-inline-action:hover { text-decoration-thickness: 2px; }
+.auth-back-action { justify-self: start; min-height: var(--control-h-sm); text-decoration: none; color: var(--ink-2); font-weight: 600; font-size: var(--text-md); }
+.guest-access-form > p { font-size: var(--text-sm); color: var(--ink-3); }
+.guest-access-form .button { width: 100%; }
+.auth-legal { margin: 0; font-size: var(--text-sm); line-height: 1.4; color: var(--ink-3); }
+.auth-legal a { color: var(--ink-2); text-underline-offset: .15em; }
+.auth-legal a:hover { color: var(--lavagna); }
+.access-note { max-width: 25rem; text-align: center; font-size: var(--text-sm); color: var(--ink-3); }
+#auth-feedback:empty { display: none; }
+
+/* Short or zoomed screens: tighten so the form fits, never lock scroll. */
+body:not([data-workspace="true"]) .app-main { padding-bottom: var(--space-4); }
+@media (max-height: 760px) {
+  body:not([data-workspace="true"]) .access-section { padding-block: 0; }
+  .auth-card { gap: var(--space-3); padding-block: var(--space-5); }
+  .login-panel { gap: var(--space-3); }
+  .login-panel h1 { font-size: var(--text-2xl); }
+  .login-brand { display: none; }
+  body:not([data-workspace="true"]) .site-header .brand { visibility: visible; }
+  .auth-footer { padding-top: var(--space-2); }
+}
+@media (max-height: 640px) {
+  body:not([data-workspace="true"]) .site-header, body:not([data-workspace="true"]) .header-inner { min-height: 48px; }
+  body:not([data-workspace="true"]) .app-main { padding-top: var(--space-2); }
+  .auth-card { gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+  .login-panel { gap: var(--space-2); }
+  .auth-form { gap: var(--space-2); }
+  .auth-subtitle { display: none; }
+  .login-panel h1 { font-size: var(--text-xl); }
+  .auth-divider { display: none; }
+  .auth-footer { gap: 0 var(--space-3); }
+  .auth-footer > * { min-height: 40px; }
+  .auth-inline-action, .auth-guest-action { min-height: 40px; }
+  .access-note { display: none; }
+  .auth-card { border: 0; background: transparent; padding: 0; }
+  .auth-alt-panel { gap: var(--space-2); }
+  .auth-alt-panel h1 { font-size: var(--text-xl); }
+  .auth-back-action { min-height: 32px; }
+  .guest-access-form { gap: var(--space-2); }
+  .guest-access-form > p { font-size: var(--text-xs); line-height: 1.35; }
+  .guest-access-form label { gap: 2px; }
+  .guest-recovery-open { min-height: 36px; }
+}
+@media (max-width: 359px) { .social-actions { grid-template-columns: 1fr; } }
+
+/* Signed in: the same card becomes the Profile page. */
+body[data-workspace="true"] .access-layout { justify-items: stretch; }
+body[data-workspace="true"] .auth-card, .auth-card:has(#signed-in-view:not([hidden])) {
+  width: 100%; max-width: 46rem; padding: 0; border: 0; background: transparent; gap: var(--space-4);
+}
+body[data-workspace="true"] .access-note { display: none; }
+.profile { display: grid; gap: var(--space-4); }
+.profile-block {
+  display: grid; gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface);
+}
+.profile-block h2 { font-size: var(--text-base); }
+.profile-identity { grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-4); }
+.profile-avatar { width: 48px; height: 48px; font-size: var(--text-base); }
+.profile-avatar:empty { display: none; }
+.profile-identity-text { display: grid; min-width: 0; }
+.profile-identity-text .label { font-size: var(--text-sm); color: var(--ink-3); }
+.profile-identity-text strong { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 520px) {
+  .profile-identity { grid-template-columns: auto 1fr; }
+  .profile-identity .button { grid-column: 1 / -1; justify-self: start; }
+}
+.profile-links .row-link { border-top: 1px solid var(--line); }
+.school-access-status { font-size: var(--text-sm); color: var(--ink-3); }
+.school-access-list { display: grid; gap: var(--space-3); }
+.school-access-card { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius); background: var(--surface-sunken); }
+.school-access-card h3, .school-access-card h4 { font-size: var(--text-md); font-family: var(--font-ui); font-weight: 700; }
+.school-role-list { display: flex; flex-wrap: wrap; gap: var(--space-1); padding: 0; margin: 0; list-style: none; }
+.school-role-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line); font-size: var(--text-xs); font-weight: 700; color: var(--ink-2); }
+.school-bars-label, .school-access-empty, .school-admin-note { font-size: var(--text-sm); color: var(--ink-3); }
+.admin-qr { display: grid; gap: var(--space-2); justify-items: start; }
+.admin-qr img { width: 180px; height: 180px; padding: var(--space-2); border-radius: var(--radius); background: #fff; border: 1px solid var(--line); }
+.guest-private-link, .profile > .guest-recovery-form { display: grid; gap: var(--space-2); padding: var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.guest-private-link p { font-size: var(--text-sm); color: var(--ink-2); }
+details.guest-recovery-form > summary { font-weight: 650; cursor: pointer; min-height: var(--control-h); display: flex; align-items: center; }
+.profile-identity > .button { justify-self: end; width: auto; }
