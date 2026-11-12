@@ -462,6 +462,20 @@
             <button type="submit" class="button button-primary">Pubblica</button>
           </form>
         </div>
+        <section id="fiscal-documents" class="panel fiscal-panel" aria-labelledby="fiscal-title">
+          <div class="panel-head">
+            <h2 id="fiscal-title">Scontrini da emettere</h2>
+            <div class="button-row">
+              <label class="sr-only" for="fiscal-status">Mostra</label>
+              <select id="fiscal-status"><option value="to_issue">Da emettere</option><option value="issued">Già emessi</option><option value="">Tutti</option></select>
+              <button type="button" id="fiscal-refresh" class="button button-outline button-small">Aggiorna</button>
+              <button type="button" id="fiscal-export" class="button button-outline button-small" disabled>CSV</button>
+            </div>
+          </div>
+          <p class="help">Ogni incasso o rimborso registrato nell’app crea qui una riga, con importo e prodotti. Emetti lo scontrino (o lo scontrino di reso) con il registratore del bar e segnalo come emesso. Il periodo è quello scelto sopra, al massimo 3 mesi.</p>
+          <p id="fiscal-summary" class="help" role="status" aria-live="polite"></p>
+          <div id="fiscal-list" class="fiscal-list"></div>
+        </section>
       </section>
 
       <section id="cash-workspace" class="cash-section" hidden aria-label="Cassa e turni">

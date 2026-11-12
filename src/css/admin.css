@@ -223,3 +223,13 @@
 .price-policy-option { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-md); color: var(--ink-1); }
 .price-policy-option input { margin-top: 0.2em; flex: none; }
 .price-policy .field { max-width: 12rem; }
+
+/* Registro scontrini da emettere. */
+.fiscal-panel { margin-top: var(--space-4); }
+.fiscal-list { display: grid; }
+.fiscal-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.fiscal-row:last-child { border-bottom: 0; }
+.fiscal-text { display: grid; gap: 2px; min-width: 0; }
+.fiscal-meta { font-size: var(--text-sm); color: var(--ink-3); overflow-wrap: anywhere; }
+.fiscal-row.is-return strong { color: var(--danger, var(--ink-1)); }
+.fiscal-row .button { flex: none; }

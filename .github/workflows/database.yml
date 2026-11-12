@@ -187,6 +187,8 @@ jobs:
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/customer-single-school.sql
       - name: Discount for paying at the counter, refunds and offline manifest
         run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/counter-discount.sql
+      - name: Test fiscal documents ledger
+        run: docker exec -i ${{ job.services.postgres.id }} psql -U postgres -v ON_ERROR_STOP=1 < tests/db/fiscal-documents.sql
       - name: Snapshot and restore disposable database into a separate empty DB
         run: |
           PG_CONTAINER="${{ job.services.postgres.id }}"
