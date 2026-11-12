@@ -126,6 +126,7 @@
                   <p class="auth-signup">Prima volta? <button class="auth-inline-action" id="signup-button" type="button">Crea un account</button></p>
                   <button id="guest-open" class="auth-guest-action" type="button" hidden>Entra come ospite <span aria-hidden="true">→</span></button>
                 </div>
+                <p class="auth-legal">Continuando accetti i <a href="termini.html">Termini d’uso</a> e dichiari di aver letto l’<a href="privacy.html">Informativa privacy</a>.</p>
               </div>
             </div>
             <div id="signed-in-view" class="profile" hidden>
@@ -185,6 +186,9 @@
               <section class="profile-block profile-links" aria-labelledby="profile-help-title">
                 <h2 id="profile-help-title">Aiuto</h2>
                 <a class="row-link" href="#support-center"><span>Assistenza e segnalazioni</span><span aria-hidden="true">→</span></a>
+                <a class="row-link" href="privacy.html"><span>Informativa privacy</span><span aria-hidden="true">→</span></a>
+                <a class="row-link" href="termini.html"><span>Termini d’uso</span><span aria-hidden="true">→</span></a>
+                <a class="row-link" href="mailto:corti.ambro@gmail.com"><span>Scrivi all’assistenza</span><span aria-hidden="true">→</span></a>
               </section>
             </div>
             <p id="auth-feedback" class="feedback" role="status" aria-live="polite"></p>
@@ -857,7 +861,7 @@
               <form id="catalog-product-form" class="disclosure-body form-grid">
                 <div class="field"><label for="catalog-product-category">Categoria</label><select id="catalog-product-category" required></select></div>
                 <div class="field"><label for="catalog-product-name">Nome</label><input id="catalog-product-name" type="text" placeholder="Es. Focaccia" minlength="2" maxlength="160" required /></div>
-                <div class="field"><label for="catalog-product-price">Prezzo (€)</label><input id="catalog-product-price" type="text" inputmode="decimal" placeholder="2,50" required /></div>
+                <div class="field"><label for="catalog-product-price">Prezzo del bar (€)</label><input id="catalog-product-price" type="text" inputmode="decimal" placeholder="2,50" required /></div>
                 <div class="field field-wide"><label for="catalog-product-description">Descrizione</label><textarea id="catalog-product-description" rows="2" maxlength="1500"></textarea></div>
                 <div class="field field-wide"><label for="catalog-product-ingredients">Ingredienti <span class="optional">obbligatori per pubblicare</span></label><textarea id="catalog-product-ingredients" rows="3" maxlength="3000" placeholder="Copia l’elenco dalla scheda del fornitore"></textarea></div>
                 <fieldset class="product-allergens field-wide">
@@ -920,6 +924,7 @@
               <div class="field"><label for="ops-horizon">Prenotabile fino a (giorni)</label><input type="number" id="ops-horizon" min="1" max="365" value="30" required /></div>
               <div class="field"><label for="ops-cutoff">Annullabile fino a (minuti prima)</label><input type="number" id="ops-cutoff" min="0" max="1440" value="10" required /></div>
               <div class="field"><label for="ops-max-unpaid">Ordini non pagati per persona</label><input type="number" id="ops-max-unpaid" min="1" max="50" value="3" required /></div>
+              <fieldset class="field price-policy"><legend>Commissioni dei pagamenti online</legend><label class="price-policy-option"><input type="radio" name="ops-price-policy" value="none" checked /> Nessuno sconto e nessun aumento: tutti pagano il prezzo del bar</label><label class="price-policy-option"><input type="radio" name="ops-price-policy" value="counter_discount" /> Sconto a chi paga al banco in contanti o con il POS del bar</label><label class="price-policy-option"><input type="radio" name="ops-price-policy" value="price_increase" /> Aumento di tutti i prezzi per coprire la commissione di Stripe</label><div class="field"><label for="ops-price-percent">Percentuale (%)</label><input type="number" id="ops-price-percent" min="0" max="20" step="0.5" value="0" inputmode="decimal" aria-describedby="ops-price-percent-help" /></div><p id="ops-price-percent-help" class="help">Stripe trattiene 1,5% + 0,25 € per ogni pagamento online: su un ordine da 2,50 € sono circa 0,29 €, cioè l’11,5%. Lo sconto al banco va da 0,5 a 10%. L’aumento va da 0,5 a 20%, vale per tutti i prodotti e per chiunque, anche per chi paga al banco, e i prezzi sono arrotondati per eccesso ai 5 centesimi. La legge non permette di far pagare di più solo a chi paga con carta.</p></fieldset>
               <div class="field"><label for="ops-approval-items">Approvazione oltre (prodotti) <span class="optional">vuoto: mai</span></label><input type="number" id="ops-approval-items" min="1" step="1" /></div>
               <div class="field"><label for="ops-approval-eur">Approvazione oltre (€) <span class="optional">vuoto: mai</span></label><input type="number" id="ops-approval-eur" step="0.01" min="0.01" /></div>
               <div class="field-wide"><button type="submit" class="button button-primary">Salva regole</button></div>

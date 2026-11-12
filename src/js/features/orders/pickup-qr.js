@@ -2,6 +2,7 @@ import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import { formatEuro } from '../catalog/utils.js';
 import { makePickupQrValue, parsePickupQrValue, parseOrderDisplayNumber } from './qr-utils.js';
 import { orderStatusLabel } from './staff-board.js';
+import { counterDueCents, counterDiscountNote } from './counter-discount.js';
 
 const el=(tag,text,cls='')=>{
   const node=document.createElement(tag);
@@ -82,7 +83,7 @@ export function initializePickupQr(client) {
       if(!data)throw new Error('Ordine non trovato oppure non autorizzato.');
       if(!await allowedStaff(data.school_id))throw new Error('Non sei autorizzato a gestire questo ordine.');
       const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:data.id});
-      if(balance.error)throw balance.error;data.due_cents=balance.data.due_cents;
+      if(balance.error)throw balance.error;data.due_cents=counterDueCents(balance.data);data.counter_note=counterDiscountNote(balance.data);
       if(version!==queryVersion || !scanDialog.open)return;
       drawOrder(data);
       report('Ordine #'+data.display_no+' verificato dal server.');
@@ -138,10 +139,10 @@ export function initializePickupQr(client) {
     };
     if(order.payment_status==='due') {
       command('Contanti e consegna',
-        'Hai ricevuto '+formatEuro(order.due_cents)+' in contanti e consegnato tutti i prodotti?',
+        'Hai ricevuto '+formatEuro(order.due_cents)+' in contanti'+(order.counter_note||'')+' e consegnato tutti i prodotti?',
         collectAndDeliver('cash'));
       command('POS e consegna',
-        'Il POS esterno ha registrato '+formatEuro(order.due_cents)+' e hai consegnato tutti i prodotti?',
+        'Il POS esterno ha registrato '+formatEuro(order.due_cents)+(order.counter_note||'')+' e hai consegnato tutti i prodotti?',
         collectAndDeliver('external_pos'));
     }
     if(order.payment_status==='paid'){

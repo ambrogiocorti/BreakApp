@@ -19,7 +19,7 @@ export async function checkPages({
     return response;
   }
   const page=await (await get('', 'Landing page')).text();
-  if(!/<title>\s*BreakApp\b/i.test(page)||!page.includes('id="auth-form"'))
+  if(!/<title>[^<]*\bBreakApp\b/i.test(page)||!page.includes('id="auth-form"'))
     throw new Error('Hosted page does not contain the BreakApp login');
   const manifest=await (await get('manifest.webmanifest','PWA manifest')).json();
   if(manifest.name!=='BreakApp'||manifest.display!=='standalone'||

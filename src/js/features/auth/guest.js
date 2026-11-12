@@ -2,6 +2,8 @@ export function initializeGuestAccess(client){
  if(!client)return;
  const make=(tag,text='')=>{const n=document.createElement(tag);n.textContent=text;return n;};
  const label=(text,field)=>{const wrapper=make('label',text);wrapper.append(field);return wrapper;};
+ const legalLink=(href,text)=>{const a=make('a',text);a.href=href;return a;};
+ const guestLegal=()=>{const p=make('p','Continuando accetti i ');p.className='auth-legal';p.append(legalLink('termini.html','Termini d’uso'),' e dichiari di aver letto l’',legalLink('privacy.html','Informativa privacy'),'.');return p;};
  const signedOut=document.getElementById('signed-out-view'),loginPanel=document.getElementById('login-panel'),guestOpen=document.getElementById('guest-open');
  const guestPanel=make('div'),recoverPanel=make('div'),guestHeading=make('h1','Accesso ospite'),recoverHeading=make('h1','Recupera accesso ospite');
  guestPanel.className='auth-alt-panel';guestPanel.id='guest-access-panel';guestPanel.hidden=true;
@@ -33,7 +35,7 @@ export function initializeGuestAccess(client){
  }
  school.addEventListener('change',()=>void updateClasses());
  const submit=make('button','Accedi come ospite');submit.className='button button-outline';submit.type='submit';status.setAttribute('role','status');
- form.append(label('Scuola',school),label('Nome e cognome',name),classLabel,make('p','Conserva il link privato per ritrovare ordini e pagamenti. Come ospite puoi partecipare ai gruppi, ma non coordinarli.'),submit,status);
+ form.append(label('Scuola',school),label('Nome e cognome',name),classLabel,make('p','Conserva il link privato per ritrovare ordini e pagamenti. Come ospite puoi partecipare ai gruppi, ma non coordinarli.'),guestLegal(),submit,status);
  guestPanel.append(backToLogin,guestHeading,form,openRecovery);
  signedOut.append(guestPanel,recoverPanel);guestOpen.hidden=false;
  const recovery=make('div'),link=make('input');recovery.className='guest-private-link';link.readOnly=true;link.setAttribute('aria-label','Link privato personale');

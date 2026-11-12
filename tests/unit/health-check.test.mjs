@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {checkPages} from '../../scripts/health-check.mjs';
 
-function fakeFetch({status=200,start='/BreakApp/',badWorker=false}={}){
+function fakeFetch({status=200,start='/BreakApp/',badWorker=false,title='BreakApp — Accedi'}={}){
   return async url=>{
     const path=new URL(url).pathname;
     if(path.endsWith('manifest.webmanifest')){
@@ -11,7 +11,7 @@ function fakeFetch({status=200,start='/BreakApp/',badWorker=false}={}){
     }
     if(path.endsWith('sw.js'))
       return new Response(badWorker?'not a worker':"self.addEventListener('push',()=>{});",{status});
-    return new Response('<html><title>BreakApp — Accedi</title><form id="auth-form"></form></html>',{status});
+    return new Response(`<html><title>${title}</title><form id="auth-form"></form></html>`,{status});
   };
 }
 test('public Pages probe validates login, manifest scope and Service Worker',async()=>{
@@ -31,4 +31,11 @@ test('public Pages probe rejects an unavailable site',async()=>{
 test('public Pages probe rejects insecure URLs',async()=>{
   await assert.rejects(checkPages({siteUrl:'http://example.com/BreakApp/',
     fetchImpl:fakeFetch()}),/HTTPS/);
+});
+test('public Pages probe accepts the real login title "Accedi · BreakApp"',async()=>{
+  const result=await checkPages({fetchImpl:fakeFetch({title:'Accedi · BreakApp'})});
+  assert.equal(result.ok,true);
+});
+test('public Pages probe rejects a page that is not BreakApp',async()=>{
+  await assert.rejects(checkPages({fetchImpl:fakeFetch({title:'Page not found'})}),/BreakApp login/);
 });

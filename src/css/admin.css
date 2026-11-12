@@ -216,3 +216,10 @@
 .location-policy-toggle input:checked { background: var(--lavagna); border-color: var(--lavagna); }
 .location-policy-toggle input:checked::before { transform: translateX(18px); }
 .location-policy-toggle input:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+/* Regola prezzi per le commissioni dei pagamenti online. */
+.price-policy { grid-column: 1 / -1; display: grid; gap: var(--space-2); }
+.price-policy legend { font-size: var(--text-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--space-1); }
+.price-policy-option { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-md); color: var(--ink-1); }
+.price-policy-option input { margin-top: 0.2em; flex: none; }
+.price-policy .field { max-width: 12rem; }

@@ -183,7 +183,7 @@ export function initializePlatformPilot(client){
      $('pilot-product-category').options[0]?.value||'';
    $('pilot-product-name').value=p?.name||'';
    $('pilot-product-description').value=p?.description||'';
-   $('pilot-product-price').value=p?String(p.price_cents/100).replace('.',','):'';
+   $('pilot-product-price').value=p?String((p.base_price_cents??p.price_cents)/100).replace('.',','):'';
    $('pilot-product-ingredients').value=p?.ingredients||'';
    $('pilot-product-active').checked=p?.is_active??true;
    $('pilot-product-image').value='';
@@ -254,7 +254,7 @@ export function initializePlatformPilot(client){
    if(!b){renderCatalog();renderProducts();renderWindows();renderHours();renderReadiness();return;}
    say('Caricamento della configurazione…');
    const [p,c,h,w,st]=await Promise.all([
-     client.from('products').select('id,category_id,name,description,price_cents,ingredients,allergens,image_path,is_active')
+     client.from('products').select('id,category_id,name,description,price_cents,base_price_cents,ingredients,allergens,image_path,is_active')
        .eq('school_id',b.school_id).eq('bar_id',b.id).order('name'),
      client.from('categories').select('id,name,is_active')
        .eq('school_id',b.school_id).eq('bar_id',b.id).order('name'),
