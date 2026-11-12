@@ -43,3 +43,8 @@ test('service worker never caches standalone pages as the app shell',()=>{
   assert.match(sw,/const isShell = url\.pathname === SHELL_URL/);
   assert.match(sw,/response\.ok && isShell/);
 });
+
+test('legal pages and profile give the support email',()=>{
+  for(const f of ['public/privacy.html','public/termini.html','index.html'])
+    assert.match(readFileSync(new URL('../../'+f,import.meta.url),'utf8'),/mailto:corti\.ambro@gmail\.com/);
+});
