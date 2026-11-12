@@ -44,13 +44,13 @@ end;$$;
 -- Solo l'Admin della scuola con 2FA imposta lo sconto, entro 0-10%.
 do $$begin
  perform pg_temp.actor('93333333-3333-4333-8333-333333333333','authenticated','aal2');
- if not pg_temp.denied($q$select public.set_school_counter_discount('91000000-0000-4000-8000-000000000001',500)$q$) then raise exception 'Barista set the discount';end if;
+ if not pg_temp.denied($q$select public.set_school_price_policy('91000000-0000-4000-8000-000000000001','counter_discount',500)$q$) then raise exception 'Barista set the discount';end if;
  perform pg_temp.actor('94444444-4444-4444-8444-444444444444','authenticated','aal1');
- if not pg_temp.denied($q$select public.set_school_counter_discount('91000000-0000-4000-8000-000000000001',500)$q$) then raise exception 'Admin without 2FA set the discount';end if;
+ if not pg_temp.denied($q$select public.set_school_price_policy('91000000-0000-4000-8000-000000000001','counter_discount',500)$q$) then raise exception 'Admin without 2FA set the discount';end if;
  perform pg_temp.actor('94444444-4444-4444-8444-444444444444','authenticated','aal2');
- if not pg_temp.denied($q$select public.set_school_counter_discount('91000000-0000-4000-8000-000000000001',1001)$q$) then raise exception 'Discount above 10%% accepted';end if;
- if not pg_temp.denied($q$select public.set_school_counter_discount('91000000-0000-4000-8000-000000000001',-1)$q$) then raise exception 'Negative discount accepted';end if;
- perform public.set_school_counter_discount('91000000-0000-4000-8000-000000000001',500);
+ if not pg_temp.denied($q$select public.set_school_price_policy('91000000-0000-4000-8000-000000000001','counter_discount',1001)$q$) then raise exception 'Discount above 10%% accepted';end if;
+ if not pg_temp.denied($q$select public.set_school_price_policy('91000000-0000-4000-8000-000000000001','counter_discount',-1)$q$) then raise exception 'Negative discount accepted';end if;
+ perform public.set_school_price_policy('91000000-0000-4000-8000-000000000001','counter_discount',500);
  if (select counter_discount_bps from public.schools where id='91000000-0000-4000-8000-000000000001')<>500 then raise exception 'Discount not saved';end if;
  if not exists(select 1 from app_private.school_settings_audit where school_id='91000000-0000-4000-8000-000000000001'
   and (previous->>'counter_discount_bps')::int=0 and (current->>'counter_discount_bps')::int=500) then raise exception 'Discount change not audited';end if;
@@ -127,6 +127,37 @@ do $$declare o uuid;o2 uuid;device uuid:=gen_random_uuid();receipt jsonb;m jsonb
   or app_private.order_paid_cents('individual',o)<>250 then raise exception 'Offline discount ledger wrong';end if;
  if not exists(select 1 from public.cash_entries where source_key like 'order_additional_receipts:%' and amount_cents=237)
  then raise exception 'Cash drawer did not receive the real amount';end if;
+end;$$;
+
+-- Regola 'price_increase': tutti i prezzi salgono, nessuno sconto al banco.
+do $$declare s uuid:='91000000-0000-4000-8000-000000000001';pr uuid:='91000000-0000-4000-8000-000000000004';np uuid;begin
+ perform pg_temp.actor('94444444-4444-4444-8444-444444444444','authenticated','aal2');
+ if app_private.marked_up_price_cents(250,1000)<>275 or app_private.marked_up_price_cents(250,1150)<>280
+  or app_private.marked_up_price_cents(100,150)<>105 or app_private.marked_up_price_cents(0,2000)<>0
+  or app_private.marked_up_price_cents(250,0)<>250 then raise exception 'Markup rounding incorrect';end if;
+ if not pg_temp.denied(format('select public.set_school_price_policy(%L,''price_increase'',2001)',s)) then raise exception 'Markup above 20%% accepted';end if;
+ if not pg_temp.denied(format('select public.set_school_price_policy(%L,''none'',500)',s)) then raise exception 'None with percentage accepted';end if;
+ if not pg_temp.denied(format('select public.set_school_price_policy(%L,''surcharge'',500)',s)) then raise exception 'Unknown policy accepted';end if;
+ perform public.set_school_price_policy(s,'price_increase',1000);
+ if (select counter_discount_bps from public.schools where id=s)<>0 then raise exception 'Discount kept with markup';end if;
+ if (select price_cents from public.products where id=pr)<>275 or (select base_price_cents from public.products where id=pr)<>250
+ then raise exception 'Markup not applied to product';end if;
+ if not exists(select 1 from app_private.school_settings_audit where school_id=s and current->>'price_policy'='price_increase'
+  and (current->>'price_markup_bps')::int=1000) then raise exception 'Markup change not audited';end if;
+ -- L'Admin scrive il prezzo del bar, anche uguale al prezzo rincarato attuale.
+ update public.products set price_cents=275,base_price_cents=275 where id=pr;
+ if (select price_cents from public.products where id=pr)<>305 or (select base_price_cents from public.products where id=pr)<>275
+ then raise exception 'Edited base price not marked up';end if;
+ update public.products set name='Panino buono' where id=pr;
+ if (select price_cents from public.products where id=pr)<>305 then raise exception 'Unrelated edit changed price';end if;
+ insert into public.products(school_id,bar_id,category_id,name,price_cents)
+  values(s,'91000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000003','Acqua',100) returning id into np;
+ if (select price_cents from public.products where id=np)<>110 then raise exception 'New product not marked up';end if;
+ -- Tornando a 'none' il bar ritrova i suoi prezzi.
+ perform public.set_school_price_policy(s,'none',0);
+ if (select price_cents from public.products where id=pr)<>275 or (select base_price_cents from public.products where id=pr) is not null
+  or (select price_cents from public.products where id=np)<>100 then raise exception 'Prices not restored';end if;
+ if (select counter_discount_bps+price_markup_bps from public.schools where id=s)<>0 then raise exception 'None kept a percentage';end if;
 end;$$;
 
 -- Il client non legge ne' scrive la tabella degli sconti.

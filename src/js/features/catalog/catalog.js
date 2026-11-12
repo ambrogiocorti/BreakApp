@@ -172,7 +172,8 @@ export function initializeAdminCatalog(client) {
       const row = element('div', 'catalog-item');
       const description = element('div', 'catalog-item-description');
       const category = categories.find((item) => item.id === product.category_id);
-      const heading = element('strong', '', `${product.name} · ${formatEuro(product.price_cents)}`);
+      const heading = element('strong', '', `${product.name} · ${formatEuro(product.price_cents)}`
+        + (product.base_price_cents!=null ? ` (prezzo del bar ${formatEuro(product.base_price_cents)})` : ''));
       description.append(heading, element('span', 'catalog-item-meta',
         `${category?.name || 'Categoria non disponibile'} · ${product.is_active ? 'Visibile' : 'Nascosto'}`));
       if (product.description) description.append(element('span', 'catalog-item-meta', product.description));
@@ -193,7 +194,7 @@ export function initializeAdminCatalog(client) {
         productCategory.value = product.category_id;
         productName.value = product.name;
         productDescription.value = product.description;
-        productPrice.value = (product.price_cents / 100).toFixed(2).replace('.', ',');
+        productPrice.value = ((product.base_price_cents ?? product.price_cents) / 100).toFixed(2).replace('.', ',');
         productIngredients.value = product.ingredients || '';
         allergenList.querySelectorAll('input[type="checkbox"]').forEach(input=>{
           input.checked=(product.allergens||[]).includes(input.value);
@@ -234,7 +235,7 @@ export function initializeAdminCatalog(client) {
         client.from('categories').select('id,school_id,bar_id,name,sort_order,is_active')
           .eq('school_id', scope.school_id).eq('bar_id', scope.bar_id)
           .order('sort_order').order('name'),
-        client.from('products').select('id,school_id,bar_id,category_id,name,description,price_cents,is_active,ingredients,allergens,image_path')
+        client.from('products').select('id,school_id,bar_id,category_id,name,description,price_cents,base_price_cents,is_active,ingredients,allergens,image_path')
           .eq('school_id', scope.school_id).eq('bar_id', scope.bar_id).order('name')
       ]);
       if (token !== generation || panel.hidden) return;
@@ -323,6 +324,7 @@ export function initializeAdminCatalog(client) {
         name: productName.value.trim(),
         description: productDescription.value.trim(),
         price_cents: parseEuroToCents(productPrice.value),
+        base_price_cents: parseEuroToCents(productPrice.value),
         ingredients: productIngredients.value.trim(),
         allergens: selectedAllergens()
       };

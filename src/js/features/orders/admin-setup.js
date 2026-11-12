@@ -43,7 +43,7 @@ export function initializeAdminOrderSetup(client) {
   async function readSettings(){
     if(!school.value)return;
     const {data,error}=await client.from('schools')
-      .select('address,latitude,longitude,pickup_radius_m,location_accuracy_m,require_geolocation,counter_discount_bps,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
+      .select('address,latitude,longitude,pickup_radius_m,location_accuracy_m,require_geolocation,price_policy,counter_discount_bps,price_markup_bps,booking_horizon_days,cancel_cutoff_minutes,max_unpaid_orders_per_customer,approval_product_threshold,approval_amount_threshold_cents')
       .eq('id',school.value).single();
     if(error){tell(error.message,true);return;}
     const values={
@@ -55,12 +55,14 @@ export function initializeAdminOrderSetup(client) {
       'ops-horizon':data.booking_horizon_days,
       'ops-cutoff':data.cancel_cutoff_minutes,
       'ops-max-unpaid':data.max_unpaid_orders_per_customer,
-      'ops-counter-discount':Number(data.counter_discount_bps||0)/100,
+      'ops-price-percent':Number((data.price_policy==='price_increase'?data.price_markup_bps:data.counter_discount_bps)||0)/100,
       'ops-approval-items':data.approval_product_threshold,
       'ops-approval-eur':data.approval_amount_threshold_cents==null?null:(data.approval_amount_threshold_cents/100)
     };
     for(const [id,value] of Object.entries(values))document.getElementById(id).value=value??'';
     document.getElementById('ops-require-geolocation').checked=data.require_geolocation!==false;
+    const policy=document.querySelector(`input[name="ops-price-policy"][value="${data.price_policy||'none'}"]`);
+    if(policy)policy.checked=true;
     refreshMapLink();
   }
   function render(){
@@ -161,10 +163,13 @@ export function initializeAdminOrderSetup(client) {
     const {error:geoError}=await client.rpc('set_school_geolocation_required',{
       p_school:school.value,p_required:document.getElementById('ops-require-geolocation').checked});
     if(geoError)return tell('Regole salvate, obbligo GPS non salvato: '+geoError.message,true);
-    const discountBps=Math.round(Number(val('ops-counter-discount').replace(',','.'))*100);
-    if(!Number.isInteger(discountBps)||discountBps<0||discountBps>1000)return tell('Regole salvate, sconto al banco non valido: da 0 a 10%.',true);
-    const {error:discountError}=await client.rpc('set_school_counter_discount',{p_school:school.value,p_bps:discountBps});
-    if(discountError)return tell('Regole salvate, sconto al banco non salvato: '+discountError.message,true);
+    const pricePolicy=document.querySelector('input[name="ops-price-policy"]:checked')?.value||'none';
+    const priceBps=pricePolicy==='none'?0:Math.round(Number(val('ops-price-percent').replace(',','.'))*100);
+    const maxBps=pricePolicy==='price_increase'?2000:1000;
+    if(pricePolicy!=='none'&&(!Number.isInteger(priceBps)||priceBps<50||priceBps>maxBps))
+      return tell(`Regole salvate, percentuale non valida: da 0,5 a ${maxBps/100}%.`,true);
+    const {error:policyError}=await client.rpc('set_school_price_policy',{p_school:school.value,p_policy:pricePolicy,p_bps:priceBps});
+    if(policyError)return tell('Regole salvate, regola prezzi non salvata: '+policyError.message,true);
     tell('Regole scuola salvate.');await readSettings();
   });
   slotForm.addEventListener('submit',async event=>{

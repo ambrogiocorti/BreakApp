@@ -41,15 +41,19 @@ test('every counter collection prompt uses the discounted amount',()=>{
 
 test('admin sets the discount through the 2FA RPC, never by writing the table',()=>{
   const setup=read('src/js/features/orders/admin-setup.js');
-  assert.match(setup,/rpc\('set_school_counter_discount'/);
+  assert.match(setup,/rpc\('set_school_price_policy'/);
   assert.doesNotMatch(setup,/update\(\{counter_discount_bps/);
   const html=read('index.html');
-  assert.match(html,/id="ops-counter-discount"[^>]*min="0"[^>]*max="10"/);
+  for(const value of ['none','counter_discount','price_increase'])
+    assert.match(html,new RegExp(`name="ops-price-policy" value="${value}"`));
+  assert.match(html,/id="ops-price-percent"[^>]*max="20"/);
 });
 
 test('migration keeps card payments at list price and rejects client access',()=>{
   const sql=read('supabase/migrations/20261112090000_counter_payment_discount.sql');
   assert.match(sql,/check \(counter_discount_bps between 0 and 1000\)/);
+  assert.match(sql,/price_policy in \('none','counter_discount','price_increase'\)/);
+  assert.match(sql,/\(price_policy='counter_discount' or counter_discount_bps=0\)/);
   assert.match(sql,/revoke all on public\.order_counter_discounts from public,anon,authenticated/);
   assert.doesNotMatch(sql,/begin_individual_stripe_checkout|begin_group_stripe_checkout/,'online checkout amount must not change');
 });

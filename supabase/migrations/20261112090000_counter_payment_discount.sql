@@ -14,11 +14,32 @@
 -- Nei rimborsi la parte scontata viene stornata (riga negativa) e si
 -- restituisce solo il denaro realmente incassato.
 -- Le funzioni sostituite partono dai corpi installati il 12/11/2026.
+--
+-- Aggiornamento 12/11/2026 pomeriggio: l'Admin sceglie una di tre regole
+-- (schools.price_policy): 'none' nessuno sconto e nessun rincaro;
+-- 'counter_discount' sconto 0,5-10% a chi paga al banco; 'price_increase'
+-- tutti i prezzi del bar aumentano della percentuale scelta (0,5-20%), per
+-- chiunque e con qualsiasi metodo di pagamento, cosi' il bar recupera la
+-- commissione Stripe senza un sovrapprezzo vietato sulla carta. Il prezzo
+-- deciso dal bar resta in products.base_price_cents; price_cents e' il prezzo
+-- mostrato e incassato, arrotondato per eccesso ai 5 centesimi.
 
 alter table public.schools add column if not exists counter_discount_bps integer not null default 0;
 alter table public.schools add constraint schools_counter_discount_range
  check (counter_discount_bps between 0 and 1000);
-grant select(counter_discount_bps) on public.schools to anon,authenticated;
+alter table public.schools add column if not exists price_policy text not null default 'none';
+alter table public.schools add column if not exists price_markup_bps integer not null default 0;
+alter table public.schools add constraint schools_price_policy_valid
+ check (price_policy in ('none','counter_discount','price_increase')
+  and price_markup_bps between 0 and 2000
+  and (price_policy='counter_discount' or counter_discount_bps=0)
+  and (price_policy='price_increase' or price_markup_bps=0));
+grant select(counter_discount_bps,price_policy,price_markup_bps) on public.schools to anon,authenticated;
+
+-- Prezzo deciso dal bar, valorizzato solo quando la scuola applica il rincaro.
+alter table public.products add column if not exists base_price_cents integer
+ check (base_price_cents between 0 and 10000000);
+grant update(base_price_cents) on public.products to authenticated;
 
 create table public.order_counter_discounts(
  id uuid primary key default gen_random_uuid(),
@@ -377,10 +398,75 @@ begin
 end;
 $audit_discount$;
 
--- Solo l'Admin della scuola con 2FA sceglie lo sconto (0-10%).
-create or replace function public.set_school_counter_discount(p_school uuid,p_bps integer)
+-- Rincaro percentuale arrotondato per eccesso ai 5 centesimi (comodo in contanti).
+create or replace function app_private.marked_up_price_cents(p_base bigint,p_bps integer)
+returns bigint language sql immutable set search_path=''
+as $$ select case when p_base is null or p_base<=0 or coalesce(p_bps,0)<=0 then p_base
+ else ((p_base*(10000+p_bps)+49999)/50000)*5 end $$;
+revoke all on function app_private.marked_up_price_cents(bigint,integer) from public,anon,authenticated;
+
+-- Ogni scrittura di un prodotto passa da qui: il valore inserito dall'Admin e'
+-- il prezzo del bar; con il rincaro attivo price_cents viene ricalcolato.
+-- Una scrittura che non cambia ne' prezzo ne' prezzo base ricalcola dal prezzo
+-- base gia' salvato (serve quando l'Admin cambia la regola).
+create or replace function app_private.apply_product_price_policy()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+declare v_input bigint;v_bps integer;
+begin
+ if tg_op='INSERT' then v_input:=coalesce(new.base_price_cents,new.price_cents);
+ elsif new.base_price_cents is distinct from old.base_price_cents and new.base_price_cents is not null then
+  v_input:=new.base_price_cents;
+ elsif new.price_cents is distinct from old.price_cents then v_input:=new.price_cents;
+ else v_input:=coalesce(old.base_price_cents,old.price_cents);end if;
+ select case when s.price_policy='price_increase' then s.price_markup_bps else 0 end into v_bps
+ from public.schools s where s.id=new.school_id;
+ if coalesce(v_bps,0)>0 then
+  new.base_price_cents:=v_input;
+  new.price_cents:=app_private.marked_up_price_cents(v_input,v_bps);
+ else
+  new.base_price_cents:=null;new.price_cents:=v_input;
+ end if;
+ return new;
+end;
+$$;
+revoke all on function app_private.apply_product_price_policy() from public,anon,authenticated;
+create trigger products_price_policy before insert or update on public.products
+ for each row execute function app_private.apply_product_price_policy();
+
+-- Il Super Admin salva il prezzo del bar anche dal pannello pilota.
+do $pilot_price$
+declare v_def text;
+begin
+ v_def:=pg_catalog.pg_get_functiondef('public.platform_save_product(uuid,uuid,uuid,text,text,integer,text,text[],boolean)'::regprocedure);
+ if pg_catalog.strpos(v_def,'price_cents=p_price_cents,')=0 then
+  raise exception 'platform_save_product non compatibile con la migrazione prezzi';end if;
+ v_def:=pg_catalog.replace(v_def,'price_cents=p_price_cents,','price_cents=p_price_cents,base_price_cents=p_price_cents,');
+ execute v_def;
+end;
+$pilot_price$;
+
+-- Lo storico delle impostazioni registra anche la regola prezzi.
+do $audit_policy$
+declare v_def text;
+begin
+ v_def:=pg_catalog.pg_get_functiondef('app_private.audit_school_settings()'::regprocedure);
+ v_def:=pg_catalog.replace(v_def,'''counter_discount_bps'',old.counter_discount_bps',
+  '''counter_discount_bps'',old.counter_discount_bps,''price_policy'',old.price_policy,''price_markup_bps'',old.price_markup_bps');
+ v_def:=pg_catalog.replace(v_def,'''counter_discount_bps'',new.counter_discount_bps',
+  '''counter_discount_bps'',new.counter_discount_bps,''price_policy'',new.price_policy,''price_markup_bps'',new.price_markup_bps');
+ if pg_catalog.strpos(v_def,'old.price_markup_bps')=0 or pg_catalog.strpos(v_def,'new.price_markup_bps')=0 then
+  raise exception 'Audit scuola non compatibile con la migrazione prezzi';end if;
+ execute v_def;
+end;
+$audit_policy$;
+
+-- Solo l'Admin della scuola con 2FA sceglie la regola. Cambiando regola i
+-- prezzi dei prodotti vengono ricalcolati subito; gli ordini gia' fatti
+-- mantengono il prezzo con cui sono stati creati.
+create or replace function public.set_school_price_policy(p_school uuid,p_policy text,p_bps integer)
 returns void language plpgsql security definer set search_path=''
-as $set_discount$
+as $set_policy$
 begin
  if auth.uid() is null or (auth.jwt()->>'aal')<>'aal2' then
   raise exception 'È richiesta autenticazione Admin con 2FA';end if;
@@ -389,11 +475,22 @@ begin
   where m.school_id=p_school and m.user_id=auth.uid()
    and m.membership_status='active' and r.role_code='school_admin') then
   raise exception 'Non sei Admin della scuola selezionata';end if;
- if p_bps is null or p_bps not between 0 and 1000 then
-  raise exception 'Sconto non valido: da 0 a 10%%';end if;
- update public.schools set counter_discount_bps=p_bps where id=p_school;
+ if p_policy='none' then
+  if coalesce(p_bps,0)<>0 then raise exception 'Senza sconto né rincaro la percentuale deve essere 0';end if;
+ elsif p_policy='counter_discount' then
+  if p_bps is null or p_bps not between 50 and 1000 then
+   raise exception 'Sconto non valido: da 0,5 a 10%%';end if;
+ elsif p_policy='price_increase' then
+  if p_bps is null or p_bps not between 50 and 2000 then
+   raise exception 'Aumento non valido: da 0,5 a 20%%';end if;
+ else raise exception 'Regola prezzi non valida';end if;
+ update public.schools set price_policy=p_policy,
+  counter_discount_bps=case when p_policy='counter_discount' then p_bps else 0 end,
+  price_markup_bps=case when p_policy='price_increase' then p_bps else 0 end
+ where id=p_school;
  if not found then raise exception 'Scuola non disponibile';end if;
+ update public.products set price_cents=price_cents where school_id=p_school;
 end;
-$set_discount$;
-revoke all on function public.set_school_counter_discount(uuid,integer) from public,anon,authenticated;
-grant execute on function public.set_school_counter_discount(uuid,integer) to authenticated;
+$set_policy$;
+revoke all on function public.set_school_price_policy(uuid,text,integer) from public,anon,authenticated;
+grant execute on function public.set_school_price_policy(uuid,text,integer) to authenticated;
