@@ -89,7 +89,7 @@ export function initializeOfflineTerminal(client){
   if(o.can_pickup_at&&Date.parse(o.can_pickup_at)>Date.now())return info('Attendi la fascia prenotata prima della consegna.',true);
   if(o.pickup_token!==$('offline-pickup-token').value.trim())
    return info('Il QR è cambiato: riverifica il codice.',true);
-  const amount=Number(o.due_cents??(o.payment_status==='paid'?0:o.total_cents));
+  const amount=Number(o.counter_due_cents??o.due_cents??(o.payment_status==='paid'?0:o.total_cents));
   if(!Number.isSafeInteger(amount)||amount<0||amount>1000000)
    return info('Totale non valido.',true);
   if(!await confirmDialog(amount

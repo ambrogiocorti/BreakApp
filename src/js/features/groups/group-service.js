@@ -1,5 +1,6 @@
 import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {orderStatusLabel} from '../orders/staff-board.js';
+import {counterDueCents,counterDiscountNote} from '../orders/counter-discount.js';
 const $=id=>document.getElementById(id);
 const make=(tag,value='',cls='')=>{const n=document.createElement(tag);n.className=cls;n.textContent=value;return n;};
 const cents=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n||0)/100);
@@ -46,7 +47,8 @@ export function initializeGroupService(client){
   active.hidden=false;active.replaceChildren();
   active.append(make('h4','Ordine gruppo · '+orderStatusLabel(data.status)),
    make('p','Totale '+cents(data.total_cents)+' · Saldato '+cents(data.paid_cents)+
-    ' · Residuo '+cents(data.due_cents)));
+    ' · Residuo '+cents(data.due_cents)+
+    (counterDueCents(data)<Number(data.due_cents)?' · Al banco '+cents(counterDueCents(data))+counterDiscountNote(data):'')));
   const ul=make('ul','','scan-item-list');
   for(const item of data.lines||[])ul.append(make('li',
    item.quantity+' × '+item.name+' · '+cents(item.subtotal_cents)));
@@ -78,7 +80,7 @@ export function initializeGroupService(client){
     const button=make('button',label,'button button-outline button-small');button.type='button';
     let key=crypto.randomUUID();
     button.addEventListener('click',()=>void action(
-     'Confermi l’incasso del saldo residuo dal coordinatore?',
+     'Confermi di aver ricevuto '+cents(counterDueCents(data))+' dal coordinatore'+counterDiscountNote(data)+'?',
      'record_group_counter_payment',{
        p_group_order_id:id,p_method:method,p_request_key:key
      }));

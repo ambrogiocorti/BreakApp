@@ -7,6 +7,7 @@ import { paymentError } from '../../core/payment-error.js';
 import { confirmDialog, toast } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
+import { counterDueCents, counterDiscountNote, counterPriceSentence } from './counter-discount.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -516,7 +517,7 @@ export function initializeOrders(client) {
     void loadFavorites();
     report(feedback,'Caricamento ordini…');
     const {data,error}=await client.from('orders')
-      .select('id,bar_id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity)')
+      .select('id,bar_id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity),schools(counter_discount_bps)')
       .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(50);
     if(error){report(feedback,'Ordini non disponibili: '+error.message,true);return;}
     history.replaceChildren();
@@ -541,6 +542,9 @@ export function initializeOrders(client) {
       const meta=elem('p','','order-meta');
       meta.append(elem('span','Ritiro '+slotLabel(o)),elem('strong',formatEuro(o.total_cents)),badge(pay.label,pay.tone));
       box.append(meta);
+      const counterPrice=['confirmed','preparing','ready'].includes(o.status)&&o.payment_status==='due'
+        ?counterPriceSentence(o.total_cents,o.schools?.counter_discount_bps,formatEuro):'';
+      if(counterPrice)box.append(elem('p',counterPrice,'order-counter-price'));
       const ul=elem('ul','','order-items');
       (o.order_items||[]).forEach(x=>{const li=elem('li');li.append(elem('b',x.quantity+'× '),document.createTextNode(x.product_name));ul.append(li);});
       box.append(ul);
@@ -562,7 +566,8 @@ export function initializeOrders(client) {
         stripe.type='button';
         stripe.addEventListener('click',async()=>{
           if(!await confirmDialog({title:'Pagare online '+formatEuro(o.total_cents)+'?',
-            message:'Si apre la pagina di pagamento Stripe. In questa versione di prova Stripe è in modalità test: non viene addebitato denaro reale.',
+            message:'Si apre la pagina di pagamento Stripe. In questa versione di prova Stripe è in modalità test: non viene addebitato denaro reale.'+
+              (counterPrice?' Se preferisci, puoi pagare al banco al ritiro: '+counterPrice.split(' · ')[1]+'.':''),
             confirmLabel:'Vai al pagamento'})){
             return;
           }
@@ -648,7 +653,7 @@ export function initializeOrders(client) {
   async function collectAndDeliver(o,method,how){
     const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});
     if(balance.error)return balance;
-    if(!await decideStaffAction(`Ordine #${o.display_no}: hai ricevuto ${formatEuro(balance.data.due_cents)} ${how} e consegnato tutti i prodotti? Conferma soltanto dopo aver verificato l'incasso.`))return null;
+    if(!await decideStaffAction(`Ordine #${o.display_no}: hai ricevuto ${formatEuro(counterDueCents(balance.data))} ${how}${counterDiscountNote(balance.data)} e consegnato tutti i prodotti? Conferma soltanto dopo aver verificato l'incasso.`))return null;
     const paid=await client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
     if(paid.error)return paid;
     const delivered=await client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});

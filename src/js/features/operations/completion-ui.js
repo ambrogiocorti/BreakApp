@@ -3,6 +3,7 @@ import {confirmDialog,promptDialog} from '../../core/dialog.js';
 import {icon} from '../../core/icons.js';
 import {orderStatusLabel} from '../orders/staff-board.js';
 import {changeKindLabel,changeStateLabel,paymentLabel} from '../../core/status-labels.js';
+import {counterDueCents} from '../orders/counter-discount.js';
 const node=(tag,text='',cls='')=>{const e=document.createElement(tag);e.textContent=text;e.className=cls;return e;};
 function input(form,label,type='text',value=''){
  const wrapper=node('label',label),field=node('input');field.type=type;field.value=value;field.required=true;wrapper.append(field);form.append(wrapper);return field;
@@ -98,7 +99,7 @@ export function initializeCompletionUI(client){
       const win=select(body,'Nuova fascia',(windows.data||[]).filter(isUpcomingWindow).map(w=>[w.id,w.service_date+' '+w.starts_at.slice(0,5)]));
       const send=button('Invia proposta al cliente',b=>act(b,()=>rpc('propose_order_exception',{p_kind:kind,p_order:id,p_type:type.value,p_line:line.value||null,p_product:replacement.value||null,p_window:win.value||null,p_key:crypto.randomUUID()})));body.append(send);
      }else{
-      body.append(node('p','Totale '+formatEuro(detail.total_cents)+' · Residuo '+formatEuro(detail.due_cents)));
+      body.append(node('p','Totale '+formatEuro(detail.total_cents)+' · Residuo '+formatEuro(detail.due_cents)+(counterDueCents(detail)<Number(detail.due_cents)?' · Al banco '+formatEuro(counterDueCents(detail)):'')));
       if(kind==='individual'){
        const quantities=[];for(const p of products.data||[]){const q=input(body,p.name+' · '+formatEuro(p.price_cents),'number',String(detail.lines.find(i=>i.product_id===p.id)?.quantity||0));q.min='0';q.max='1000';q.step='1';quantities.push({p,q});}
        body.append(button('Invia modifica',b=>act(b,()=>rpc('request_order_amendment',{p_order:id,p_items:quantities.filter(x=>Number(x.q.value)>0).map(x=>({product_id:x.p.id,quantity:Number(x.q.value)})),p_key:crypto.randomUUID()}))));
