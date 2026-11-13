@@ -113,7 +113,9 @@ export function initializeCompletionUI(client){
    if(!staff){extra.append(node('h3','I tuoi pagamenti'),node('p','Conferme interne di pagamento e rimborsi. Non sostituiscono il documento fiscale.'));
     for(const p of documents||[])extra.append(node('p',new Date(p.created_at).toLocaleString('it-IT')+' · '+formatEuro(p.amount_cents)+' · '+paymentLabel(p.status)+' · rimborsi: '+p.refunds.map(r=>formatEuro(r.amount_cents)+' '+paymentLabel(r.status)).join(', ')));}
    if(admin){
-    for(const o of [...(individual.data||[]).map(o=>({...o,kind:'individual',label:'#'+o.display_no})),...(groups||[]).map(o=>({...o,kind:'group',label:o.title||'Gruppo'}))].filter(o=>['delivered','no_show'].includes(o.status)))
+    // Gli ordini singoli si rimborsano dall'ordine stesso (Ordini > Rimborsa); qui restano i gruppi.
+    extra.append(node('p','Per rimborsare un ordine singolo aprilo in «Ordini» (Conclusi e rimborsi) e premi «Rimborsa».','help'));
+    for(const o of (groups||[]).map(o=>({...o,kind:'group',label:o.title||'Gruppo'})).filter(o=>['delivered','no_show'].includes(o.status)))
      extra.append(button('Richiedi rimborso '+o.label,b=>act(b,async()=>{const reason=await promptDialog('Motivo (almeno 8 caratteri). Online: rimborso ai pagatori originali. Contanti: obbligo di restituzione fisica.');if(reason)await rpc('request_completed_order_refund',{p_kind:o.kind,p_order:o.id,p_key:crypto.randomUUID(),p_reason:reason});})));
    }
   }catch(error){if(v===epoch)extra.append(node('p','Impossibile aggiornare: '+error.message));}

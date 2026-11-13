@@ -9,6 +9,7 @@ import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
 import { counterDueCents, counterDiscountNote, counterPriceSentence } from './counter-discount.js';
 import { receiptQuestion, pendingReceiptCents, markReceiptsIssued } from './receipt-step.js';
+import { REFUND_REASONS, OTHER_REASON, refundReason as chosenRefundReason, exchangeableLines, exchangeDifference, exchangeDifferenceText, cashReturnQuestion, exchangePaymentQuestion, returnCashNow, cashOutcomeText } from './refund-exchange.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -80,7 +81,7 @@ export function initializeOrders(client) {
   let staffContextSchool=null;
   let staffFetchSequence=0,staffAuthVersion=0;
   const STAFF_PAGE_SIZE=250,STAFF_MAX_PAGES=8;
-  const STAFF_FIELDS='id,school_id,bar_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_name,quantity)';
+  const STAFF_FIELDS='id,school_id,bar_id,display_no,status,payment_status,payment_method,total_cents,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity,unit_cents)';
   let staffChannels=[],staffFallbackTimer=null,staffDebounceTimer=null;
   function stopStaffFeed(){
     clearInterval(staffFallbackTimer);
@@ -130,9 +131,18 @@ export function initializeOrders(client) {
   const refundSummary=document.querySelector('#staff-refund-summary');
   const refundReason=document.querySelector('#staff-refund-reason');
   const refundFeedback=document.querySelector('#staff-refund-feedback');
-  const refundConfirm=document.querySelector('#staff-refund-confirm');
   const refundSubmit=document.querySelector('#staff-refund-submit');
-  let selectedRefund=null;
+  const refundHow=document.querySelector('#staff-refund-how');
+  const refundPreset=document.querySelector('#staff-refund-reason-preset');
+  const refundReasonField=document.querySelector('#staff-refund-reason-field');
+  const exchangeFields=document.querySelector('#staff-exchange-fields');
+  const exchangeOut=document.querySelector('#staff-exchange-out');
+  const exchangeQty=document.querySelector('#staff-exchange-qty');
+  const exchangeIn=document.querySelector('#staff-exchange-in');
+  const exchangeDiff=document.querySelector('#staff-exchange-diff');
+  const exchangePay=document.querySelector('#staff-exchange-pay');
+  const exchangeKeys=new Map();
+  let selectedRefund=null,exchangeProducts=[];
   const cashRefundList=document.querySelector('#staff-cash-refunds-list');
   const cashRefundFeedback=document.querySelector('#staff-cash-refunds-feedback');
   const cashReturnDialog=document.querySelector('#staff-cash-return-dialog');
@@ -197,8 +207,74 @@ export function initializeOrders(client) {
       }
     }finally{cashReturnSubmit.disabled=false;}
   });
+  for(const text of REFUND_REASONS)refundPreset.add(new Option(text,text));
+  refundPreset.add(new Option('Altro (scrivilo)',OTHER_REASON));
+  const refundMode=()=>refundForm.querySelector('input[name="staff-refund-mode"]:checked')?.value||'refund';
+  const exchangePayMethod=()=>refundForm.querySelector('input[name="staff-exchange-pay"]:checked')?.value||'cash';
+  function exchangeChoice(){
+    const line=exchangeableLines(selectedRefund).find(x=>x.product_id===exchangeOut.value);
+    const product=exchangeProducts.find(x=>x.id===exchangeIn.value);
+    const quantity=Math.min(Number(exchangeQty.value)||1,line?.quantity||1);
+    return {line,product,quantity,diff:line&&product?exchangeDifference(line.unit_cents,product.price_cents,quantity):0};
+  }
+  function syncRefundForm(){
+    const o=selectedRefund;if(!o)return;
+    const exchange=refundMode()==='exchange';
+    exchangeFields.hidden=!exchange;
+    refundReasonField.hidden=refundPreset.value!==OTHER_REASON;
+    document.querySelector('#staff-refund-reason').required=refundPreset.value===OTHER_REASON;
+    if(!exchange){
+      refundHow.textContent='Tornano solo i soldi davvero incassati: la parte pagata online va sulla carta con Stripe, quella in contanti o POS la dai in contanti al banco.';
+      refundSubmit.textContent='Rimborsa';refundSubmit.className='button button-danger';
+      return;
+    }
+    refundHow.textContent='Il cliente rende un prodotto e ne prende un altro. Se costa di più paga la differenza, se costa di meno gli torna come ha pagato.';
+    const line=exchangeableLines(o).find(x=>x.product_id===exchangeOut.value);
+    exchangeQty.max=String(line?.quantity||1);
+    const {product,diff}=exchangeChoice();
+    exchangeDiff.textContent=product&&line?exchangeDifferenceText(diff):'';
+    exchangePay.hidden=!(diff>0);
+    refundSubmit.textContent='Registra il cambio';refundSubmit.className='button button-primary';
+  }
+  async function loadExchangeProducts(o){
+    exchangeIn.replaceChildren(new Option('Caricamento prodotti…',''));
+    const {data,error}=await client.from('products').select('id,name,price_cents')
+      .eq('bar_id',o.bar_id).eq('is_active',true).order('name');
+    if(selectedRefund?.id!==o.id)return;
+    if(error){exchangeIn.replaceChildren(new Option('Prodotti non disponibili','')); report(refundFeedback,'Impossibile leggere i prodotti: '+error.message,true);return;}
+    exchangeProducts=(data||[]).filter(p=>Number.isFinite(Number(p.price_cents)));
+    exchangeIn.replaceChildren(new Option('Scegli il prodotto',''),...exchangeProducts.map(p=>new Option(p.name+' · '+formatEuro(p.price_cents),p.id)));
+    syncRefundForm();
+  }
+  function openRefund(o){
+    if(!user||!staffSchools.includes(o.school_id))return;
+    selectedRefund=o;exchangeProducts=[];
+    refundForm.reset();refundFeedback.textContent='';
+    refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents);
+    const lines=exchangeableLines(o);
+    exchangeOut.replaceChildren(...lines.map(x=>new Option(x.quantity+'× '+x.product_name+' · '+formatEuro(x.unit_cents),x.product_id)));
+    const canExchange=o.status==='delivered'&&lines.length>0;
+    refundForm.querySelector('input[name="staff-refund-mode"][value="exchange"]').disabled=!canExchange;
+    exchangeIn.replaceChildren();exchangeDiff.textContent='';
+    syncRefundForm();
+    refundDialog.showModal();
+    refundSubmit.focus();
+  }
+  refundForm.addEventListener('change',event=>{
+    if(event.target.name==='staff-refund-mode'&&refundMode()==='exchange'&&selectedRefund&&!exchangeProducts.length)void loadExchangeProducts(selectedRefund);
+    syncRefundForm();
+  });
+  exchangeQty.addEventListener('input',syncRefundForm);
   document.querySelector('#staff-refund-cancel').addEventListener('click',()=>refundDialog.close());
   refundDialog.addEventListener('close',()=>{selectedRefund=null;refundForm.reset();refundFeedback.textContent='';});
+  async function giveBackCash(o,reason,expectedCents){
+    // Il contante si restituisce subito: una domanda, poi la registrazione in cassa.
+    if(!await decideStaffAction(cashReturnQuestion(o.display_no,expectedCents)))
+      return 'Contanti da dare al cliente: '+formatEuro(expectedCents)+'. Registrali da «Restituzioni da registrare» quando li hai dati.';
+    const outcome=await returnCashNow(client,o.id,reason);
+    if(outcome.returned>0){const problem=await markReceiptsIssued(client,o.id);if(problem)return cashOutcomeText(outcome)+' '+problem;}
+    return cashOutcomeText(outcome);
+  }
   refundForm.addEventListener('submit',async event=>{
     event.preventDefault();
     const o=selectedRefund;
@@ -206,13 +282,16 @@ export function initializeOrders(client) {
     if(!staffSchools.includes(o.school_id)||!['delivered','no_show'].includes(o.status)||o.payment_status!=='paid'){
       report(refundFeedback,'L’ordine non è più rimborsabile. Aggiorna la lista.',true);return;
     }
+    const reason=chosenRefundReason(refundPreset.value,document.querySelector('#staff-refund-reason').value);
+    if(!reason){report(refundFeedback,'Scrivi un motivo di almeno 8 caratteri.',true);return;}
+    if(refundMode()==='exchange'){await submitExchange(o,reason);return;}
     refundSubmit.disabled=true;
-    report(refundFeedback,'Registrazione della richiesta di rimborso…');
+    report(refundFeedback,'Registrazione del rimborso…');
     const key=stripeRefundKeys.get(o.id)||crypto.randomUUID();
     stripeRefundKeys.set(o.id,key);
     try{
       const {data,error}=await client.rpc('request_completed_order_refund',{
-        p_kind:'individual',p_order:o.id,p_key:key,p_reason:refundReason.value.trim()
+        p_kind:'individual',p_order:o.id,p_key:key,p_reason:reason
       });
       if(error)throw error;
       const online=Array.isArray(data?.online)?data.online:[];
@@ -221,14 +300,51 @@ export function initializeOrders(client) {
       stripeRefundKeys.delete(o.id);
       refundDialog.close();
       const parts=[];
-      if(online.length)parts.push('Rimborso Stripe richiesto: '+online.length+' transazione/i in elaborazione. L’esito definitivo sarà confermato dal webhook.');
-      if(cash>0)parts.push('Restituzione al banco/POS esterno da effettuare e registrare in cassa: '+formatEuro(cash)+'. Non risulta ancora restituita.');
-      report(staffFeedback,parts.join(' '));
+      if(online.length)parts.push('Rimborso sulla carta avviato con Stripe: il cliente lo vede in pochi giorni.');
+      if(cash>0)parts.push(await giveBackCash(o,reason,cash));
+      report(staffFeedback,'Ordine #'+o.display_no+' rimborsato. '+parts.join(' '));
       await fetchStaffOrders();
     }catch(e){
       report(refundFeedback,'Rimborso non registrato o esito incerto: '+(e?.message||'riprovare verificando prima lo stato ordine')+'. In caso di errore di rete, riprova dalla stessa finestra.',true);
     }finally{refundSubmit.disabled=false;}
   });
+  async function submitExchange(o,reason){
+    const {line,product,quantity,diff}=exchangeChoice();
+    if(!line||!product){report(refundFeedback,'Scegli il prodotto che rende e quello che prende.',true);return;}
+    if(line.product_id===product.id){report(refundFeedback,'Scegli un prodotto diverso.',true);return;}
+    const method=diff>0?exchangePayMethod():null;
+    refundSubmit.disabled=true;
+    try{
+      if(diff>0){
+        // Prima lo scontrino della differenza, poi l'incasso, come al ritiro.
+        refundDialog.close();
+        if(!await decideStaffAction(receiptQuestion(o.display_no,diff)))return;
+        if(!await decideStaffAction(exchangePaymentQuestion(o.display_no,diff,method)))return;
+      }
+      const key=exchangeKeys.get(o.id)||crypto.randomUUID();
+      exchangeKeys.set(o.id,key);
+      const {data,error}=await client.rpc('exchange_order_item',{
+        p_order:o.id,p_product_out:line.product_id,p_quantity:quantity,p_product_in:product.id,
+        p_method:method,p_key:key,p_reason:reason
+      });
+      if(error)throw error;
+      exchangeKeys.delete(o.id);
+      if(refundDialog.open)refundDialog.close();
+      const parts=['Cambio registrato: '+quantity+'× '+product.name+' al posto di '+line.product_name+'.'];
+      if(diff>0){const problem=await markReceiptsIssued(client,o.id);if(problem)parts.push(problem);}
+      if(diff<0){
+        const {data:due}=await client.rpc('order_cash_refunds_to_return',{p_order:o.id});
+        const cash=(Array.isArray(due)?due:[]).reduce((n,x)=>n+Number(x.amount_cents||0),0);
+        if(cash>0)parts.push(await giveBackCash(o,reason,cash));
+        if(cash<-diff)parts.push('Rimborso sulla carta avviato con Stripe.');
+      }
+      report(staffFeedback,parts.join(' '));
+      await fetchStaffOrders();
+    }catch(e){
+      const message='Cambio non registrato: '+friendlyError(e,e?.message||'riprova');
+      if(refundDialog.open)report(refundFeedback,message,true);else report(staffFeedback,message,true);
+    }finally{refundSubmit.disabled=false;}
+  }
   const couponDisclosure=elem('details','','checkout-coupon');
   const couponLabel=elem('label','Codice sconto');
   couponLabel.htmlFor='order-coupon';
@@ -920,18 +1036,7 @@ export function initializeOrders(client) {
           const refund=elem('button','Rimborsa','button button-outline button-small');
           refund.type='button';
           refund.setAttribute('aria-label','Rimborsa ordine numero '+o.display_no);
-          refund.addEventListener('click',()=>{
-            if(!user||!staffSchools.includes(o.school_id))return;
-            selectedRefund=o;
-            refundForm.reset();
-            refundFeedback.textContent='';
-            // payment_method records the booking choice, not how the order was
-            // actually paid: the server routes each paid amount from the ledger.
-            refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents)+
-              '. Verrà rimborsato solo il credito effettivamente incassato: la parte pagata online torna in automatico al pagatore con Stripe, quella in contanti o POS va restituita al banco.';
-            refundDialog.showModal();
-            refundReason.focus();
-          });
+          refund.addEventListener('click',()=>openRefund(o));
           actions.append(refund);
         }
         if(actions.childElementCount)box.append(actions);

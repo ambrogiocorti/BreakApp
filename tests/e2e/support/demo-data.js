@@ -47,7 +47,7 @@ const windows = [
 const product = id => products.find(p => p.id === id);
 function order(no, status, payment, items, slot = 'w-today-1', customer = USER, minutesAgo = no) {
   const window = windows.find(w => w.id === slot);
-  const lines = items.map(([id, quantity]) => ({ product_id: id, product_name: product(id).name, quantity }));
+  const lines = items.map(([id, quantity]) => ({ product_id: id, product_name: product(id).name, quantity, unit_cents: product(id).price_cents }));
   return {
     id: 'order-' + no, display_no: no, status, payment_status: payment,
     payment_method: payment === 'paid' ? (no % 2 ? 'stripe' : 'cash') : null,
@@ -146,6 +146,10 @@ export function demoState(as = 'student') {
     group_order_details: { id: 'go-1', status: 'confirmed', total_cents: 2140, paid_cents: 900, due_cents: 1240, coordinator: false, lines: [{ quantity: 4, name: 'Focaccia genovese', subtotal_cents: 720 }] },
     list_staff_group_orders: [{ id: 'go-1', title: 'Laboratorio di chimica', status: 'confirmed', total_cents: 2140 }, { id: 'go-2', title: 'Merenda 3C', status: 'ready', total_cents: 1180 }],
     list_staff_pending_cash_refunds: { items: [], total: 0, has_more: false },
+    request_completed_order_refund: () => ({ online: [], cash_pending: 180 }),
+    order_cash_refunds_to_return: [{ id: 'eeeeeeee-0000-4000-8000-000000000001', amount_cents: 180 }],
+    confirm_cash_refund_return: null,
+    exchange_order_item: ({ p_method }) => ({ status: 'recorded', id: 'eeeeeeee-0000-4000-8000-000000000002', difference_cents: 0, method: p_method || 'none' }),
     workflow_order_details: { due_cents: 520, total_cents: 520, bar_id: BAR, lines: [] },
     list_order_approvals: [], list_order_changes: [], list_cash_refund_obligations: [], my_payment_documents: [],
     list_school_stock_conflicts: [], list_school_promotions: [],

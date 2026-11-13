@@ -10,10 +10,10 @@ const cashMigration = await readFile('supabase/migrations/20261030171145_staff_p
 
 test('refunds are started from a selected staff order, without manual UUID',()=>{
   assert.match(html,/id="staff-refund-dialog"/);
-  assert.match(html,/id="staff-refund-confirm"/);
+  assert.match(html,/name="staff-refund-mode" value="exchange"/);
   assert.match(orders,/Rimborsa ordine numero/);
   assert.match(orders,/request_completed_order_refund/);
-  assert.match(orders,/p_kind:'individual',p_order:o.id,p_key:key/);
+  assert.match(orders,/p_kind:'individual',p_order:o.id,p_key:key,p_reason:reason/);
   assert.doesNotMatch(html,/id="pilot-refund-order"/);
   assert.doesNotMatch(pilot,/pilot-refund-form/);
 });

@@ -787,12 +787,28 @@
         <form id="staff-refund-form" class="form-stack">
           <h2 id="staff-refund-title">Rimborsa l’ordine</h2>
           <p id="staff-refund-summary" class="dialog-summary"></p>
-          <p class="help">I pagamenti online tornano al pagatore originale, con conferma di Stripe. Contanti e POS esterno vanno restituiti al banco e registrati a parte.</p>
-          <div class="field"><label for="staff-refund-reason">Motivo</label>
-            <textarea id="staff-refund-reason" required minlength="8" maxlength="300" rows="3" placeholder="Perché rimborsi l’ordine?"></textarea></div>
-          <label class="check" for="staff-refund-confirm">
-            <input id="staff-refund-confirm" type="checkbox" required /> Rimborso l’intero importo ancora disponibile.
-          </label>
+          <fieldset class="refund-mode">
+            <legend>Cosa vuole il cliente?</legend>
+            <label class="check"><input type="radio" name="staff-refund-mode" value="refund" checked /> I soldi indietro</label>
+            <label class="check"><input type="radio" name="staff-refund-mode" value="exchange" /> Un altro prodotto</label>
+          </fieldset>
+          <p id="staff-refund-how" class="help"></p>
+          <div id="staff-exchange-fields" class="form-stack" hidden>
+            <div class="field"><label for="staff-exchange-out">Prodotto che rende</label><select id="staff-exchange-out"></select></div>
+            <div class="field"><label for="staff-exchange-qty">Quantità</label>
+              <input id="staff-exchange-qty" type="number" min="1" max="100" step="1" value="1" inputmode="numeric" /></div>
+            <div class="field"><label for="staff-exchange-in">Prodotto che prende</label><select id="staff-exchange-in"></select></div>
+            <p id="staff-exchange-diff" class="dialog-summary" role="status" aria-live="polite"></p>
+            <fieldset id="staff-exchange-pay" class="refund-mode" hidden>
+              <legend>Il cliente paga la differenza</legend>
+              <label class="check"><input type="radio" name="staff-exchange-pay" value="cash" checked /> Contanti</label>
+              <label class="check"><input type="radio" name="staff-exchange-pay" value="external_pos" /> POS</label>
+            </fieldset>
+          </div>
+          <div class="field"><label for="staff-refund-reason-preset">Motivo</label>
+            <select id="staff-refund-reason-preset"></select></div>
+          <div class="field" id="staff-refund-reason-field" hidden><label for="staff-refund-reason">Scrivi il motivo</label>
+            <textarea id="staff-refund-reason" minlength="8" maxlength="300" rows="2" placeholder="Almeno 8 caratteri"></textarea></div>
           <p id="staff-refund-feedback" class="feedback" role="status" aria-live="polite"></p>
           <div class="dialog-actions">
             <button id="staff-refund-cancel" type="button" class="button button-outline">Annulla</button>
