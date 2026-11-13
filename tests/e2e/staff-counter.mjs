@@ -29,7 +29,7 @@ try{
    await confirmed.locator('.order-actions .button-primary').click();
    await page.waitForFunction(()=>window.demo.client.db.state.rpcCalls.some(c=>c.args?.p_next==='ready'));
 
-   // Ready and unpaid: «Contanti» (incassa e consegna) asks once, focus on Conferma, then pays and delivers.
+   // Ready and unpaid: «Contanti» asks for the receipt, then the cash; focus on Conferma, then pays, marks the receipt and delivers.
    if(viewport.width<1024)await page.getByRole('tab',{name:/Pronti/}).click();
    const due=card(126);
    assert.equal(await due.locator('.order-actions .button-primary').innerText(),'Contanti');
@@ -37,6 +37,11 @@ try{
    await due.locator('.order-actions .button-primary').click();
    const dialog=page.locator('#staff-action-confirm');
    await dialog.waitFor({state:'visible'});
+   // First the receipt on the bar's register, then the cash confirmation.
+   assert.match(await dialog.innerText(),/#126.*scontrino di 5,20/s);
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'staff-action-approve');
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(()=>/contanti/.test(document.querySelector('#staff-action-confirm')?.innerText||'')&&document.querySelector('#staff-action-confirm')?.open);
    assert.match(await dialog.innerText(),/#126.*5,20.*contanti/s);
    assert.equal(await page.evaluate(()=>document.activeElement?.id),'staff-action-approve');
    await page.keyboard.press('Enter');

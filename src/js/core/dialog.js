@@ -22,7 +22,7 @@ function wire(p){
   if(wired)return;wired=true;
   const settle=value=>{const resolve=pending;pending=null;if(p.dialog.open)p.dialog.close();resolve?.(value);};
   p.cancel.addEventListener('click',()=>settle(null));
-  p.dialog.addEventListener('close',()=>{if(pending)settle(null);});
+  p.dialog.addEventListener('close',()=>{if(pending&&!p.dialog.open)settle(null);});
   p.form.addEventListener('submit',event=>{
     event.preventDefault();
     if(!p.field.hidden){

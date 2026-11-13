@@ -3,6 +3,7 @@ import { formatEuro } from '../catalog/utils.js';
 import { makePickupQrValue, parsePickupQrValue, parseOrderDisplayNumber } from './qr-utils.js';
 import { orderStatusLabel } from './staff-board.js';
 import { counterDueCents, counterDiscountNote } from './counter-discount.js';
+import { receiptQuestion, pendingReceiptCents, markReceiptsIssued } from './receipt-step.js';
 
 const el=(tag,text,cls='')=>{
   const node=document.createElement(tag);
@@ -106,7 +107,9 @@ export function initializePickupQr(client) {
       return;
     }
     const actions=el('div','', 'order-actions');
-    async function execute(label,query){
+    async function execute(label,query,receiptCents=0){
+      const cents=typeof receiptCents==='function'?await receiptCents():receiptCents;
+      if(cents>0&&!await confirmDialog({title:'Scontrino',message:receiptQuestion(order.display_no,cents,{online:order.payment_status==='paid'}),confirmLabel:'Fatto',focusConfirm:true}))return;
       if(!await confirmDialog({title:'Confermi?',message:label,focusConfirm:true}))return;
       const buttons=[...actions.querySelectorAll('button')];
       buttons.forEach(button=>{button.disabled=true;});
@@ -121,9 +124,9 @@ export function initializePickupQr(client) {
         buttons.forEach(button=>{button.disabled=false;});
       }
     }
-    function command(label,message,callback){
+    function command(label,message,callback,receiptCents=0){
       const button=el('button',label,'button button-primary button-small');
-      button.type='button';button.addEventListener('click',()=>void execute(message,callback));
+      button.type='button';button.addEventListener('click',()=>void execute(message,callback,receiptCents));
       actions.append(button);
     }
     // Payment at the counter and delivery in one confirmation: the same two
@@ -133,6 +136,8 @@ export function initializePickupQr(client) {
         p_order_id:order.id,p_method:method,p_request_key:crypto.randomUUID()
       });
       if(paid.error)return paid;
+      const receiptProblem=await markReceiptsIssued(client,order.id);
+      if(receiptProblem)report(receiptProblem,true);
       const delivered=await client.rpc('advance_individual_order',{p_order_id:order.id,p_next:'delivered'});
       if(delivered.error)return {error:new Error('Incasso registrato, consegna non registrata: '+delivered.error.message)};
       return delivered;
@@ -140,15 +145,19 @@ export function initializePickupQr(client) {
     if(order.payment_status==='due') {
       command('Contanti e consegna',
         'Hai ricevuto '+formatEuro(order.due_cents)+' in contanti'+(order.counter_note||'')+' e consegnato tutti i prodotti?',
-        collectAndDeliver('cash'));
+        collectAndDeliver('cash'),order.due_cents);
       command('POS e consegna',
         'Il POS esterno ha registrato '+formatEuro(order.due_cents)+(order.counter_note||'')+' e hai consegnato tutti i prodotti?',
-        collectAndDeliver('external_pos'));
+        collectAndDeliver('external_pos'),order.due_cents);
     }
     if(order.payment_status==='paid'){
       command('Consegna ordine',
         'Confermi esplicitamente la consegna di tutti i prodotti al cliente?',
-        ()=>client.rpc('advance_individual_order',{p_order_id:order.id,p_next:'delivered'}));
+        async()=>{
+          const problem=await markReceiptsIssued(client,order.id);
+          if(problem)report(problem,true);
+          return client.rpc('advance_individual_order',{p_order_id:order.id,p_next:'delivered'});
+        },()=>pendingReceiptCents(client,order.id));
     }
     result.append(actions);
   }

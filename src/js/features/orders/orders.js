@@ -8,6 +8,7 @@ import { confirmDialog, toast } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
 import { counterDueCents, counterDiscountNote, counterPriceSentence } from './counter-discount.js';
+import { receiptQuestion, pendingReceiptCents, markReceiptsIssued } from './receipt-step.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -56,7 +57,8 @@ export function initializeOrders(client) {
     event.preventDefault();finishStaffDecision(true);
   });
   actionDialog.addEventListener('close',()=>{
-    if(activeDecision)finishStaffDecision(false);
+    // The close event of a previous dialog arrives late: ignore it if a new question is already open.
+    if(activeDecision&&!actionDialog.open)finishStaffDecision(false);
   });
 
   const productDialog=document.querySelector('#product-dialog');
@@ -661,9 +663,13 @@ export function initializeOrders(client) {
   async function collectAndDeliver(o,method,how){
     const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});
     if(balance.error)return balance;
-    if(!await decideStaffAction(`Ordine #${o.display_no}: hai ricevuto ${formatEuro(counterDueCents(balance.data))} ${how}${counterDiscountNote(balance.data)} e consegnato tutti i prodotti? Conferma soltanto dopo aver verificato l'incasso.`))return null;
+    const due=counterDueCents(balance.data);
+    if(!await decideStaffAction(receiptQuestion(o.display_no,due)))return null;
+    if(!await decideStaffAction(`Ordine #${o.display_no}: hai ricevuto ${formatEuro(due)} ${how}${counterDiscountNote(balance.data)} e consegnato tutti i prodotti? Conferma soltanto dopo aver verificato l'incasso.`))return null;
     const paid=await client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
     if(paid.error)return paid;
+    const receiptProblem=await markReceiptsIssued(client,o.id);
+    if(receiptProblem)report(staffFeedback,receiptProblem,true);
     const delivered=await client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
     if(delivered.error)return {error:new Error('Incasso registrato, consegna non registrata: '+delivered.error.message+' Premi «Consegna» sull’ordine.')};
     return delivered;
@@ -903,7 +909,10 @@ export function initializeOrders(client) {
         }
         if(o.status==='ready'&&o.payment_status==='paid'){
           action(actions,'Consegna',async()=>{
+            const toReceipt=await pendingReceiptCents(client,o.id);
+            if(toReceipt>0&&!await decideStaffAction(receiptQuestion(o.display_no,toReceipt,{online:true})))return null;
             if(!await decideStaffAction('Confermi di avere consegnato tutti i prodotti di questo ordine?'))return null;
+            if(toReceipt>0){const problem=await markReceiptsIssued(client,o.id);if(problem)report(staffFeedback,problem,true);}
             return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
           },{primary:true});
         }
