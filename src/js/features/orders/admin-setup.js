@@ -11,6 +11,11 @@ export function mapLink(lat,lon){
   return 'https://www.openstreetmap.org/?mlat='+la+'&mlon='+lo+'#map=18/'+la+'/'+lo;
 }
 
+const WEEKDAYS=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+// Monday-first list of weekday names, e.g. [1,2,3,4,5] -> "Lun, Mar, Mer, Gio, Ven".
+export function weekdayList(days){
+  return [...new Set(days)].sort((a,b)=>((a+6)%7)-((b+6)%7)).map(d=>WEEKDAYS[d]).join(', ');
+}
 const make=(tag,text='')=>{const e=document.createElement(tag);e.textContent=text;return e;};
 export function initializeAdminOrderSetup(client) {
   const panel=document.querySelector('#admin-order-setup');
@@ -20,16 +25,19 @@ export function initializeAdminOrderSetup(client) {
   const schoolForm=document.querySelector('#ops-school-form');
   const slotForm=document.querySelector('#ops-slot-form');
   const slotList=document.querySelector('#ops-slot-list');
+  const templateForm=document.querySelector('#ops-template-form');
+  const templateList=document.querySelector('#ops-template-list');
   const stockForm=document.querySelector('#ops-stock-form');
   const stockList=document.querySelector('#ops-stock-list');
   const productSelect=document.querySelector('#ops-product');
   const day=document.querySelector('#ops-stock-date');
-  let access=null,windows=[],products=[],stock=[];
+  let access=null,windows=[],products=[],stock=[],templates=[];
   const tell=(message,error=false)=>{status.textContent=message;status.dataset.type=error?'error':'information';};
 
   function current() {return {school_id:school.value,bar_id:bar.value};}
   function enableForms(value){
     [...schoolForm.querySelectorAll('input,button'),...slotForm.querySelectorAll('input,button'),
+      ...templateForm.querySelectorAll('input,button'),
       ...stockForm.querySelectorAll('input,button,select')].forEach(e=>{e.disabled=!value;});
   }
   function fillBars(){
@@ -65,7 +73,34 @@ export function initializeAdminOrderSetup(client) {
     if(policy)policy.checked=true;
     refreshMapLink();
   }
+  function renderTemplates(){
+    templateList.replaceChildren();
+    const groups=new Map();
+    for(const t of templates){
+      const key=t.starts_at.slice(0,5)+'–'+t.ends_at.slice(0,5);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(t);
+    }
+    for(const [time,items] of groups){
+      const row=make('div');row.className='catalog-item';
+      row.append(make('span',time+' · '+weekdayList(items.map(t=>t.weekday))));
+      const btn=make('button','Rimuovi');
+      btn.type='button';btn.className='button button-outline button-small';
+      btn.addEventListener('click',async()=>{
+        btn.disabled=true;
+        for(const t of items){
+          const {error}=await client.rpc('remove_pickup_template',{p_id:t.id});
+          if(error){tell(error.message,true);btn.disabled=false;return;}
+        }
+        tell('Fascia settimanale rimossa. Le fasce già create restano: disattivale qui sotto se servono.');
+        await refresh();
+      });
+      row.append(btn);templateList.append(row);
+    }
+    if(!templates.length)templateList.append(make('p','Nessuna fascia settimanale: le fasce vanno create giorno per giorno.'));
+  }
   function render(){
+    renderTemplates();
     slotList.replaceChildren();
     for(const w of windows){
       const row=make('div');row.className='catalog-item';
@@ -95,20 +130,21 @@ export function initializeAdminOrderSetup(client) {
     if(!access||!bar.value)return;
     const {school_id,bar_id}=current();
     tell('Caricamento impostazioni dal database...');
-    const [slots,pros,availability]=await Promise.all([
+    const [slots,pros,availability,weekly]=await Promise.all([
       client.from('pickup_windows').select('id,service_date,starts_at,ends_at,is_active')
         .eq('school_id',school_id).eq('bar_id',bar_id).gte('service_date',romeToday()).order('service_date',{ascending:true}).order('starts_at',{ascending:true}).limit(80),
       client.from('products').select('id,name,is_active').eq('school_id',school_id).eq('bar_id',bar_id).order('name'),
       client.from('daily_stock').select('id,product_id,service_date,capacity,allocated')
-        .eq('school_id',school_id).eq('bar_id',bar_id).eq('service_date',day.value||'1900-01-01').order('product_id')
+        .eq('school_id',school_id).eq('bar_id',bar_id).eq('service_date',day.value||'1900-01-01').order('product_id'),
+      client.rpc('list_pickup_templates',{p_bar:bar_id})
     ]);
-    const failure=slots.error||pros.error||availability.error;
+    const failure=slots.error||pros.error||availability.error||weekly.error;
     if(failure){
       enableForms(false);
       tell('Configurazione operativa non disponibile: '+failure.message+' (verifica migrazione SQL 04).',true);
       return;
     }
-    windows=slots.data||[];products=pros.data||[];stock=availability.data||[];
+    windows=slots.data||[];products=pros.data||[];stock=availability.data||[];templates=Array.isArray(weekly.data)?weekly.data:[];
     enableForms(true);render();tell('Configurazione del bar aggiornata.');
   }
   const mapAnchor=document.querySelector('#ops-map-link');
@@ -171,6 +207,15 @@ export function initializeAdminOrderSetup(client) {
     const {error:policyError}=await client.rpc('set_school_price_policy',{p_school:school.value,p_policy:pricePolicy,p_bps:priceBps});
     if(policyError)return tell('Regole salvate, regola prezzi non salvata: '+policyError.message,true);
     tell('Regole scuola salvate.');await readSettings();
+  });
+  templateForm.addEventListener('submit',async event=>{
+    event.preventDefault();if(!templateForm.reportValidity())return;
+    const days=[...templateForm.querySelectorAll('input[name="ops-template-day"]:checked')].map(i=>Number(i.value));
+    if(!days.length)return tell('Scegli almeno un giorno della settimana.',true);
+    const {error}=await client.rpc('add_pickup_templates',{p_bar:bar.value,p_weekdays:days,
+      p_starts:document.querySelector('#ops-template-start').value,p_ends:document.querySelector('#ops-template-end').value});
+    if(error)return tell(error.message,true);
+    templateForm.reset();tell('Fascia settimanale salvata: le fasce dei prossimi 14 giorni sono pronte.');await refresh();
   });
   slotForm.addEventListener('submit',async event=>{
     event.preventDefault();if(!slotForm.reportValidity())return;

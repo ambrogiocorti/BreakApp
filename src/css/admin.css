@@ -233,3 +233,10 @@
 .fiscal-meta { font-size: var(--text-sm); color: var(--ink-3); overflow-wrap: anywhere; }
 .fiscal-row.is-return strong { color: var(--danger, var(--ink-1)); }
 .fiscal-row .button { flex: none; }
+
+/* Fasce settimanali. */
+.subhead { font-size: var(--text-md); font-weight: 650; color: var(--ink-1); margin-top: var(--space-3); }
+.weekday-picker { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.weekday-picker legend { width: 100%; font-size: var(--text-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--space-1); }
+.weekday-picker label { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-md); }
+.field-end { align-self: end; }
