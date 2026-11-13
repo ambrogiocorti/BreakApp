@@ -517,9 +517,17 @@ export function initializeOrders(client) {
     void loadFavorites();
     report(feedback,'Caricamento ordini…');
     const {data,error}=await client.from('orders')
-      .select('id,bar_id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity),schools(counter_discount_bps)')
+      .select('id,bar_id,school_id,display_no,pickup_token,status,payment_status,total_cents,created_at,pickup_windows(service_date,starts_at),order_items(product_id,product_name,quantity)')
       .eq('customer_id',user.id).order('created_at',{ascending:false}).limit(50);
     if(error){report(feedback,'Ordini non disponibili: '+error.message,true);return;}
+    // Lo sconto al banco e' della scuola: gli ordini non hanno un legame diretto
+    // con schools, quindi si legge a parte (una riga per scuola).
+    const schoolIds=[...new Set((data||[]).map(o=>o.school_id).filter(Boolean))];
+    const discounts=new Map();
+    if(schoolIds.length){
+      const {data:rows}=await client.from('schools').select('id,counter_discount_bps').in('id',schoolIds);
+      for(const r of rows||[])discounts.set(r.id,r.counter_discount_bps);
+    }
     history.replaceChildren();
     const STEPS=[['confirmed','Confermato'],['preparing','Preparazione'],['ready','Pronto'],['delivered','Ritirato']];
     for(const o of data||[]){
@@ -543,7 +551,7 @@ export function initializeOrders(client) {
       meta.append(elem('span','Ritiro '+slotLabel(o)),elem('strong',formatEuro(o.total_cents)),badge(pay.label,pay.tone));
       box.append(meta);
       const counterPrice=['confirmed','preparing','ready'].includes(o.status)&&o.payment_status==='due'
-        ?counterPriceSentence(o.total_cents,o.schools?.counter_discount_bps,formatEuro):'';
+        ?counterPriceSentence(o.total_cents,discounts.get(o.school_id),formatEuro):'';
       if(counterPrice)box.append(elem('p',counterPrice,'order-counter-price'));
       const ul=elem('ul','','order-items');
       (o.order_items||[]).forEach(x=>{const li=elem('li');li.append(elem('b',x.quantity+'× '),document.createTextNode(x.product_name));ul.append(li);});
