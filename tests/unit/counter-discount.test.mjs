@@ -33,7 +33,7 @@ test('customer sentence matches the server rounding (half up, cents)',()=>{
 });
 
 test('every counter collection prompt uses the discounted amount',()=>{
-  assert.match(read('src/js/features/orders/orders.js'),/formatEuro\(counterDueCents\(balance\.data\)\)/);
+  assert.match(read('src/js/features/orders/orders.js'),/const due=counterDueCents\(balance\.data\)[^]*hai ricevuto \$\{formatEuro\(due\)\}/);
   assert.match(read('src/js/features/orders/pickup-qr.js'),/data\.due_cents=counterDueCents\(balance\.data\)/);
   assert.match(read('src/js/features/groups/group-service.js'),/cents\(counterDueCents\(data\)\)\+' dal coordinatore'/);
   assert.match(read('src/js/features/offline/terminal.js'),/o\.counter_due_cents\?\?o\.due_cents/);

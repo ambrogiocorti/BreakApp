@@ -96,6 +96,28 @@ do $$declare l jsonb;d uuid;today date:=(now() at time zone 'Europe/Rome')::date
  if not pg_temp.denied(format('select public.mark_fiscal_document(%L,true)',d)) then raise exception 'Customer marked a receipt';end if;
 end;$$;
 
+-- Scontrino confermato al banco (20261113170000): riepilogo e segna emessi per ordine.
+do $$declare o uuid;r jsonb;n integer;begin
+ perform pg_temp.actor('95111111-1111-4111-8111-111111111111');
+ o:=public.submit_individual_order('95000000-0000-4000-8000-000000000002','95000000-0000-4000-8000-000000000007','[{"product_id":"95000000-0000-4000-8000-000000000004","quantity":3}]',gen_random_uuid(),45,9,10,now());
+ if not pg_temp.denied(format('select public.pending_order_receipts(%L)',o)) then raise exception 'Customer read pending receipts';end if;
+ perform pg_temp.actor('95333333-3333-4333-8333-333333333333');
+ r:=public.pending_order_receipts(o);
+ if (r->>'count')::int<>0 then raise exception 'Receipt before payment: %',r;end if;
+ perform public.collect_workflow_balance('individual',o,'external_pos','95000000-0000-4000-8000-0000000000b1');
+ r:=public.pending_order_receipts(o);
+ if (r->>'count')::int<>1 or (r->>'sale_cents')::int<>750 or (r->>'return_cents')::int<>0 then raise exception 'Pending receipts wrong: %',r;end if;
+ perform pg_temp.actor('95111111-1111-4111-8111-111111111111');
+ if not pg_temp.denied(format('select public.mark_order_receipts_issued(%L)',o)) then raise exception 'Customer marked order receipts';end if;
+ perform pg_temp.actor('95444444-4444-4444-8444-444444444444','authenticated','aal1');
+ if not pg_temp.denied(format('select public.mark_order_receipts_issued(%L)',o)) then raise exception 'Admin without 2FA marked order receipts';end if;
+ perform pg_temp.actor('95333333-3333-4333-8333-333333333333');
+ n:=public.mark_order_receipts_issued(o);
+ if n<>1 or (public.pending_order_receipts(o)->>'count')::int<>0 then raise exception 'Order receipts not marked';end if;
+ if (select issue_channel||'/'||(issued_by='95333333-3333-4333-8333-333333333333')::text from public.fiscal_documents where order_id=o)<>'bar_register/true' then raise exception 'Issued fields wrong';end if;
+ if public.mark_order_receipts_issued(o)<>0 then raise exception 'Second mark changed rows';end if;
+end;$$;
+
 -- Il client non legge ne' scrive la tabella.
 set local role authenticated;
 do $$begin

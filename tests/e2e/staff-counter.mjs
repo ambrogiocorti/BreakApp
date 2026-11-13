@@ -29,7 +29,7 @@ try{
    await confirmed.locator('.order-actions .button-primary').click();
    await page.waitForFunction(()=>window.demo.client.db.state.rpcCalls.some(c=>c.args?.p_next==='ready'));
 
-   // Ready and unpaid: «Contanti» (incassa e consegna) asks once, focus on Conferma, then pays and delivers.
+   // Ready and unpaid: «Contanti» asks for the receipt, then the cash; focus on Conferma, then pays, marks the receipt and delivers.
    if(viewport.width<1024)await page.getByRole('tab',{name:/Pronti/}).click();
    const due=card(126);
    assert.equal(await due.locator('.order-actions .button-primary').innerText(),'Contanti');
@@ -37,6 +37,11 @@ try{
    await due.locator('.order-actions .button-primary').click();
    const dialog=page.locator('#staff-action-confirm');
    await dialog.waitFor({state:'visible'});
+   // First the receipt on the bar's register, then the cash confirmation.
+   assert.match(await dialog.innerText(),/#126.*scontrino di 5,20/s);
+   assert.equal(await page.evaluate(()=>document.activeElement?.id),'staff-action-approve');
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(()=>/contanti/.test(document.querySelector('#staff-action-confirm')?.innerText||'')&&document.querySelector('#staff-action-confirm')?.open);
    assert.match(await dialog.innerText(),/#126.*5,20.*contanti/s);
    assert.equal(await page.evaluate(()=>document.activeElement?.id),'staff-action-approve');
    await page.keyboard.press('Enter');
@@ -58,8 +63,34 @@ try{
    await page.waitForFunction(()=>document.activeElement?.textContent==='Consegna');
    assert.equal(await page.evaluate(()=>document.activeElement.closest('.staff-order-card')?.querySelector('.ticket-no')?.textContent),'#125');
 
+   // Ordine concluso: «Rimborsa» dall'ordine, soldi indietro in contanti registrati nello stesso passaggio.
+   await page.fill('#staff-search','');
+   await page.selectOption('#staff-visibility-filter','closed');
+   const closed=card(120);
+   await closed.getByRole('button',{name:'Rimborsa ordine numero 120'}).click();
+   const refund=page.locator('#staff-refund-dialog');
+   await refund.waitFor({state:'visible'});
+   await page.locator('#staff-refund-submit').click();
+   await page.waitForFunction(()=>/1,80.*in contanti/.test(document.querySelector('#staff-action-confirm')?.innerText||'')&&document.querySelector('#staff-action-confirm')?.open);
+   await page.keyboard.press('Enter');
+   await page.waitForFunction(()=>window.demo.client.db.state.rpcCalls.some(c=>c.name==='confirm_cash_refund_return'));
+
+   // Cambio prodotto: focaccia (1,80) -> acqua (0,80), la differenza torna in contanti.
+   await closed.getByRole('button',{name:'Rimborsa ordine numero 120'}).click();
+   await refund.waitFor({state:'visible'});
+   await page.locator('input[name="staff-refund-mode"][value="exchange"]').check();
+   await page.waitForFunction(()=>document.querySelector('#staff-exchange-in')?.options.length>2);
+   await page.selectOption('#staff-exchange-in','p-acqua');
+   assert.match(await page.locator('#staff-exchange-diff').innerText(),/tornano 1,00/);
+   assert.equal(await page.locator('#staff-exchange-pay').isHidden(),true);
+   await page.locator('#staff-refund-submit').click();
+   await page.waitForFunction(()=>document.querySelector('#staff-action-confirm')?.open);
+   await page.keyboard.press('Enter');
+   const exchange=await page.evaluate(()=>window.demo.client.db.state.rpcCalls.find(c=>c.name==='exchange_order_item')?.args);
+   assert.equal(exchange.p_product_out,'p-focaccia');assert.equal(exchange.p_product_in,'p-acqua');assert.equal(exchange.p_method,null);
+
    assert.deepEqual(errors,[]);
-   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'bartender counter: one-tap ready, pay and deliver in one confirmation, number + Enter'}));
+   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'bartender counter: one-tap ready, pay and deliver in one confirmation, number + Enter, refund and exchange from the order'}));
    await page.close();
   }
   await browser.close();

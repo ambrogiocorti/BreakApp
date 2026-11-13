@@ -24,3 +24,15 @@ test('report export queries one school and stops on a complete last page',async(
  assert.equal(result.rows.length,1);assert.equal(calls[0].args.p_school,'school-a');
  assert.equal(reportTable(result.rows)[1][7],2.5);assert.equal(reportTable(result.rows)[1][8],0.5);
 });
+test('report PDF has header, euro amounts, bold font, page numbers and valid xref',async()=>{
+ const {reportPdfBytes}=await import('../../src/js/features/shell/report-files.js');
+ const {reportPdfDocument}=await import('../../src/js/features/shell/reports.js');
+ const selected={school_name:'ITSOS Marie Curie',from:'2026-11-01',to:'2026-11-13',cash_cents:4550,net_recorded_cents:4550,products:[{name:'Caffè',quantity:3,amount_cents:300}]};
+ const rows=Array.from({length:90},(_,i)=>({reference:'#'+i,kind:'individual',created_at:'2026-11-13T09:00:00Z',service_date:'2026-11-13',starts_at:'11:40:00',status:'delivered',total_cents:250,due_cents:0}));
+ const pdf=String.fromCharCode(...reportPdfBytes(reportPdfDocument(selected,{rows,truncated:false})));
+ assert.match(pdf,/Report incassi/);assert.match(pdf,/01\/11\/2026 - 13\/11\/2026/);
+ assert.match(pdf,/45,50.\\200/,'euro sign encoded in WinAnsi');assert.match(pdf,/Helvetica-Bold/);
+ assert.match(pdf,/Caff\xe8/);assert.match(pdf,/Pagina 1 di \d/);
+ const start=Number(pdf.match(/startxref\n(\d+)/)[1]);assert.equal(pdf.slice(start,start+4),'xref');
+ for(const m of pdf.matchAll(/(\d{10}) 00000 n /g))assert.match(pdf.slice(Number(m[1])),/^\d+ 0 obj/);
+});

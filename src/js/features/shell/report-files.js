@@ -80,3 +80,88 @@ export function downloadReport(data,type,filename){
  a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+
+// Report PDF impaginato: intestazione, riepilogo con importi allineati e tabelle
+// con righe alterne. Solo font standard (Helvetica, WinAnsi) e nessuna libreria.
+const HELV=(()=>{const w={};const s=' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+ const v=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,
+ 667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,
+ 556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+ [...s].forEach((c,i)=>{w[c]=v[i];});return w;})();
+export function pdfTextWidth(text,size,bold=false){
+ let t=0;for(const c of String(text))t+=HELV[c]??556;return t*size/1000*(bold?1.06:1);
+}
+const pdfEsc=text=>String(text).normalize('NFC').replace(/[\u2018\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/[\u2013\u2014]/g,'-').replace(/\u2026/g,'...')
+ .replace(/[^\x20-\xff\u20ac]/g,'?').replaceAll('\\','\\\\').replaceAll('(','\\(').replaceAll(')','\\)').replaceAll('\u20ac','\\200');
+function fit(text,width,size,bold){
+ text=String(text??'');if(pdfTextWidth(text,size,bold)<=width)return text;
+ while(text.length>1&&pdfTextWidth(text+'...',size,bold)>width)text=text.slice(0,-1);
+ return text+'...';
+}
+export function reportPdfBytes({title,subtitle='',meta=[],sections=[],footer=''}){
+ const W=595,H=842,M=40,IW=W-2*M,pages=[];let ops,y;
+ const GREEN='0.114 0.294 0.251',INK='0.11 0.098 0.09',MUTED='0.42 0.39 0.36',ZEBRA='0.965 0.957 0.937',LINE='0.886 0.867 0.827';
+ const text=(x,yy,s,{size=9,bold=false,color=INK,align='left',width=0}={})=>{
+  const str=width?fit(s,width,size,bold):String(s??'');
+  const tx=align==='right'?x+width-pdfTextWidth(str,size,bold):x;
+  ops.push(`BT ${color} rg /${bold?'F2':'F1'} ${size} Tf ${tx.toFixed(2)} ${yy.toFixed(2)} Td (${pdfEsc(str)}) Tj ET`);
+ };
+ const rect=(x,yy,w,h,color)=>ops.push(`${color} rg ${x} ${yy.toFixed(2)} ${w} ${h} re f`);
+ const rule=(yy,color=LINE,width=0.6)=>ops.push(`${color} RG ${width} w ${M} ${yy.toFixed(2)} m ${W-M} ${yy.toFixed(2)} l S`);
+ const newPage=()=>{ops=[];pages.push(ops);y=H-M;
+  if(pages.length===1){
+   text(M,y-18,title,{size:18,bold:true,color:GREEN});
+   if(subtitle)text(M,y-34,subtitle,{size:10,color:MUTED});
+   y-=44;
+   for(const [k,v] of meta){text(M,y-10,k,{size:9,color:MUTED});text(M+110,y-10,v,{size:9,bold:true,width:IW-110});y-=14;}
+   y-=6;rule(y,GREEN,1.5);y-=14;
+  }else{text(M,y-10,title,{size:9,bold:true,color:GREEN});y-=18;rule(y);y-=12;}
+ };
+ const need=h=>{if(y-h<M+24)newPage();};
+ newPage();
+ for(const sec of sections){
+  need(40);
+  text(M,y-12,sec.title,{size:12,bold:true,color:GREEN});y-=22;
+  if(sec.kind==='kv'){
+   for(const [i,[k,v,strong]] of sec.rows.entries()){
+    need(16);if(i%2===0)rect(M,y-12,IW,16,ZEBRA);
+    text(M+6,y-8,k,{size:9,bold:!!strong,width:IW-160});
+    text(W-M-150,y-8,v,{size:9,bold:!!strong,align:'right',width:144});y-=16;
+   }
+   y-=10;continue;
+  }
+  const cols=sec.columns,total=cols.reduce((a,c)=>a+c.w,0),scale=IW/total;
+  const header=()=>{rect(M,y-14,IW,18,GREEN);let x=M;
+   for(const c of cols){const w=c.w*scale;text(x+4,y-9,c.label,{size:8,bold:true,color:'1 1 1',align:c.align,width:w-8});x+=w;}y-=18;};
+  header();
+  if(!sec.rows.length){text(M+4,y-10,sec.empty||'Nessun dato nel periodo.',{size:9,color:MUTED});y-=18;}
+  for(const [i,row] of sec.rows.entries()){
+   if(y-15<M+24){newPage();header();}
+   if(i%2===1)rect(M,y-11,IW,15,ZEBRA);
+   let x=M;for(const [j,c] of cols.entries()){const w=c.w*scale;text(x+4,y-7,row[j],{size:8,align:c.align,width:w-8});x+=w;}
+   y-=15;
+  }
+  if(sec.note){need(16);text(M,y-10,sec.note,{size:8,color:MUTED,width:IW});y-=14;}
+  y-=12;
+ }
+ const objects=['<< /Type /Catalog /Pages 2 0 R >>','',
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'];
+ const kids=[];
+ for(const [i,page] of pages.entries()){
+  ops=page;
+  rule(M+14);
+  if(footer)text(M,M,footer,{size:7.5,color:MUTED,width:IW-80});
+  text(W-M-80,M,'Pagina '+(i+1)+' di '+pages.length,{size:7.5,color:MUTED,align:'right',width:80});
+  const stream=page.join('\n'),pageId=objects.length+1;kids.push(pageId+' 0 R');
+  objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${pageId+1} 0 R >>`,
+   `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+ }
+ objects[1]='<< /Type /Pages /Count '+pages.length+' /Kids ['+kids.join(' ')+'] >>';
+ let content='%PDF-1.4\n';const positions=[];
+ for(const [i,obj] of objects.entries()){positions.push(content.length);content+=(i+1)+' 0 obj\n'+obj+'\nendobj\n';}
+ const start=content.length;content+='xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n';
+ for(const pos of positions)content+=String(pos).padStart(10,'0')+' 00000 n \n';
+ content+='trailer << /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF\n';
+ return Uint8Array.from(content,c=>c.charCodeAt(0)&0xff);
+}
