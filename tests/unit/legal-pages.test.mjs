@@ -48,3 +48,11 @@ test('legal pages and profile give the support email',()=>{
   for(const f of ['public/privacy.html','public/termini.html','index.html'])
     assert.match(readFileSync(new URL('../../'+f,import.meta.url),'utf8'),/mailto:corti\.ambro@gmail\.com/);
 });
+
+test('privacy notice names the pilot bar as controller and the processor',()=>{
+  const html=read('public/privacy.html');
+  assert.match(html,/Phil Bar SNC/);
+  assert.match(html,/Responsabile del trattamento:<\/strong> Ambrogio Corti/);
+  assert.match(html,/2-quinquies/,'age of digital consent in Italy');
+  assert.match(html,/Data Privacy Framework/);
+});

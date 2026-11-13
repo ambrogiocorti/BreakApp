@@ -50,19 +50,22 @@ export function initializeAuth(config,clientFactory=createClient) {
   environment.textContent = '';
   environment.hidden = true;
   const client = clientFactory(config.url, config.publishableKey,{auth:{flowType:'pkce',detectSessionInUrl:true,persistSession:true,autoRefreshToken:true}});
-  let oauthProviders=null,busy=false,providerCheckFailed=false;
+  // I tasti Google e Microsoft restano attivi: si spengono solo se il server dice
+  // esplicitamente che quell'accesso e' disattivato. Se il controllo non risponde
+  // (rete lenta, blocchi del browser) si prova comunque l'accesso esterno.
+  let oauthProviders=null,busy=false;
   const socialNote=document.getElementById('social-auth-status');
   function refreshSocialControls(){
-    google.disabled=busy||oauthProviders?.google!==true;
-    microsoft.disabled=busy||oauthProviders?.azure!==true;
+    google.disabled=busy||oauthProviders?.google===false;
+    microsoft.disabled=busy||oauthProviders?.azure===false;
     if(socialNote){
       const unavailable=[oauthProviders?.google===false?'Google':null,oauthProviders?.azure===false?'Microsoft':null].filter(Boolean);
-      socialNote.hidden=Boolean(oauthProviders)&&!unavailable.length;
-      socialNote.textContent=unavailable.length?unavailable.join(' e ')+(unavailable.length===1?' non è disponibile al momento.':' non sono disponibili al momento.')+' Puoi usare email e password.':providerCheckFailed?'Non è possibile verificare gli accessi esterni. Puoi usare email e password.':oauthProviders?'':'Verifica dei metodi di accesso…';
+      socialNote.hidden=!unavailable.length;
+      socialNote.textContent=unavailable.length?unavailable.join(' e ')+(unavailable.length===1?' non è disponibile al momento.':' non sono disponibili al momento.')+' Puoi usare email e password.':'';
     }
   }
   refreshSocialControls();
-  void readOAuthProviders(config).then(providers=>{oauthProviders=providers;refreshSocialControls();}).catch(()=>{providerCheckFailed=true;refreshSocialControls();});
+  void readOAuthProviders(config).then(providers=>{oauthProviders=providers;refreshSocialControls();}).catch(()=>{});
   const callbackError=oauthReturnError(window.location);
   if(callbackError){
     setFeedback(feedback,callbackError,true);
