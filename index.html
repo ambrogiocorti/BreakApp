@@ -946,7 +946,27 @@
           </section>
           <section class="panel" aria-labelledby="ops-slots-title">
             <div class="panel-head"><h2 id="ops-slots-title">Fasce di ritiro</h2></div>
-            <p class="help">Valgono per un bar e un giorno.</p>
+            <h3 class="subhead">Ogni settimana</h3>
+            <p class="help">Le fasce settimanali si ripetono da sole: l’app crea le fasce e le scorte dei prossimi 14 giorni. Un ordine non ritirato passa alla fascia successiva dello stesso giorno; se non viene ritirato entro la chiusura del bar è rimborsato in automatico.</p>
+            <form id="ops-template-form" class="form-stack">
+              <fieldset class="field weekday-picker"><legend>Giorni</legend>
+                <label><input type="checkbox" name="ops-template-day" value="1" />Lun</label>
+                <label><input type="checkbox" name="ops-template-day" value="2" />Mar</label>
+                <label><input type="checkbox" name="ops-template-day" value="3" />Mer</label>
+                <label><input type="checkbox" name="ops-template-day" value="4" />Gio</label>
+                <label><input type="checkbox" name="ops-template-day" value="5" />Ven</label>
+                <label><input type="checkbox" name="ops-template-day" value="6" />Sab</label>
+                <label><input type="checkbox" name="ops-template-day" value="0" />Dom</label>
+              </fieldset>
+              <div class="form-grid form-grid-3">
+                <div class="field"><label for="ops-template-start">Dalle</label><input type="time" id="ops-template-start" required /></div>
+                <div class="field"><label for="ops-template-end">Alle</label><input type="time" id="ops-template-end" required /></div>
+                <div class="field field-end"><button type="submit" class="button button-primary">Aggiungi fascia settimanale</button></div>
+              </div>
+            </form>
+            <div id="ops-template-list" class="row-list catalog-list"></div>
+            <h3 class="subhead">Giorno per giorno</h3>
+            <p class="help">Per una fascia in un solo giorno, o per disattivarne una già creata.</p>
             <form id="ops-slot-form" class="form-grid form-grid-3">
               <div class="field"><label for="ops-slot-date">Giorno</label><input type="date" id="ops-slot-date" required /></div>
               <div class="field"><label for="ops-slot-start">Dalle</label><input type="time" id="ops-slot-start" required /></div>
