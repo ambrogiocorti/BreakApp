@@ -14,12 +14,12 @@ const [html,orders,menu,base,workspace,migration]=await Promise.all([
 
 test('dossier: operational workbench has production list, workflow stages and functional controls',()=>{
   for(const id of ['staff-production-list','staff-production-total','staff-slot-filter',
-    'staff-visibility-filter','staff-live-status','staff-action-confirm']){
+    'staff-visibility-filter','staff-live-status','staff-cash-toggle']){
     assert.match(html,new RegExp('id="'+id+'"'));
   }
   assert.match(orders,/productionTotals\(scoped,/);
   assert.match(orders,/boardOrders\(scoped,/);
-  assert.match(orders,/staffList\.dataset\.view=staffVisibilityFilter\.value/);
+  assert.match(orders,/staffList\.dataset\.view=/);
   assert.match(orders,/orderStatusLabel\(o\.status\)/);
   assert.doesNotMatch(html,/Aggiorna e verifica ruolo/);
 });

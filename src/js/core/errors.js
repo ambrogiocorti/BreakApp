@@ -2,6 +2,7 @@
 // Server messages written in Italian for people (raised by our RPCs) are kept;
 // raw network, database or library errors are replaced.
 const TECHNICAL=[
+  [/checkout in corso|risultato firmato/i,'C’è un pagamento con carta in corso: riprova tra qualche secondo.'],
   [/failed to fetch|networkerror|load failed|network request failed|fetch failed/i,'Connessione assente o instabile. Controlla la rete e riprova.'],
   [/jwt|token (is )?expired|invalid refresh token|session.*(expired|missing)/i,'La sessione è scaduta. Accedi di nuovo.'],
   [/permission denied|row-level security|violates row level|not authori[sz]ed|42501/i,'Non hai i permessi per questa operazione con il ruolo attuale.'],

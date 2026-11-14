@@ -1,16 +1,16 @@
 import { romeToday, isUpcomingWindow } from '../../core/pickup-time.js';
 import { cartAdd, cartSetQuantity, cartSummary, toRpcItems } from './cart-core.js';
-import { formatEuro } from '../catalog/utils.js';
+import { formatEuro, parseEuroToCents } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
 import { accuratePosition, schoolAccuracyLimit, schoolRequiresGeolocation } from '../../core/geolocation.js';
 import { paymentError } from '../../core/payment-error.js';
-import { confirmDialog } from '../../core/dialog.js';
+import { confirmDialog, promptDialog } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
 import { counterDueCents, counterDiscountNote, counterPriceSentence } from './counter-discount.js';
-import { receiptQuestion, pendingReceiptCents, markReceiptsIssued } from './receipt-step.js';
-import { releaseAbandonedCheckout } from './checkout-release.js';
-import { REFUND_REASONS, OTHER_REASON, refundReason as chosenRefundReason, exchangeableLines, exchangeDifference, exchangeDifferenceText, cashReturnQuestion, exchangePaymentQuestion, returnCashNow, cashOutcomeText } from './refund-exchange.js';
+import { markReceiptsIssued } from './receipt-step.js';
+import { REFUND_REASONS, OTHER_REASON, refundReason as chosenRefundReason, exchangeableLines, exchangeDifference, exchangeDifferenceText, returnCashNow, cashOutcomeText } from './refund-exchange.js';
+import { ACTIVE, UNDO_MS, ticketActions, pendingText, handOver, counterError, ownCashSession, openCashSession } from './counter-flow.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -37,32 +37,6 @@ export function initializeOrders(client) {
   const staffLiveStatus=document.querySelector('#staff-live-status');
   const staffProduction=document.querySelector('#staff-production-list');
   const staffProductionTotal=document.querySelector('#staff-production-total');
-  const actionDialog=document.querySelector('#staff-action-confirm');
-  const actionSummary=document.querySelector('#staff-action-summary');
-  let activeDecision=null;
-  function decideStaffAction(message){
-    if(actionDialog.open)return Promise.resolve(false);
-    actionSummary.textContent=message;
-    actionDialog.showModal();
-    // Confirm is the expected answer at the counter: Enter or Space confirms.
-    document.querySelector('#staff-action-approve')?.focus();
-    return new Promise(resolve=>{activeDecision=resolve;});
-  }
-  function finishStaffDecision(result){
-    const resolve=activeDecision;
-    activeDecision=null;
-    if(actionDialog.open)actionDialog.close();
-    if(resolve)resolve(result);
-  }
-  document.querySelector('#staff-action-cancel').addEventListener('click',()=>finishStaffDecision(false));
-  document.querySelector('#staff-action-form').addEventListener('submit',event=>{
-    event.preventDefault();finishStaffDecision(true);
-  });
-  actionDialog.addEventListener('close',()=>{
-    // The close event of a previous dialog arrives late: ignore it if a new question is already open.
-    if(activeDecision&&!actionDialog.open)finishStaffDecision(false);
-  });
-
   const productDialog=document.querySelector('#product-dialog');
   const cartDialog=document.querySelector('#cart-dialog');
   const cartBar=document.querySelector('#cart-strip');
@@ -78,7 +52,7 @@ export function initializeOrders(client) {
   const orderSubmit=document.querySelector('#order-submit');
   let user=null, context={schoolId:'',barId:'',products:[]}, cart=[], product=null;
   let step=2,windows=[], enabled=false, requestKey=null, staffSchools=[],version=0,locationAbort=null;
-  let staffOrders=[];
+  let staffOrders=[],baristaSchools=[];
   let staffContextSchool=null;
   let staffFetchSequence=0,staffAuthVersion=0;
   const STAFF_PAGE_SIZE=250,STAFF_MAX_PAGES=8;
@@ -134,8 +108,11 @@ export function initializeOrders(client) {
   const refundFeedback=document.querySelector('#staff-refund-feedback');
   const refundSubmit=document.querySelector('#staff-refund-submit');
   const refundHow=document.querySelector('#staff-refund-how');
-  const refundPreset=document.querySelector('#staff-refund-reason-preset');
+  const refundReasonList=document.querySelector('#staff-refund-reason-list');
+  const refundReasonsTitle=document.querySelector('#staff-refund-reasons-title');
   const refundReasonField=document.querySelector('#staff-refund-reason-field');
+  const refundDrawer=document.querySelector('#staff-refund-drawer');
+  const refundOpening=document.querySelector('#staff-refund-opening');
   const exchangeFields=document.querySelector('#staff-exchange-fields');
   const exchangeOut=document.querySelector('#staff-exchange-out');
   const exchangeQty=document.querySelector('#staff-exchange-qty');
@@ -143,7 +120,7 @@ export function initializeOrders(client) {
   const exchangeDiff=document.querySelector('#staff-exchange-diff');
   const exchangePay=document.querySelector('#staff-exchange-pay');
   const exchangeKeys=new Map();
-  let selectedRefund=null,exchangeProducts=[];
+  let selectedRefund=null,exchangeProducts=[],refundBusy=false,refundSession=undefined;
   const cashRefundList=document.querySelector('#staff-cash-refunds-list');
   const cashRefundFeedback=document.querySelector('#staff-cash-refunds-feedback');
   const cashReturnDialog=document.querySelector('#staff-cash-return-dialog');
@@ -195,23 +172,76 @@ export function initializeOrders(client) {
       if(error)throw error;
       if(user?.id!==actor)return;
       cashReturnDialog.close();
-      report(staffFeedback,'Restituzione di '+formatEuro(obligation.amount_cents)+' registrata in cassa. Il movimento è salvato dal server.');
+      report(staffFeedback,'Restituzione di '+formatEuro(obligation.amount_cents)+' registrata in cassa.');
       await fetchStaffOrders();
     }catch(error){
       if(user?.id===actor){
         const needsShift=String(error?.message||'').includes('Apri il turno di cassa');
         cashShiftHelp.hidden=!needsShift;cashGoCash.hidden=!needsShift;
         report(cashReturnFeedback,needsShift
-          ?'La restituzione non è stata registrata: manca il turno di cassa aperto. Non effettuare un secondo pagamento al cliente; verifica l’operazione dopo aver aperto il turno.'
-          :'Restituzione non confermata: '+(error?.message||'errore sconosciuto')+
-           '. Se hai già consegnato il denaro, verifica i movimenti di cassa prima di riprovare.',true);
+          ?'La restituzione non è stata registrata: manca il turno di cassa aperto. Non dare i soldi una seconda volta; aprila e riprova.'
+          :'Restituzione non registrata: '+counterError(error)+' Se hai già dato i soldi, controlla i movimenti di cassa prima di riprovare.',true);
       }
     }finally{cashReturnSubmit.disabled=false;}
   });
-  for(const text of REFUND_REASONS)refundPreset.add(new Option(text,text));
-  refundPreset.add(new Option('Altro (scrivilo)',OTHER_REASON));
+
+  // Turno di cassa del barista: serve per dare contanti al cliente. Il banco lo
+  // controlla prima e lo apre nello stesso passaggio, cosi' nessun rimborso in
+  // contanti resta a meta' («Rimborso in elaborazione» senza fine).
+  const cashToggle=document.querySelector('#staff-cash-toggle');
+  let cashState={school:null,bar:null,session:null,checked:false};
+  const baristaIn=schoolId=>baristaSchools.includes(schoolId);
+  async function refreshCashState(){
+    const school=staffContextSchool&&staffSchools.includes(staffContextSchool)?staffContextSchool:staffSchools[0];
+    if(!user||!school||!baristaIn(school)){cashToggle.hidden=true;cashState={school:null,bar:null,session:null,checked:false};return;}
+    const actor=user.id;
+    const {data,error}=await client.rpc('cash_workspace',{p_school:school});
+    if(user?.id!==actor)return;
+    const own=(data?.sessions||[]).find(s=>s.actor_id===actor&&!s.closed_at);
+    cashState={school,bar:own?.bar_id||cashState.bar,session:error?null:own?.id||null,checked:!error};
+    cashToggle.hidden=!!error;
+    cashToggle.textContent=own?'Cassa aperta':'Apri cassa';
+    cashToggle.dataset.state=own?'open':'closed';
+  }
+  async function barOf(schoolId){
+    const known=staffOrders.find(o=>o.school_id===schoolId)?.bar_id;
+    if(known)return known;
+    const {data}=await client.from('bars').select('id').eq('school_id',schoolId).eq('is_active',true).order('name').limit(1);
+    return data?.[0]?.id||null;
+  }
+  // Restituisce l'id del turno aperto (aprendolo se serve) oppure null.
+  async function ensureCashSession(schoolId,barId,openingText){
+    if(!user||!baristaIn(schoolId))return null;
+    const found=await ownCashSession(client,schoolId,barId,user.id);
+    if(found.error)throw found.error;
+    if(found.id)return found.id;
+    let text=openingText;
+    if(text==null){
+      text=await promptDialog({title:'Apri la cassa',label:'Fondo cassa (€)',value:'0,00',confirmLabel:'Apri cassa',required:true});
+      if(text==null)return null;
+    }
+    const opened=await openCashSession(client,barId||await barOf(schoolId),parseEuroToCents(text||'0'));
+    if(opened.error)throw opened.error;
+    await refreshCashState();
+    return opened.id;
+  }
+  cashToggle.addEventListener('click',async()=>{
+    if(cashToggle.dataset.state==='open'){location.hash='cash-workspace';return;}
+    try{
+      const school=cashState.school;
+      if(!school)return;
+      const id=await ensureCashSession(school,cashState.bar||await barOf(school),null);
+      if(id)report(staffFeedback,'Cassa aperta.');
+    }catch(error){report(staffFeedback,'Cassa non aperta: '+counterError(error),true);}
+  });
+
   const refundMode=()=>refundForm.querySelector('input[name="staff-refund-mode"]:checked')?.value||'refund';
   const exchangePayMethod=()=>refundForm.querySelector('input[name="staff-exchange-pay"]:checked')?.value||'cash';
+  for(const text of [...REFUND_REASONS,OTHER_REASON]){
+    const chip=elem('button',text===OTHER_REASON?'Altro…':text,'button button-outline reason-chip');
+    chip.type='submit';chip.name='reason';chip.value=text;
+    refundReasonList.append(chip);
+  }
   function exchangeChoice(){
     const line=exchangeableLines(selectedRefund).find(x=>x.product_id===exchangeOut.value);
     const product=exchangeProducts.find(x=>x.id===exchangeIn.value);
@@ -222,10 +252,13 @@ export function initializeOrders(client) {
     const o=selectedRefund;if(!o)return;
     const exchange=refundMode()==='exchange';
     exchangeFields.hidden=!exchange;
-    refundReasonField.hidden=refundPreset.value!==OTHER_REASON;
-    document.querySelector('#staff-refund-reason').required=refundPreset.value===OTHER_REASON;
+    // Cassa chiusa: si apre nello stesso tocco, con il fondo scritto qui.
+    refundDrawer.hidden=!(refundSession===null&&baristaIn(o.school_id));
     if(!exchange){
-      refundHow.textContent='Tornano solo i soldi davvero incassati: la parte pagata online va sulla carta con Stripe, quella in contanti o POS la dai in contanti al banco.';
+      refundHow.textContent=baristaIn(o.school_id)
+        ?'I soldi tornano come sono stati pagati: quelli con carta tornano sulla carta, quelli in contanti o POS li dai tu in contanti e batti il reso.'
+        :'I soldi tornano come sono stati pagati. I contanti al cliente li dà e li registra un barista con la cassa aperta.';
+      refundReasonsTitle.textContent='Tocca il motivo: il rimborso parte subito';
       refundSubmit.textContent='Rimborsa';refundSubmit.className='button button-danger';
       return;
     }
@@ -233,8 +266,11 @@ export function initializeOrders(client) {
     const line=exchangeableLines(o).find(x=>x.product_id===exchangeOut.value);
     exchangeQty.max=String(line?.quantity||1);
     const {product,diff}=exchangeChoice();
-    exchangeDiff.textContent=product&&line?exchangeDifferenceText(diff):'';
+    exchangeDiff.textContent=product&&line?exchangeDifferenceText(diff)+(diff>0?' Batti lo scontrino della differenza.':''):'';
     exchangePay.hidden=!(diff>0);
+    refundReasonsTitle.textContent=diff>0
+      ?'Incassa '+formatEuro(diff)+(exchangePayMethod()==='cash'?' in contanti':' con il POS')+', poi tocca il motivo'
+      :'Tocca il motivo per registrare il cambio';
     refundSubmit.textContent='Registra il cambio';refundSubmit.className='button button-primary';
   }
   async function loadExchangeProducts(o){
@@ -249,8 +285,9 @@ export function initializeOrders(client) {
   }
   function openRefund(o){
     if(!user||!staffSchools.includes(o.school_id))return;
-    selectedRefund=o;exchangeProducts=[];
-    refundForm.reset();refundFeedback.textContent='';
+    selectedRefund=o;exchangeProducts=[];refundSession=undefined;
+    refundForm.reset();refundFeedback.textContent='';refundReasonField.hidden=true;refundSubmit.hidden=true;
+    refundOpening.value='0,00';
     refundSummary.textContent='Ordine #'+o.display_no+' · '+formatEuro(o.total_cents);
     const lines=exchangeableLines(o);
     exchangeOut.replaceChildren(...lines.map(x=>new Option(x.quantity+'× '+x.product_name+' · '+formatEuro(x.unit_cents),x.product_id)));
@@ -259,7 +296,12 @@ export function initializeOrders(client) {
     exchangeIn.replaceChildren();exchangeDiff.textContent='';
     syncRefundForm();
     refundDialog.showModal();
-    refundSubmit.focus();
+    refundReasonList.querySelector('button')?.focus();
+    // Controllo della cassa in sottofondo: se e' chiusa compare il fondo da usare.
+    if(baristaIn(o.school_id))void ownCashSession(client,o.school_id,o.bar_id,user.id).then(found=>{
+      if(selectedRefund?.id!==o.id)return;
+      refundSession=found.error?undefined:found.id;syncRefundForm();
+    });
   }
   refundForm.addEventListener('change',event=>{
     if(event.target.name==='staff-refund-mode'&&refundMode()==='exchange'&&selectedRefund&&!exchangeProducts.length)void loadExchangeProducts(selectedRefund);
@@ -267,84 +309,90 @@ export function initializeOrders(client) {
   });
   exchangeQty.addEventListener('input',syncRefundForm);
   document.querySelector('#staff-refund-cancel').addEventListener('click',()=>refundDialog.close());
-  refundDialog.addEventListener('close',()=>{selectedRefund=null;refundForm.reset();refundFeedback.textContent='';});
-  async function giveBackCash(o,reason,expectedCents){
-    // Il contante si restituisce subito: una domanda, poi la registrazione in cassa.
-    if(!await decideStaffAction(cashReturnQuestion(o.display_no,expectedCents)))
-      return 'Contanti da dare al cliente: '+formatEuro(expectedCents)+'. Registrali da «Restituzioni da registrare» quando li hai dati.';
+  refundDialog.addEventListener('close',()=>{if(!refundBusy){selectedRefund=null;refundForm.reset();refundFeedback.textContent='';}});
+  // Contanti al cliente: registrati subito nel turno di cassa, nessuna domanda in piu'.
+  async function giveBackCash(o,reason){
     const outcome=await returnCashNow(client,o.id,reason);
     if(outcome.returned>0){const problem=await markReceiptsIssued(client,o.id);if(problem)return cashOutcomeText(outcome)+' '+problem;}
-    return cashOutcomeText(outcome);
+    return outcome.returned>0
+      ?'Dai '+formatEuro(outcome.returned)+' in contanti al cliente e batti il reso. '+(outcome.pending?cashOutcomeText({...outcome,returned:0}):'')
+      :cashOutcomeText(outcome);
+  }
+  function setRefundBusy(busy){
+    refundBusy=busy;
+    for(const button of refundForm.querySelectorAll('button'))button.disabled=busy&&button.id!=='staff-refund-cancel';
   }
   refundForm.addEventListener('submit',async event=>{
     event.preventDefault();
     const o=selectedRefund;
-    if(!user||!o||!refundForm.reportValidity()||refundSubmit.disabled)return;
-    if(!staffSchools.includes(o.school_id)||!['delivered','no_show'].includes(o.status)||o.payment_status!=='paid'){
-      report(refundFeedback,'L’ordine non è più rimborsabile. Aggiorna la lista.',true);return;
+    if(!user||!o||refundBusy)return;
+    const picked=event.submitter?.name==='reason'?event.submitter.value:null;
+    if(picked===OTHER_REASON){
+      refundReasonField.hidden=false;refundSubmit.hidden=false;refundReason.required=true;refundReason.focus();return;
     }
-    const reason=chosenRefundReason(refundPreset.value,document.querySelector('#staff-refund-reason').value);
-    if(!reason){report(refundFeedback,'Scrivi un motivo di almeno 8 caratteri.',true);return;}
-    if(refundMode()==='exchange'){await submitExchange(o,reason);return;}
-    refundSubmit.disabled=true;
-    report(refundFeedback,'Registrazione del rimborso…');
-    const key=stripeRefundKeys.get(o.id)||crypto.randomUUID();
-    stripeRefundKeys.set(o.id,key);
+    const reason=picked?chosenRefundReason(picked,''):chosenRefundReason(OTHER_REASON,refundReason.value);
+    if(!reason){report(refundFeedback,'Scrivi un motivo di almeno 8 caratteri.',true);refundReason.focus();return;}
+    if(!staffSchools.includes(o.school_id)||!['delivered','no_show'].includes(o.status)||o.payment_status!=='paid'){
+      report(refundFeedback,'L’ordine non è più rimborsabile: la lista è stata aggiornata.',true);void fetchStaffOrders();return;
+    }
+    setRefundBusy(true);
     try{
+      // Cassa prima di tutto: senza turno aperto i contanti resterebbero da registrare.
+      if(refundSession===null&&baristaIn(o.school_id)){
+        report(refundFeedback,'Apro la cassa…');
+        refundSession=await ensureCashSession(o.school_id,o.bar_id,refundOpening.value.trim()||'0');
+      }
+      if(refundMode()==='exchange'){await submitExchange(o,reason);return;}
+      report(refundFeedback,'Rimborso in corso…');
+      const key=stripeRefundKeys.get(o.id)||crypto.randomUUID();
+      stripeRefundKeys.set(o.id,key);
       const {data,error}=await client.rpc('request_completed_order_refund',{
         p_kind:'individual',p_order:o.id,p_key:key,p_reason:reason
       });
       if(error)throw error;
       const online=Array.isArray(data?.online)?data.online:[];
       const cash=Number(data?.cash_pending||0);
-      if(!online.length&&!cash)throw new Error('Il server non ha restituito un credito rimborsabile.');
+      if(!online.length&&!cash)throw new Error('Non c’è niente da rimborsare su questo ordine.');
       stripeRefundKeys.delete(o.id);
-      refundDialog.close();
       const parts=[];
-      if(online.length)parts.push('Rimborso sulla carta avviato con Stripe: il cliente lo vede in pochi giorni.');
-      if(cash>0)parts.push(await giveBackCash(o,reason,cash));
-      report(staffFeedback,'Ordine #'+o.display_no+' rimborsato. '+parts.join(' '));
+      if(online.length)parts.push('Sulla carta torna '+formatEuro(online.reduce((n,x)=>n+Number(x.amount_cents||0),0))+': il cliente lo vede in pochi giorni.');
+      if(cash>0)parts.push(baristaIn(o.school_id)?await giveBackCash(o,reason):'Contanti da dare: '+formatEuro(cash)+'. Li registra un barista con la cassa aperta.');
+      refundBusy=false;refundDialog.close();
+      report(staffFeedback,'#'+o.display_no+' rimborsato. '+parts.join(' '));
       await fetchStaffOrders();
     }catch(e){
-      report(refundFeedback,'Rimborso non registrato o esito incerto: '+(e?.message||'riprovare verificando prima lo stato ordine')+'. In caso di errore di rete, riprova dalla stessa finestra.',true);
-    }finally{refundSubmit.disabled=false;}
+      report(refundFeedback,'Rimborso non fatto: '+counterError(e),true);
+    }finally{setRefundBusy(false);}
   });
   async function submitExchange(o,reason){
     const {line,product,quantity,diff}=exchangeChoice();
     if(!line||!product){report(refundFeedback,'Scegli il prodotto che rende e quello che prende.',true);return;}
     if(line.product_id===product.id){report(refundFeedback,'Scegli un prodotto diverso.',true);return;}
     const method=diff>0?exchangePayMethod():null;
-    refundSubmit.disabled=true;
     try{
-      if(diff>0){
-        // Prima lo scontrino della differenza, poi l'incasso, come al ritiro.
-        refundDialog.close();
-        if(!await decideStaffAction(receiptQuestion(o.display_no,diff)))return;
-        if(!await decideStaffAction(exchangePaymentQuestion(o.display_no,diff,method)))return;
-      }
+      report(refundFeedback,'Registro il cambio…');
       const key=exchangeKeys.get(o.id)||crypto.randomUUID();
       exchangeKeys.set(o.id,key);
-      const {data,error}=await client.rpc('exchange_order_item',{
+      const {error}=await client.rpc('exchange_order_item',{
         p_order:o.id,p_product_out:line.product_id,p_quantity:quantity,p_product_in:product.id,
         p_method:method,p_key:key,p_reason:reason
       });
       if(error)throw error;
       exchangeKeys.delete(o.id);
-      if(refundDialog.open)refundDialog.close();
       const parts=['Cambio registrato: '+quantity+'× '+product.name+' al posto di '+line.product_name+'.'];
       if(diff>0){const problem=await markReceiptsIssued(client,o.id);if(problem)parts.push(problem);}
       if(diff<0){
         const {data:due}=await client.rpc('order_cash_refunds_to_return',{p_order:o.id});
         const cash=(Array.isArray(due)?due:[]).reduce((n,x)=>n+Number(x.amount_cents||0),0);
-        if(cash>0)parts.push(await giveBackCash(o,reason,cash));
-        if(cash<-diff)parts.push('Rimborso sulla carta avviato con Stripe.');
+        if(cash>0)parts.push(await giveBackCash(o,reason));
+        if(cash<-diff)parts.push('La differenza pagata con carta torna sulla carta.');
       }
+      refundBusy=false;refundDialog.close();
       report(staffFeedback,parts.join(' '));
       await fetchStaffOrders();
     }catch(e){
-      const message='Cambio non registrato: '+friendlyError(e,e?.message||'riprova');
-      if(refundDialog.open)report(refundFeedback,message,true);else report(staffFeedback,message,true);
-    }finally{refundSubmit.disabled=false;}
+      report(refundFeedback,'Cambio non registrato: '+counterError(e),true);
+    }
   }
   const couponDisclosure=elem('details','','checkout-coupon');
   const couponLabel=elem('label','Codice sconto');
@@ -773,36 +821,150 @@ export function initializeOrders(client) {
     }
     if(feedback.dataset.type!=='error'&&/^Caricamento/.test(feedback.textContent))report(feedback,'');
   }
-  // Pickup with payment at the counter: one confirmation, then the same two
-  // server steps as before (record the payment, then deliver). The server
-  // still refuses delivery of an unpaid order.
-  async function collectAndDeliver(o,method,how){
-    const blocked=await releaseAbandonedCheckout(client,o,decideStaffAction);
-    if(blocked)return {error:new Error(blocked)};
-    const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});
-    if(balance.error)return balance;
-    const due=counterDueCents(balance.data);
-    if(!await decideStaffAction(receiptQuestion(o.display_no,due)))return null;
-    if(!await decideStaffAction(`Ordine #${o.display_no}: hai ricevuto ${formatEuro(due)} ${how}${counterDiscountNote(balance.data)} e consegnato tutti i prodotti? Conferma soltanto dopo aver verificato l'incasso.`))return null;
-    const paid=await client.rpc('record_individual_counter_payment',{p_order_id:o.id,p_method:method,p_request_key:crypto.randomUUID()});
-    if(paid.error)return paid;
-    const receiptProblem=await markReceiptsIssued(client,o.id);
-    if(receiptProblem)report(staffFeedback,receiptProblem,true);
-    const delivered=await client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
-    if(delivered.error)return {error:new Error('Incasso registrato, consegna non registrata: '+delivered.error.message+' Premi «Consegna» sull’ordine.')};
-    return delivered;
+  // Banco: ogni tocco su un pulsante del biglietto fa tutto il passaggio.
+  // Per UNDO_MS il biglietto mostra «Annulla»: un tocco sbagliato non parte.
+  const pendingTaps=new Map();
+  let schoolBps=new Map(),scanView=null;
+  function pendingCashFor(orderId){
+    return cashRefunds.filter(x=>x.order_id===orderId).reduce((n,x)=>n+Number(x.amount_cents||0),0);
   }
-  function action(box,label,callback,{primary=false}={}){
-    const button=elem('button',label,primary?'button button-primary':'button button-outline button-small');
-    button.type='button';
-    button.addEventListener('click',async()=>{
-      button.disabled=true;
-      try {
-        const result=await callback();
-        if(result?.error)throw result.error;
-        await fetchStaffOrders();
-      }catch(err){report(staffFeedback,err.message,true);button.disabled=false;}
-    });box.append(button);
+  async function runTap(o,act){
+    switch(act.key){
+      case 'cash':case 'pos':case 'deliver':return handOver(client,o,act.method);
+      case 'ready':case 'preparing':{
+        const {error}=await client.rpc('advance_individual_order',{p_order_id:o.id,p_next:act.key});
+        return error&&!/transizione/i.test(error.message||'')?{ok:false,message:counterError(error)}:{ok:true};
+      }
+      case 'give-back':{
+        const session=await ensureCashSession(o.school_id,o.bar_id,null);
+        if(!session)return {ok:false,message:'Contanti non registrati: serve la cassa aperta.'};
+        const outcome=await returnCashNow(client,o.id,'Rimborso al banco');
+        if(!(outcome.returned>0))return {ok:false,message:cashOutcomeText(outcome)};
+        await markReceiptsIssued(client,o.id);
+        return {ok:true,note:'Batti il reso di '+formatEuro(outcome.returned)+' sul registratore.'};
+      }
+      default:return {ok:true};
+    }
+  }
+  function finishTap(o,state){
+    pendingTaps.delete(o.id);
+    if(state.ok){
+      if(state.note)report(staffFeedback,state.note);
+      else if(staffFeedback.dataset.type==='error')report(staffFeedback,'');
+    }else report(staffFeedback,state.message,true);
+    scanView?.done?.(o.id);
+    void fetchStaffOrders();
+  }
+  function commitTap(o){
+    const tap=pendingTaps.get(o.id);
+    if(!tap||tap.state!=='waiting')return;
+    clearTimeout(tap.timer);tap.state='running';redrawTicket(o.id);
+    runTap(o,tap.act).then(result=>finishTap(o,result),error=>finishTap(o,{ok:false,message:counterError(error)}));
+  }
+  function startTap(o,act,{instant=false}={}){
+    if(pendingTaps.has(o.id))return;
+    // Le azioni di soli stati (Pronto) non toccano soldi: partono subito.
+    if(instant||['ready','preparing'].includes(act.key)){
+      pendingTaps.set(o.id,{act,state:'running'});redrawTicket(o.id);
+      runTap(o,act).then(result=>finishTap(o,result),error=>finishTap(o,{ok:false,message:counterError(error)}));
+      return;
+    }
+    const tap={act,state:'waiting',timer:setTimeout(()=>commitTap(o),UNDO_MS)};
+    pendingTaps.set(o.id,tap);redrawTicket(o.id);
+  }
+  function undoTap(orderId){
+    const tap=pendingTaps.get(orderId);
+    if(!tap||tap.state!=='waiting')return;
+    clearTimeout(tap.timer);pendingTaps.delete(orderId);redrawTicket(orderId);
+    scanView?.done?.(orderId,{undone:true});
+  }
+  // Se la pagina va in secondo piano, i tocchi in attesa partono subito.
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden)return;
+    for(const [id] of pendingTaps){const o=staffOrders.find(x=>x.id===id)||scanView?.order;if(o?.id===id)commitTap(o);}
+  });
+  function renderTicket(o,{closed=false}={}){
+    const box=elem('article','','order-card staff-order-card');
+    box.dataset.status=o.status;box.dataset.orderId=o.id;
+    const pay=paymentState(o,{staff:true});
+    box.dataset.payment=pay.tone;
+    box.setAttribute('aria-label','Ordine '+o.display_no);
+    const top=elem('div','','ticket-head');
+    top.append(elem('h4',`#${o.display_no}`,'ticket-no'),elem('span',slotLabel(o),'ticket-slot'));
+    box.append(top);
+    const ul=elem('ul','','ticket-items');
+    (o.order_items||[]).forEach(x=>{const li=elem('li');li.append(elem('b',x.quantity+'×'),document.createTextNode(' '+x.product_name));ul.append(li);});
+    box.append(ul);
+    const foot=elem('div','','ticket-foot');
+    foot.append(elem('strong',formatEuro(o.total_cents),'ticket-total'),badge(pay.label,pay.tone));
+    if(closed||!ACTIVE.includes(o.status))foot.append(elem('span',orderStatusLabel(o.status),'staff-status staff-status--'+o.status));
+    box.append(foot);
+    const tap=pendingTaps.get(o.id);
+    if(tap){
+      box.classList.add('is-pending');
+      const bar=elem('div','','ticket-undo');bar.setAttribute('role','status');
+      if(tap.state==='waiting'){
+        bar.style.setProperty('--undo-ms',UNDO_MS+'ms');
+        bar.append(elem('span',pendingText(o,tap.act),'ticket-undo-text'));
+        const undo=elem('button','Annulla','button button-outline button-small ticket-undo-button');
+        undo.type='button';undo.setAttribute('aria-label','Annulla: '+pendingText(o,tap.act));
+        undo.addEventListener('click',()=>undoTap(o.id));
+        bar.append(undo);
+      }else bar.append(elem('span','Registrazione…','ticket-undo-text'));
+      box.append(bar);
+      return box;
+    }
+    const acts=ticketActions(o,{bps:schoolBps.get(o.school_id),pendingCashCents:pendingCashFor(o.id)});
+    if(acts.length){
+      const main=elem('div','','order-actions');
+      const extra=elem('div','','order-actions order-actions--small');
+      for(const act of acts){
+        const button=elem('button',act.label,act.primary?'button button-primary':act.small?'button button-ghost button-small':'button button-outline');
+        button.type='button';button.dataset.action=act.key;
+        if(act.key==='refund'){
+          button.setAttribute('aria-label','Rimborsa ordine numero '+o.display_no);
+          button.addEventListener('click',()=>openRefund(o));
+        }else{
+          button.setAttribute('aria-label',act.label+' · ordine '+o.display_no);
+          button.addEventListener('click',event=>{
+            startTap(o,act);
+            // Da tastiera: il cursore torna sulla ricerca per il prossimo numero.
+            if(event.detail===0&&!scanView)document.querySelector('#staff-search')?.focus();
+          });
+        }
+        (act.small?extra:main).append(button);
+      }
+      if(main.childElementCount)box.append(main);
+      if(extra.childElementCount)box.append(extra);
+    }
+    return box;
+  }
+  function redrawTicket(orderId){
+    for(const node of document.querySelectorAll(`.staff-order-card[data-order-id="${orderId}"]`)){
+      const o=(scanView?.order?.id===orderId&&scanView.container.contains(node))?scanView.order:staffOrders.find(x=>x.id===orderId);
+      if(o)node.replaceWith(renderTicket(o,{closed:node.closest('[data-stage="closed"]')!==null}));
+    }
+  }
+  // Ordine trovato con il QR o il numero: si mostra nello scanner con gli
+  // stessi pulsanti del banco. Dopo il tocco lo scanner riprende da solo.
+  window.addEventListener('breakapp:counter-scan',async event=>{
+    const {orderId,container,done}=event.detail||{};
+    if(!orderId||!container)return;
+    const {data,error}=await client.from('orders').select(STAFF_FIELDS).eq('id',orderId).maybeSingle();
+    if(error||!data){container.replaceChildren(elem('p','Ordine non disponibile.','feedback'));return;}
+    if(!schoolBps.has(data.school_id))await loadSchoolBps([data.school_id]);
+    scanView={order:data,container,done};
+    container.replaceChildren(renderTicket(data,{closed:!ACTIVE.includes(data.status)}));
+    container.querySelector('.order-actions .button-primary')?.focus();
+  });
+  window.addEventListener('breakapp:counter-scan-closed',()=>{
+    // Chiudendo lo scanner il tocco in attesa parte subito.
+    const order=scanView?.order;scanView=null;
+    if(order&&pendingTaps.get(order.id)?.state==='waiting')commitTap(order);
+  });
+  async function loadSchoolBps(ids){
+    const {data}=await client.from('schools').select('id,counter_discount_bps').in('id',ids);
+    for(const row of data||[])schoolBps.set(row.id,Number(row.counter_discount_bps||0));
   }
   async function fetchStaffOrders(){
     if(!user||!staffSchools.length)return;
@@ -841,6 +1003,18 @@ export function initializeOrders(client) {
       }
       if(total!==null && loaded<total)omitted+=total-loaded;
     }
+    // Conclusi degli ultimi due giorni: servono a trovare subito un ordine da
+    // rimborsare cercandone il numero, anche nella vista «Da gestire».
+    if(visibility==='active'){
+      const since=new Date(Date.now()-2*86400000).toISOString();
+      const {data}=await client.from('orders').select(STAFF_FIELDS)
+        .in('school_id',schools).in('status',closed).gte('created_at',since)
+        .order('created_at',{ascending:false}).limit(STAFF_PAGE_SIZE);
+      if(generation!==staffFetchSequence||user?.id!==actor)return;
+      for(const order of data||[])if(!seen.has(order.id)){seen.add(order.id);orders.push(order);}
+    }
+    const missingBps=schools.filter(id=>!schoolBps.has(id));
+    if(missingBps.length)await loadSchoolBps(missingBps);
     if(generation!==staffFetchSequence||user?.id!==actor)return;
     staffOrders=orders;
     updateSlotFilter();drawStaff();
@@ -848,10 +1022,12 @@ export function initializeOrders(client) {
       report(staffFeedback,'ATTENZIONE: '+omitted+
         ' ordini non sono ancora visibili in questo elenco. Non considerare completa la lista: consulta i report e avvisa l’Admin; riduci la fascia e aggiorna.',true);
     else{
-      report(staffFeedback,'');
+      // Toglie solo l'avviso di lista incompleta: gli esiti dei tocchi restano visibili.
+      if(/^ATTENZIONE: /.test(staffFeedback.textContent))report(staffFeedback,'');
       staffLiveStatus.title='Ultimo aggiornamento alle '+new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
     }
     await loadCashRefunds();
+    void refreshCashState();
   }
   async function loadCashRefunds(){
     const version=++cashRefundVersion;
@@ -873,23 +1049,33 @@ export function initializeOrders(client) {
     }
     cashRefunds=results.flatMap(result=>Array.isArray(result.data?.items)?result.data.items:[])
       .filter(obligation=>obligation.status==='pending'&&staffSchools.includes(obligation.school_id));
+    // Soldi ancora da dare: l'ordine compare in cima al banco con il suo pulsante.
+    const missing=[...new Set(cashRefunds.map(x=>x.order_id).filter(id=>id&&!staffOrders.some(o=>o.id===id)))];
+    if(missing.length){
+      const {data}=await client.from('orders').select(STAFF_FIELDS).in('id',missing.slice(0,50));
+      if(version!==cashRefundVersion||user?.id!==actor)return;
+      for(const order of data||[])if(!staffOrders.some(o=>o.id===order.id))staffOrders.push(order);
+    }
     const remaining=results.reduce((n,r)=>n+Math.max(0,Number(r.data?.total||0)-200),0);
     if(results.some(r=>r.data?.has_more)){
       report(cashRefundFeedback,'Attenzione: '+remaining+
         ' restituzioni aggiuntive non sono visualizzate. Contatta l’Admin per la riconciliazione completa.',true);
     }else cashRefundFeedback.textContent='';
     drawCashRefunds();
+    drawStaff();
   }
   function drawCashRefunds(){
     cashRefundList.replaceChildren();
     const panel=document.querySelector('#staff-cash-refunds-panel');
-    if(!cashRefunds.length){
+    // Gli ordini singoli stanno in cima al banco: qui restano gruppi e casi senza ordine.
+    const rest=cashRefunds.filter(x=>!x.order_id||!staffOrders.some(o=>o.id===x.order_id));
+    if(!rest.length){
       cashRefundList.append(elem('p','Nessuna restituzione al banco da registrare.'));
       if(panel)panel.hidden=!cashRefundFeedback.textContent;
       return;
     }
     if(panel)panel.hidden=false;
-    for(const obligation of cashRefunds){
+    for(const obligation of rest){
       const order=staffOrders.find(x=>x.id===obligation.order_id);
       const title=order?'Ordine #'+order.display_no:
         obligation.group_order_id?'Ordine di gruppo':'Ordine concluso non presente negli ultimi 100';
@@ -944,13 +1130,31 @@ export function initializeOrders(client) {
   const compactStaffMedia=matchMedia('(max-width: 1023px)');
   // On phones the production summary starts collapsed above the queue.
   if(matchMedia('(max-width: 1279px)').matches)document.querySelector('#staff-production-panel')?.removeAttribute('open');
-  let selectedLane='pending';
-  function drawLaneTabs(stages){
+  // Telefono e tablet: di base una sola coda con tutti gli ordini da consegnare,
+  // cosi' non si cambia scheda per incassare. Le schede restano come filtro.
+  let selectedLane='all';
+  function laneStages(){
+    const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
+    const visibility=staffVisibilityFilter.value;
+    const search=document.querySelector('#staff-search').value.trim();
+    // Con una ricerca si vedono anche i conclusi recenti: il rimborso e' a un tocco.
+    let stages=boardOrders(scoped,{slot:staffSlotFilter.value,visibility:search&&visibility==='active'?'all':visibility,search});
+    const owed=scoped.filter(o=>!ACTIVE.includes(o.status)&&pendingCashFor(o.id)>0);
+    stages=stages.map(stage=>stage.key==='closed'?{...stage,orders:stage.orders.filter(o=>!owed.includes(o))}:stage)
+      .filter(stage=>stage.key!=='closed'||visibility!=='active'||stage.orders.length);
+    if(compactStaffMedia.matches&&visibility!=='closed'){
+      const queue=stages.filter(s=>s.key!=='closed').flatMap(s=>s.orders)
+        .sort((a,b)=>slotLabel(a)===slotLabel(b)?Number(a.display_no)-Number(b.display_no):String(a.pickup_windows?.service_date+a.pickup_windows?.starts_at).localeCompare(String(b.pickup_windows?.service_date+b.pickup_windows?.starts_at)));
+      stages.unshift({key:'all',label:'Tutti',orders:queue});
+    }
+    return {stages,owed:visibility==='closed'?[]:owed,search};
+  }
+  function drawLaneTabs(stages,search){
     laneTabs.replaceChildren();
-    const visible=stages.filter(stage=>staffVisibilityFilter.value==='all'||(staffVisibilityFilter.value==='closed')===(stage.key==='closed'));
-    if(!visible.some(stage=>stage.key===selectedLane))selectedLane=visible[0]?.key||'pending';
+    const visible=stages;
+    if(!visible.some(stage=>stage.key===selectedLane))selectedLane=visible[0]?.key||'all';
     staffList.dataset.lane=selectedLane;
-    laneTabs.hidden=visible.length<2;
+    laneTabs.hidden=visible.length<2||Boolean(search);
     for(const stage of visible){
       const tab=elem('button','');tab.type='button';tab.setAttribute('role','tab');
       tab.id='staff-lane-tab-'+stage.key;
@@ -967,88 +1171,42 @@ export function initializeOrders(client) {
       laneTabs.append(tab);
     }
   }
+  function drawLane(stage,list){
+    const lane=elem('section','','staff-board-lane');
+    lane.dataset.stage=stage.key;
+    lane.setAttribute('aria-label',stage.label);
+    if(stage.key!=='owed'){lane.setAttribute('role','tabpanel');lane.setAttribute('aria-labelledby','staff-lane-tab-'+stage.key);}
+    const head=elem('div','','staff-lane-header');
+    head.append(elem('h3',stage.label),elem('span',String(stage.orders.length),'staff-count'));
+    lane.append(head);
+    const orders=elem('div','','staff-lane-orders');
+    for(const o of stage.orders)orders.append(renderTicket(o,{closed:stage.key==='closed'}));
+    if(!stage.orders.length)orders.append(elem('p',stage.key==='all'||stage.key==='pending'?'Nessun ordine da consegnare.':'Nessun ordine in questo stato.','staff-empty'));
+    lane.append(orders);list.append(lane);
+    return stage.orders.length;
+  }
   function drawStaff(){
     staffList.replaceChildren();
-    staffList.dataset.view=staffVisibilityFilter.value;
     drawProduction();
-    const scoped=staffOrders.filter(o=>!staffContextSchool||o.school_id===staffContextSchool);
-    const stages=boardOrders(scoped,{
-      slot:staffSlotFilter.value,
-      visibility:staffVisibilityFilter.value,
-      search:document.querySelector('#staff-search').value.trim()
-    });
-    drawLaneTabs(stages);
+    const {stages,owed,search}=laneStages();
+    staffList.dataset.view=stages.some(s=>s.key==='closed')&&staffVisibilityFilter.value!=='closed'?'all':staffVisibilityFilter.value;
+    drawLaneTabs(stages,search);
     let shown=0;
+    if(owed.length)shown+=drawLane({key:'owed',label:'Soldi da dare al cliente',orders:owed},staffList);
     for(const stage of stages){
-      if(staffVisibilityFilter.value==='active'&&stage.key==='closed')continue;
-      if(staffVisibilityFilter.value==='closed'&&stage.key!=='closed')continue;
-      // A phone shows one lane at a time. Do not build hundreds of hidden
-      // tickets for the other lanes on every search, status update or tap.
-      if(compactStaffMedia.matches&&stage.key!==selectedLane)continue;
-      const lane=elem('section','','staff-board-lane');
-      lane.dataset.stage=stage.key;
-      lane.setAttribute('aria-label',stage.label);
-      lane.setAttribute('role','tabpanel');lane.setAttribute('aria-labelledby','staff-lane-tab-'+stage.key);
-      const head=elem('div','','staff-lane-header');
-      head.append(elem('h3',stage.label),elem('span',String(stage.orders.length),'staff-count'));
-      lane.append(head);
-      const list=elem('div','','staff-lane-orders');
-      for(const o of stage.orders){
-        shown++;
-        const box=elem('article','','order-card staff-order-card');
-        box.dataset.status=o.status;box.dataset.orderId=o.id;
-        const pay=paymentState(o,{staff:true});
-        box.dataset.payment=pay.tone;
-        const top=elem('div','','ticket-head');
-        top.append(elem('h4',`#${o.display_no}`,'ticket-no'),elem('span',slotLabel(o),'ticket-slot'));
-        box.append(top);
-        box.setAttribute('aria-label','Ordine '+o.display_no);
-        const ul=elem('ul','','ticket-items');
-        (o.order_items||[]).forEach(x=>{const li=elem('li');li.append(elem('b',x.quantity+'×'),document.createTextNode(' '+x.product_name));ul.append(li);});
-        box.append(ul);
-        const foot=elem('div','','ticket-foot');
-        foot.append(elem('strong',formatEuro(o.total_cents),'ticket-total'),badge(pay.label,pay.tone));
-        // Lanes already name the state; only the mixed "closed" lane repeats it.
-        if(stage.key==='closed')foot.append(elem('span',orderStatusLabel(o.status),'staff-status staff-status--'+o.status));
-        box.append(foot);
-        const actions=elem('div','','order-actions');
-        if(o.status==='confirmed'){
-          // One tap to the pickup shelf; «In preparazione» stays for longer jobs.
-          action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}),{primary:true});
-          action(actions,'In preparazione',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'preparing'}));
-        }
-        if(o.status==='preparing')action(actions,'Pronto',()=>client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'ready'}),{primary:true});
-        if(o.status==='ready'&&o.payment_status==='due'){
-          actions.append(elem('p','Incassa e consegna','order-actions-caption'));
-          for(const [label,method,how] of [['Contanti','cash','in contanti'],['POS','external_pos','con il POS esterno']]){
-            action(actions,label,()=>collectAndDeliver(o,method,how),{primary:method==='cash'});
-            actions.lastElementChild.setAttribute('aria-label',label+': incassa e consegna l’ordine '+o.display_no);
-          }
-        }
-        if(o.status==='ready'&&o.payment_status==='paid'){
-          action(actions,'Consegna',async()=>{
-            const toReceipt=await pendingReceiptCents(client,o.id);
-            if(toReceipt>0&&!await decideStaffAction(receiptQuestion(o.display_no,toReceipt,{online:true})))return null;
-            if(!await decideStaffAction('Confermi di avere consegnato tutti i prodotti di questo ordine?'))return null;
-            if(toReceipt>0){const problem=await markReceiptsIssued(client,o.id);if(problem)report(staffFeedback,problem,true);}
-            return client.rpc('advance_individual_order',{p_order_id:o.id,p_next:'delivered'});
-          },{primary:true});
-        }
-        if(o.payment_status==='paid'&&['delivered','no_show'].includes(o.status)){
-          const refund=elem('button','Rimborsa','button button-outline button-small');
-          refund.type='button';
-          refund.setAttribute('aria-label','Rimborsa ordine numero '+o.display_no);
-          refund.addEventListener('click',()=>openRefund(o));
-          actions.append(refund);
-        }
-        if(actions.childElementCount)box.append(actions);
-        list.append(box);
-      }
-      if(!stage.orders.length)list.append(elem('p','Nessun ordine in questo stato.','staff-empty'));
-      lane.append(list);staffList.append(lane);
+      // Un telefono mostra una coda per volta (tutte, se si sta cercando).
+      if(compactStaffMedia.matches&&!search&&stage.key!==selectedLane)continue;
+      if(compactStaffMedia.matches&&search&&stage.key!=='all'&&stage.key!=='closed')continue;
+      if(!compactStaffMedia.matches&&stage.key==='all')continue;
+      shown+=drawLane(stage,staffList);
     }
-    if(!shown && !staffList.childElementCount)
-      staffList.append(elem('p','Nessun ordine corrisponde ai filtri.','staff-empty'));
+    if(!shown&&search){
+      staffList.replaceChildren(elem('p','Nessun ordine con «'+search+'».','staff-empty'));
+    }
+    if(scanView?.order){
+      const fresh=staffOrders.find(o=>o.id===scanView.order.id);
+      if(fresh&&!pendingTaps.has(fresh.id)){scanView.order=fresh;scanView.container.replaceChildren(renderTicket(fresh,{closed:!ACTIVE.includes(fresh.status)}));}
+    }
   }
   compactStaffMedia.addEventListener?.('change',drawStaff);
   async function checkStaff(){
@@ -1073,6 +1231,7 @@ export function initializeOrders(client) {
       (m.role_assignments||[]).some(r=>r.role_code==='bartender'||
         (r.role_code==='school_admin'&&adminVerified))
     ).map(m=>m.school_id))];
+    baristaSchools=[...new Set((data||[]).filter(m=>(m.role_assignments||[]).some(r=>r.role_code==='bartender')).map(m=>m.school_id))];
     staffPanel.hidden=!staffSchools.length;
     if(staffSchools.length){
       await fetchStaffOrders();
@@ -1084,7 +1243,6 @@ export function initializeOrders(client) {
     const role=event.detail?.role||'customer';
     if(refundDialog.open)refundDialog.close();
     if(cashReturnDialog.open)cashReturnDialog.close();
-    if(actionDialog.open)finishStaffDecision(false);
     if(role!=='customer'){
       if(productDialog.open)productDialog.close();
       if(cartDialog.open)cartDialog.close();
@@ -1100,20 +1258,20 @@ export function initializeOrders(client) {
   document.querySelector('#orders-refresh').addEventListener('click',()=>void loadOrders());
   document.querySelector('#staff-refresh').addEventListener('click',()=>void checkStaff());
   document.querySelector('#staff-search').addEventListener('input',drawStaff);
-  // Number + Enter jumps to that order and focuses its main button, so the
-  // whole pickup is «numero, Invio, Invio, Invio» from the keyboard.
+  // Numero + Invio: il pulsante principale di quell'ordine prende il focus,
+  // quindi da tastiera la consegna e' «numero, Invio, Invio».
   document.querySelector('#staff-search').addEventListener('keydown',event=>{
     if(event.key!=='Enter')return;
     const wanted=event.currentTarget.value.trim().replace(/^#/,'');
     if(!/^\d+$/.test(wanted))return;
     event.preventDefault();
-    const target=staffOrders.find(o=>String(o.display_no)===wanted&&(!staffContextSchool||o.school_id===staffContextSchool)&&['confirmed','preparing','ready'].includes(o.status));
-    if(!target){report(staffFeedback,'Nessun ordine da gestire con numero '+wanted+'.',true);return;}
-    const lane=target.status==='ready'?'ready':target.status==='preparing'?'preparing':'pending';
-    if(selectedLane!==lane){selectedLane=lane;drawStaff();}
+    const same=o=>String(o.display_no)===wanted&&(!staffContextSchool||o.school_id===staffContextSchool);
+    const target=staffOrders.find(o=>same(o)&&ACTIVE.includes(o.status))||staffOrders.find(same);
+    if(!target){report(staffFeedback,'Nessun ordine con numero '+wanted+'.',true);return;}
+    drawStaff();
     const card=staffList.querySelector(`[data-order-id="${target.id}"]`);
     card?.scrollIntoView({block:'center'});
-    card?.querySelector('.order-actions .button-primary')?.focus();
+    card?.querySelector('.order-actions .button-primary, .order-actions .button-outline')?.focus();
   });
   document.addEventListener('keydown',event=>{
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'&&
@@ -1126,12 +1284,12 @@ export function initializeOrders(client) {
   function setUser(next){
     const changed=user?.id!==next?.id;user=next;section.hidden=!user;
     if(!user){
-      if(actionDialog.open)finishStaffDecision(false);
-      if(productDialog.open)productDialog.close();
+        if(productDialog.open)productDialog.close();
       if(cartDialog.open)cartDialog.close();
       if(stepper.open)stepper.close();
       stopStaffFeed();staffFetchSequence++;staffAuthVersion++;
-      staffSchools=[];staffOrders=[];updateSlotFilter();drawStaff();
+      staffSchools=[];baristaSchools=[];staffOrders=[];updateSlotFilter();drawStaff();
+      for(const [,tap] of pendingTaps)clearTimeout(tap.timer);pendingTaps.clear();
       if(refundDialog.open)refundDialog.close();
       if(cashReturnDialog.open)cashReturnDialog.close();
       cashRefundVersion++;cashRefunds=[];drawCashRefunds();

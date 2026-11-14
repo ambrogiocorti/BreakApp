@@ -15,14 +15,12 @@
 #staff-refresh { grid-column: 2; justify-self: end; }
 .staff-toolbar .live-status { grid-column: 1; grid-row: 3; }
 @media (min-width: 720px) {
-  .staff-toolbar { grid-template-columns: minmax(12rem, 1fr) auto auto auto auto; }
-  .staff-search { grid-column: 1; }
-  .staff-board-filters { grid-column: 2; grid-row: 1; grid-template-columns: auto auto; }
-  .staff-board-filters select { width: auto; min-width: 10rem; }
-  .staff-scan-button { grid-column: 3; }
-  .staff-cash-shortcut { grid-column: 4; grid-row: 1; }
-  #staff-refresh { grid-column: 5; grid-row: 1; }
-  .staff-toolbar .live-status { grid-column: 1 / -1; grid-row: 2; }
+  /* Una riga sola quando c'e' spazio, altrimenti va a capo senza uscire dallo schermo. */
+  .staff-toolbar { display: flex; flex-wrap: wrap; align-items: center; }
+  .staff-search { flex: 1 1 14rem; min-width: 0; }
+  .staff-board-filters { display: flex; gap: var(--space-2); flex: 0 1 auto; min-width: 0; }
+  .staff-board-filters select { width: auto; min-width: 0; max-width: 12rem; }
+  .staff-toolbar .live-status { flex-basis: 100%; }
 }
 @media (min-width: 1024px) {
   .staff-toolbar { position: sticky; top: var(--topbar-h); z-index: 15; margin-inline: calc(-1 * var(--space-2)); padding: var(--space-2); background: color-mix(in srgb, var(--canvas) 96%, transparent); }
@@ -41,11 +39,7 @@
 
 /* Phones and small tablets: one lane at a time, chosen by tabs. */
 @media (max-width: 1023px) {
-  .staff-board[data-lane="pending"] .staff-board-lane:not([data-stage="pending"]),
-  .staff-board[data-lane="preparing"] .staff-board-lane:not([data-stage="preparing"]),
-  .staff-board[data-lane="ready"] .staff-board-lane:not([data-stage="ready"]),
-  .staff-board[data-lane="closed"] .staff-board-lane:not([data-stage="closed"]) { display: none; }
-  .lane-tabs:not([hidden]) ~ .staff-board .staff-lane-header { display: none; }
+  .lane-tabs:not([hidden]) ~ .staff-board .staff-board-lane:not([data-stage="owed"]) .staff-lane-header { display: none; }
   .staff-lane-orders { grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
 }
 @media (min-width: 1024px) {
@@ -70,7 +64,8 @@
 .ticket-total { font-variant-numeric: tabular-nums; margin-right: auto; }
 .staff-status { font-size: var(--text-xs); font-weight: 700; color: var(--ink-3); }
 .staff-order-card .order-actions { padding-top: var(--space-1); }
-.staff-order-card .order-actions .button-primary { flex: 1 1 8rem; min-height: 48px; font-size: var(--text-base); }
+.staff-order-card .order-actions { flex-wrap: nowrap; }
+.staff-order-card .order-actions .button-primary { flex: 1 1 0; min-width: 0; min-height: 48px; font-size: var(--text-base); }
 .staff-order-card .order-actions-caption { flex: 1 0 100%; margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--ink-2); }
 .staff-order-card .order-actions-caption ~ .button-outline { min-height: 48px; }
 
@@ -98,3 +93,37 @@
 .scan-result > * { text-align: left; }
 .staff-number-form { width: 100%; }
 @media (max-width: 1279px) { .service-console { order: -1; } }
+
+/* Soldi da dare al cliente: sempre in cima, su tutta la larghezza. */
+.staff-board-lane[data-stage="owed"] { grid-column: 1 / -1; }
+.staff-board-lane[data-stage="owed"] .staff-lane-header h3 { color: var(--danger); }
+.staff-board-lane[data-stage="owed"] .staff-count { background: var(--danger-soft, var(--surface-sunken)); color: var(--danger); }
+@media (min-width: 1024px) {
+  .staff-board-lane[data-stage="owed"] { background: transparent; padding: 0; }
+  .staff-board-lane[data-stage="owed"] .staff-lane-orders { grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+}
+
+/* Un tocco: suggerimento breve, pulsanti grandi, azioni di stato piccole sotto. */
+.ticket-hint { margin: 0; font-size: var(--text-sm); color: var(--ink-3); }
+.staff-order-card .order-actions .button-outline { min-height: 48px; }
+.staff-order-card .order-actions--small { padding-top: 0; gap: var(--space-1); flex-wrap: wrap; }
+.staff-board-help { margin: 0; font-size: var(--text-sm); color: var(--ink-2); }
+.staff-order-card .order-actions--small .button { min-height: 40px; }
+
+/* Secondi per annullare un tocco sbagliato: la barra si svuota da sola. */
+.staff-order-card.is-pending { border-left-color: var(--lavagna); background: var(--lavagna-soft); }
+.ticket-undo { position: relative; display: flex; align-items: center; gap: var(--space-2); min-height: 48px; padding-top: var(--space-1); overflow: hidden; }
+.ticket-undo-text { flex: 1; font-weight: 700; color: var(--ink); }
+.ticket-undo-button { min-height: 44px; background: var(--surface); }
+.ticket-undo::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--lavagna); transform-origin: left; animation: ticket-undo var(--undo-ms, 3000ms) linear forwards; }
+@keyframes ticket-undo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .ticket-undo::after { animation: none; } }
+
+/* Rimborso: un tocco sul motivo fa partire tutto. */
+.reason-chips { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.reason-chips legend { font-weight: 700; margin-bottom: var(--space-2); }
+.reason-chip-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); gap: var(--space-2); }
+.reason-chip { min-height: 52px; justify-content: flex-start; text-align: left; white-space: normal; }
+.refund-drawer { display: grid; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius); background: var(--warning-soft, var(--surface-sunken)); }
+.refund-drawer .help { margin: 0; color: var(--ink); font-weight: 650; }
+.staff-cash-shortcut[data-state="closed"] { border-color: var(--warning); color: var(--warning); }

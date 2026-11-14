@@ -33,8 +33,10 @@ test('customer sentence matches the server rounding (half up, cents)',()=>{
 });
 
 test('every counter collection prompt uses the discounted amount',()=>{
-  assert.match(read('src/js/features/orders/orders.js'),/const due=counterDueCents\(balance\.data\)[^]*hai ricevuto \$\{formatEuro\(due\)\}/);
-  assert.match(read('src/js/features/orders/pickup-qr.js'),/data\.due_cents=counterDueCents\(balance\.data\)/);
+  // Il pulsante del banco mostra l'importo scontato con la stessa formula del server.
+  const flow=read('src/js/features/orders/counter-flow.js');
+  assert.match(flow,/Math\.min\(due-1,Math\.floor\(\(due\*rate\+5000\)\/10000\)\)/);
+  assert.match(read('src/js/features/orders/orders.js'),/ticketActions\(o,\{bps:schoolBps\.get\(o\.school_id\)/);
   assert.match(read('src/js/features/groups/group-service.js'),/cents\(counterDueCents\(data\)\)\+' dal coordinatore'/);
   assert.match(read('src/js/features/offline/terminal.js'),/o\.counter_due_cents\?\?o\.due_cents/);
 });

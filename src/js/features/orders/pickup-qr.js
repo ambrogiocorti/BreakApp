@@ -1,10 +1,4 @@
-import {confirmDialog,promptDialog} from '../../core/dialog.js';
-import {releaseAbandonedCheckout} from './checkout-release.js';
-import { formatEuro } from '../catalog/utils.js';
 import { makePickupQrValue, parsePickupQrValue, parseOrderDisplayNumber } from './qr-utils.js';
-import { orderStatusLabel } from './staff-board.js';
-import { counterDueCents, counterDiscountNote } from './counter-discount.js';
-import { receiptQuestion, pendingReceiptCents, markReceiptsIssued } from './receipt-step.js';
 
 const el=(tag,text,cls='')=>{
   const node=document.createElement(tag);
@@ -55,7 +49,10 @@ export function initializePickupQr(client) {
     video.pause();video.srcObject=null;video.hidden=true;inFlight=false;
     cameraBtn.disabled=false;cameraBtn.textContent='Apri fotocamera';
   }
-  scanDialog.addEventListener('close',()=>{stopCamera();queryVersion+=1;});
+  scanDialog.addEventListener('close',()=>{
+    stopCamera();queryVersion+=1;
+    window.dispatchEvent(new CustomEvent('breakapp:counter-scan-closed'));
+  });
 
   async function allowedStaff(schoolId) {
     if(!currentUser)return false;
@@ -71,101 +68,33 @@ export function initializePickupQr(client) {
       (m.role_assignments||[]).some(r=>r.role_code==='bartender'
         ||(r.role_code==='school_admin'&&aal2)));
   }
+  // Il cliente mostra il QR: l'ordine compare qui con gli stessi pulsanti del
+  // banco (un tocco per incassare e consegnare). Dopo il tocco la fotocamera
+  // torna a leggere da sola per il cliente successivo.
+  let lastToken='',lastTokenAt=0;
   async function lookup(filter) {
     const version=++queryVersion;
-    result.replaceChildren();report('Verifica ordine in corso...');
+    result.replaceChildren();report('Cerco l’ordine…');
     try{
-      let q=client.from('orders').select(
-        'id,school_id,display_no,status,payment_status,total_cents,pickup_windows(service_date,starts_at,ends_at),order_items(product_name,quantity)'
-      );
+      let q=client.from('orders').select('id,school_id,display_no');
       q=filter.token?q.eq('pickup_token',filter.token):q.eq('display_no',filter.displayNo);
       const {data,error}=await q.maybeSingle();
       if(version!==queryVersion || !scanDialog.open)return;
       if(error)throw error;
-      if(!data)throw new Error('Ordine non trovato oppure non autorizzato.');
-      if(!await allowedStaff(data.school_id))throw new Error('Non sei autorizzato a gestire questo ordine.');
-      const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:data.id});
-      if(balance.error)throw balance.error;data.due_cents=counterDueCents(balance.data);data.counter_note=counterDiscountNote(balance.data);
+      if(!data)throw new Error('Ordine non trovato.');
+      if(!await allowedStaff(data.school_id))throw new Error('Questo ordine è di un’altra scuola.');
       if(version!==queryVersion || !scanDialog.open)return;
-      drawOrder(data);
-      report('Ordine #'+data.display_no+' verificato dal server.');
-    }catch(err){if(version===queryVersion)report(err.message||'Ricerca ordine non riuscita.',true);}
+      report('Ordine #'+data.display_no);
+      inFlight=true;
+      window.dispatchEvent(new CustomEvent('breakapp:counter-scan',{detail:{orderId:data.id,container:result,done:resume}}));
+    }catch(err){if(version===queryVersion){report(err.message||'Ricerca non riuscita.',true);resume();}}
   }
-
-  function drawOrder(order) {
-    result.replaceChildren();
-    const heading=el('h3','Ordine #'+order.display_no+' · '+orderStatusLabel(order.status));
-    const slot=order.pickup_windows;
-    const when=el('p',slot?'Ritiro: '+slot.service_date+' · '+slot.starts_at.slice(0,5):'Ritiro da verificare','catalog-help');
-    const payment=el('p',
-      'Totale: '+formatEuro(order.total_cents)+' · '+
-      (order.payment_status==='paid'?'Pagato':order.payment_status==='refund_pending'?'Rimborso in elaborazione':order.payment_status==='refunded'?'Rimborsato':'Saldo da incassare'),'catalog-help');
-    const items=el('ul','', 'scan-item-list');
-    for(const x of order.order_items||[]) items.append(el('li',x.quantity+' × '+x.product_name));
-    result.append(heading,when,payment,items);
-    if(order.status!=='ready'){
-      result.append(el('p','Consegna non disponibile: ordine non pronto oppure già concluso.','catalog-help'));
-      return;
-    }
-    const actions=el('div','', 'order-actions');
-    async function execute(label,query,receiptCents=0,{collect=false}={}){
-      if(collect){
-        const blocked=await releaseAbandonedCheckout(client,order,message=>confirmDialog({title:'Pagamento con carta aperto',message,confirmLabel:'Annulla e incassa',focusConfirm:true}));
-        if(blocked){report(blocked,true);return;}
-      }
-      const cents=typeof receiptCents==='function'?await receiptCents():receiptCents;
-      if(cents>0&&!await confirmDialog({title:'Scontrino',message:receiptQuestion(order.display_no,cents,{online:order.payment_status==='paid'}),confirmLabel:'Fatto',focusConfirm:true}))return;
-      if(!await confirmDialog({title:'Confermi?',message:label,focusConfirm:true}))return;
-      const buttons=[...actions.querySelectorAll('button')];
-      buttons.forEach(button=>{button.disabled=true;});
-      report('Registrazione dell’operazione sul server…');
-      try{
-        const {error}=await query();
-        if(error)throw error;
-        await lookup({displayNo:String(order.display_no)});
-        document.querySelector('#staff-refresh')?.click();
-      }catch(err){
-        report(err.message||'Operazione non riuscita.',true);
-        buttons.forEach(button=>{button.disabled=false;});
-      }
-    }
-    function command(label,message,callback,receiptCents=0,options={}){
-      const button=el('button',label,'button button-primary button-small');
-      button.type='button';button.addEventListener('click',()=>void execute(message,callback,receiptCents,options));
-      actions.append(button);
-    }
-    // Payment at the counter and delivery in one confirmation: the same two
-    // server calls as before, in order; the server still refuses an unpaid delivery.
-    const collectAndDeliver=method=>async()=>{
-      const paid=await client.rpc('record_individual_counter_payment',{
-        p_order_id:order.id,p_method:method,p_request_key:crypto.randomUUID()
-      });
-      if(paid.error)return paid;
-      const receiptProblem=await markReceiptsIssued(client,order.id);
-      if(receiptProblem)report(receiptProblem,true);
-      const delivered=await client.rpc('advance_individual_order',{p_order_id:order.id,p_next:'delivered'});
-      if(delivered.error)return {error:new Error('Incasso registrato, consegna non registrata: '+delivered.error.message)};
-      return delivered;
-    };
-    if(order.payment_status==='due') {
-      command('Contanti e consegna',
-        'Hai ricevuto '+formatEuro(order.due_cents)+' in contanti'+(order.counter_note||'')+' e consegnato tutti i prodotti?',
-        collectAndDeliver('cash'),order.due_cents,{collect:true});
-      command('POS e consegna',
-        'Il POS esterno ha registrato '+formatEuro(order.due_cents)+(order.counter_note||'')+' e hai consegnato tutti i prodotti?',
-        collectAndDeliver('external_pos'),order.due_cents,{collect:true});
-    }
-    if(order.payment_status==='paid'){
-      command('Consegna ordine',
-        'Confermi esplicitamente la consegna di tutti i prodotti al cliente?',
-        async()=>{
-          const problem=await markReceiptsIssued(client,order.id);
-          if(problem)report(problem,true);
-          return client.rpc('advance_individual_order',{p_order_id:order.id,p_next:'delivered'});
-        },()=>pendingReceiptCents(client,order.id));
-    }
-    result.append(actions);
+  // Dopo il tocco (o l'annullamento) si torna a leggere i QR.
+  function resume(){
+    inFlight=false;
+    if(active&&scanDialog.open&&frameId===null)frameId=requestAnimationFrame(()=>void readLoop?.());
   }
+  let readLoop=null;
 
   async function startCamera(){
     if(active||inFlight)return;
@@ -186,6 +115,7 @@ export function initializePickupQr(client) {
       active=true;cameraBtn.textContent='Fotocamera attiva';
       report('Inquadra il QR personale del cliente.');
       const read=async()=>{
+        frameId=null;
         if(!active||inFlight||!scanDialog.open)return;
         try{
           const codes=await detector.detect(video);
@@ -200,15 +130,17 @@ export function initializePickupQr(client) {
               return;
             }
             const token=parsePickupQrValue(code.rawValue);
-            if(token){
-              stopCamera();
+            // Lo stesso QR ancora inquadrato non riapre l'ordine appena gestito.
+            if(token&&(token!==lastToken||Date.now()-lastTokenAt>8000)){
+              lastToken=token;lastTokenAt=Date.now();
               await lookup({token});
               return;
             }
           }
         }catch(err){report('Lettura non riuscita. Riprova oppure cerca il numero ordine.',true);}
-        if(active)frameId=requestAnimationFrame(()=>void read());
+        if(active&&!inFlight)frameId=requestAnimationFrame(()=>void read());
       };
+      readLoop=read;
       frameId=requestAnimationFrame(()=>void read());
     }catch(err){
       stopCamera();
@@ -225,14 +157,16 @@ export function initializePickupQr(client) {
     event.preventDefault();
     const displayNo=parseOrderDisplayNumber(manualInput.value);
     if(!displayNo)return report('Inserisci un numero d’ordine valido.',true);
-    stopCamera();void lookup({displayNo});
+    void lookup({displayNo});
   });
   document.querySelector('#staff-scan-open').addEventListener('click',()=>{
     if(!currentUser)return;
     result.replaceChildren();
     manual.reset();
-    report('Scegli scansione QR oppure ricerca manuale.');
     scanDialog.showModal();
+    // La fotocamera parte subito: niente tocco in piu'. Senza scanner si usa il numero.
+    if('BarcodeDetector' in window&&navigator.mediaDevices?.getUserMedia){report('Inquadra il QR del cliente.');void startCamera();}
+    else{report('Scrivi il numero dell’ordine.');manualInput.focus();}
   });
   client.auth.onAuthStateChange((_event,session)=>queueMicrotask(()=>{
     currentUser=session?.user||null;
