@@ -18,15 +18,21 @@ test('refunds are started from a selected staff order, without manual UUID',()=>
   assert.doesNotMatch(pilot,/pilot-refund-form/);
 });
 
-test('only paid completed staff orders expose the refund button',()=>{
-  assert.match(orders,/o.payment_status==='paid'&&\['delivered','no_show'\].includes\(o.status\)/);
+test('only paid completed staff orders expose the refund button',async()=>{
+  const {ticketActions}=await import('../../src/js/features/orders/counter-flow.js');
+  const keys=o=>ticketActions(o).map(a=>a.key);
+  assert.ok(keys({status:'delivered',payment_status:'paid'}).includes('refund'));
+  assert.ok(keys({status:'no_show',payment_status:'paid'}).includes('refund'));
+  assert.ok(!keys({status:'delivered',payment_status:'refunded'}).includes('refund'));
+  assert.ok(!keys({status:'ready',payment_status:'paid'}).includes('refund'));
   assert.match(orders,/staffSchools.includes\(o.school_id\)/);
   assert.match(orders,/stripeRefundKeys.get\(o.id\)\|\|crypto.randomUUID\(\)/);
 });
 
-test('the mobile bartender board renders only the selected lane',()=>{
+test('the mobile bartender board renders one queue, «Tutti» by default',()=>{
   assert.match(orders,/const compactStaffMedia=matchMedia\('\(max-width: 1023px\)'\)/);
-  assert.match(orders,/if\(compactStaffMedia\.matches&&stage\.key!==selectedLane\)continue/);
+  assert.match(orders,/let selectedLane='all'/);
+  assert.match(orders,/if\(compactStaffMedia\.matches&&!search&&stage\.key!==selectedLane\)continue/);
   assert.match(orders,/compactStaffMedia\.addEventListener\?\.\('change',drawStaff\)/);
 });
 

@@ -13,9 +13,11 @@ test('pending receipt amount nets returns and survives errors',async()=>{
   assert.equal(await markReceiptsIssued({rpc:async()=>({data:1})},'o'),'');
   assert.match(await markReceiptsIssued({rpc:async()=>({error:new Error('x')})},'o'),/Scontrini da emettere/);
 });
-test('counter collection asks for the receipt before the payment and marks it after',()=>{
-  const src=readFileSync(new URL('../../src/js/features/orders/orders.js',import.meta.url),'utf8');
-  const fn=src.slice(src.indexOf('async function collectAndDeliver'),src.indexOf('function action('));
-  assert.ok(fn.indexOf('receiptQuestion')<fn.indexOf('hai ricevuto'));
+test('one-tap handover records the payment, marks the receipt, then delivers',()=>{
+  const src=readFileSync(new URL('../../src/js/features/orders/counter-flow.js',import.meta.url),'utf8');
+  const fn=src.slice(src.indexOf('export async function handOver'),src.indexOf('export async function ownCashSession'));
   assert.ok(fn.indexOf('record_individual_counter_payment')<fn.indexOf('markReceiptsIssued'));
+  assert.ok(fn.indexOf('markReceiptsIssued')<fn.indexOf("p_next:'delivered'"));
+  const html=readFileSync(new URL('../../index.html',import.meta.url),'utf8');
+  assert.match(html,/Batti lo scontrino, poi tocca come paga il cliente/);
 });

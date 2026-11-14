@@ -259,10 +259,11 @@
             </label>
           </div>
           <button type="button" class="button button-primary staff-scan-button" id="staff-scan-open">Scansiona QR</button>
-          <a href="#cash-workspace" class="button button-outline staff-cash-shortcut">Apri cassa</a>
+          <button type="button" id="staff-cash-toggle" class="button button-outline staff-cash-shortcut" hidden>Apri cassa</button>
           <button type="button" class="button button-ghost button-small" id="staff-refresh">Aggiorna</button>
           <p id="staff-live-status" class="live-status" role="status" aria-live="polite">Collegamento…</p>
         </div>
+        <p class="staff-board-help">Batti lo scontrino, poi tocca come paga il cliente: incasso e consegna in un tocco. Hai 3 secondi per annullare.</p>
         <p id="staff-orders-feedback" class="feedback" role="status" aria-live="polite"></p>
         <div class="service-floor">
           <div class="service-queue">
@@ -753,16 +754,6 @@
         <div id="staff-scan-result" class="scan-result"></div>
       </dialog>
 
-      <dialog id="staff-action-confirm" class="ba-dialog confirm-dialog" aria-labelledby="staff-action-title">
-        <form id="staff-action-form">
-          <h2 id="staff-action-title">Confermi?</h2>
-          <p id="staff-action-summary"></p>
-          <div class="dialog-actions">
-            <button id="staff-action-cancel" type="button" class="button button-outline">Annulla</button>
-            <button id="staff-action-approve" type="submit" class="button button-primary">Conferma</button>
-          </div>
-        </form>
-      </dialog>
       <dialog id="staff-cash-return-dialog" class="ba-dialog" aria-labelledby="staff-cash-return-title">
         <form id="staff-cash-return-form" class="form-stack">
           <h2 id="staff-cash-return-title">Registra la restituzione</h2>
@@ -805,14 +796,21 @@
               <label class="check"><input type="radio" name="staff-exchange-pay" value="external_pos" /> POS</label>
             </fieldset>
           </div>
-          <div class="field"><label for="staff-refund-reason-preset">Motivo</label>
-            <select id="staff-refund-reason-preset"></select></div>
+          <div id="staff-refund-drawer" class="refund-drawer" hidden>
+            <p class="help">La cassa è chiusa: la apro io con questo fondo.</p>
+            <div class="field"><label for="staff-refund-opening">Fondo cassa (€)</label>
+              <input id="staff-refund-opening" inputmode="decimal" value="0,00" autocomplete="off" /></div>
+          </div>
+          <fieldset id="staff-refund-reasons" class="reason-chips">
+            <legend id="staff-refund-reasons-title">Tocca il motivo: il rimborso parte subito</legend>
+            <div id="staff-refund-reason-list" class="reason-chip-list"></div>
+          </fieldset>
           <div class="field" id="staff-refund-reason-field" hidden><label for="staff-refund-reason">Scrivi il motivo</label>
             <textarea id="staff-refund-reason" minlength="8" maxlength="300" rows="2" placeholder="Almeno 8 caratteri"></textarea></div>
           <p id="staff-refund-feedback" class="feedback" role="status" aria-live="polite"></p>
           <div class="dialog-actions">
-            <button id="staff-refund-cancel" type="button" class="button button-outline">Annulla</button>
-            <button id="staff-refund-submit" type="submit" class="button button-danger">Rimborsa</button>
+            <button id="staff-refund-cancel" type="button" class="button button-outline">Chiudi</button>
+            <button id="staff-refund-submit" type="submit" class="button button-danger" hidden>Rimborsa</button>
           </div>
         </form>
       </dialog>

@@ -19,7 +19,7 @@ test('P0: stale staff role checks and old sessions cannot restore private order 
   assert.match(orders,/const attempt=\+\+staffAuthVersion,actor=user\?\.id/);
   assert.match(orders,/attempt!==staffAuthVersion\|\|user\?\.id!==actor/);
   assert.match(orders,/staffAuthVersion\+\+;/);
-  assert.match(orders,/staffSchools=\[\];staffOrders=\[\]/);
+  assert.match(orders,/staffSchools=\[\];baristaSchools=\[\];staffOrders=\[\]/);
   assert.match(orders,/if\(attempt===staffAuthVersion&&user\?\.id===actor&&staffSchools\.length\)/);
 });
 
