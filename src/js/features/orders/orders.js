@@ -4,7 +4,7 @@ import { formatEuro } from '../catalog/utils.js';
 import { orderStatusLabel, slotLabel, availableSlots, boardOrders, productionTotals, windowLabel, orderStatusTone, paymentState } from './staff-board.js';
 import { accuratePosition, schoolAccuracyLimit, schoolRequiresGeolocation } from '../../core/geolocation.js';
 import { paymentError } from '../../core/payment-error.js';
-import { confirmDialog, toast } from '../../core/dialog.js';
+import { confirmDialog } from '../../core/dialog.js';
 import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
 import { counterDueCents, counterDiscountNote, counterPriceSentence } from './counter-discount.js';
@@ -450,7 +450,6 @@ export function initializeOrders(client) {
       if(!cart.some(x=>x.product_id===id)&&cart.length>=100)
         throw new Error('Il carrello contiene già il numero massimo di prodotti.');
       changeCart(cartAdd(cart,id,1));
-      toast(product.name+' nel carrello');
     }catch(error){report(status,error?.message||'Impossibile aggiungere il prodotto.',true);}
   });
   window.addEventListener('breakapp:quick-set',event=>{
