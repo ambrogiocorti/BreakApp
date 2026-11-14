@@ -11,6 +11,7 @@ import { counterDueCents, counterDiscountNote, counterPriceSentence } from './co
 import { markReceiptsIssued } from './receipt-step.js';
 import { REFUND_REASONS, OTHER_REASON, refundReason as chosenRefundReason, exchangeableLines, exchangeDifference, exchangeDifferenceText, returnCashNow, cashOutcomeText } from './refund-exchange.js';
 import { ACTIVE, UNDO_MS, ticketActions, pendingText, handOver, counterError, ownCashSession, openCashSession } from './counter-flow.js';
+import { usefulNotices } from '../notifications/routine-notices.js';
 
 const elem = (tag, text='', cls='') => {
   const node=document.createElement(tag); node.className=cls; node.textContent=text; return node;
@@ -806,13 +807,14 @@ export function initializeOrders(client) {
     const noticeArea=document.querySelector('#customer-service-notices');
     if(noticeArea){
       const n=await client.from('customer_notifications')
-        .select('message,created_at,read_at')
-        .eq('user_id',user.id).order('created_at',{ascending:false}).limit(15);
+        .select('message,event_type,created_at,read_at')
+        .eq('user_id',user.id).order('created_at',{ascending:false}).limit(40);
       noticeArea.replaceChildren();
-      if(!n.error && n.data?.length){
+      const notices=n.error?[]:usefulNotices(n.data).slice(0,15);
+      if(notices.length){
         const h=elem('h3','Avvisi sui tuoi ordini');
         noticeArea.append(h);
-        n.data.forEach(row=>{
+        notices.forEach(row=>{
           const card=elem('div','','service-notice');
           card.append(elem('strong',new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(row.created_at))),
             elem('p',row.message));noticeArea.append(card);

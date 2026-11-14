@@ -1,3 +1,4 @@
+import {usefulNotices} from './routine-notices.js';
 const byId=id=>document.getElementById(id);
 // Revoke browser endpoint when signing out of a shared school device.
 // Always unsubscribe locally, even when the remote deletion fails.
@@ -98,7 +99,7 @@ export function initializeInAppNotifications(client){
    markAll.hidden=!unread;
    toggle.setAttribute('aria-label',unread
      ?'Notifiche: '+unread+' non lette':'Apri notifiche');
-   if(!rows.length){const empty=make('div','','notice-empty');empty.append(make('strong','Nessuna notifica'),make('p','Qui troverai le conferme dei tuoi ordini e gli avvisi della scuola.'));list.append(empty);return;}
+   if(!rows.length){const empty=make('div','','notice-empty');empty.append(make('strong','Nessuna notifica'),make('p','Qui compaiono solo gli avvisi importanti: ordini annullati o spostati, gruppi, assistenza e scuola.'));list.append(empty);return;}
    for(const n of rows){
      const item=make('article','','notice-row'+(n.read_at?'':' notice-unread'));
      item.dataset.tone=noticeCategory(n.event_type).tone;
@@ -155,7 +156,7 @@ export function initializeInAppNotifications(client){
      .eq('user_id',uid).order('created_at',{ascending:false}).limit(100);
    if(current!==epoch||user?.id!==uid)return;
    if(error){report('Impossibile aggiornare gli avvisi: '+error.message,true);return;}
-   renderRows(data||[]);
+   renderRows(usefulNotices(data));
    if(!feedback.dataset.type||feedback.dataset.type==='information')report('');
  }
  async function loadPreferences(){
