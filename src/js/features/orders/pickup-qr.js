@@ -1,4 +1,5 @@
 import {confirmDialog,promptDialog} from '../../core/dialog.js';
+import {releaseAbandonedCheckout} from './checkout-release.js';
 import { formatEuro } from '../catalog/utils.js';
 import { makePickupQrValue, parsePickupQrValue, parseOrderDisplayNumber } from './qr-utils.js';
 import { orderStatusLabel } from './staff-board.js';
@@ -107,7 +108,11 @@ export function initializePickupQr(client) {
       return;
     }
     const actions=el('div','', 'order-actions');
-    async function execute(label,query,receiptCents=0){
+    async function execute(label,query,receiptCents=0,{collect=false}={}){
+      if(collect){
+        const blocked=await releaseAbandonedCheckout(client,order,message=>confirmDialog({title:'Pagamento con carta aperto',message,confirmLabel:'Annulla e incassa',focusConfirm:true}));
+        if(blocked){report(blocked,true);return;}
+      }
       const cents=typeof receiptCents==='function'?await receiptCents():receiptCents;
       if(cents>0&&!await confirmDialog({title:'Scontrino',message:receiptQuestion(order.display_no,cents,{online:order.payment_status==='paid'}),confirmLabel:'Fatto',focusConfirm:true}))return;
       if(!await confirmDialog({title:'Confermi?',message:label,focusConfirm:true}))return;
@@ -124,9 +129,9 @@ export function initializePickupQr(client) {
         buttons.forEach(button=>{button.disabled=false;});
       }
     }
-    function command(label,message,callback,receiptCents=0){
+    function command(label,message,callback,receiptCents=0,options={}){
       const button=el('button',label,'button button-primary button-small');
-      button.type='button';button.addEventListener('click',()=>void execute(message,callback,receiptCents));
+      button.type='button';button.addEventListener('click',()=>void execute(message,callback,receiptCents,options));
       actions.append(button);
     }
     // Payment at the counter and delivery in one confirmation: the same two
@@ -145,10 +150,10 @@ export function initializePickupQr(client) {
     if(order.payment_status==='due') {
       command('Contanti e consegna',
         'Hai ricevuto '+formatEuro(order.due_cents)+' in contanti'+(order.counter_note||'')+' e consegnato tutti i prodotti?',
-        collectAndDeliver('cash'),order.due_cents);
+        collectAndDeliver('cash'),order.due_cents,{collect:true});
       command('POS e consegna',
         'Il POS esterno ha registrato '+formatEuro(order.due_cents)+(order.counter_note||'')+' e hai consegnato tutti i prodotti?',
-        collectAndDeliver('external_pos'),order.due_cents);
+        collectAndDeliver('external_pos'),order.due_cents,{collect:true});
     }
     if(order.payment_status==='paid'){
       command('Consegna ordine',

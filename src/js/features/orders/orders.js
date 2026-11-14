@@ -9,6 +9,7 @@ import { friendlyError } from '../../core/errors.js';
 import { showLocation, locationProblem } from '../../core/location-ui.js';
 import { counterDueCents, counterDiscountNote, counterPriceSentence } from './counter-discount.js';
 import { receiptQuestion, pendingReceiptCents, markReceiptsIssued } from './receipt-step.js';
+import { releaseAbandonedCheckout } from './checkout-release.js';
 import { REFUND_REASONS, OTHER_REASON, refundReason as chosenRefundReason, exchangeableLines, exchangeDifference, exchangeDifferenceText, cashReturnQuestion, exchangePaymentQuestion, returnCashNow, cashOutcomeText } from './refund-exchange.js';
 
 const elem = (tag, text='', cls='') => {
@@ -777,6 +778,8 @@ export function initializeOrders(client) {
   // server steps as before (record the payment, then deliver). The server
   // still refuses delivery of an unpaid order.
   async function collectAndDeliver(o,method,how){
+    const blocked=await releaseAbandonedCheckout(client,o,decideStaffAction);
+    if(blocked)return {error:new Error(blocked)};
     const balance=await client.rpc('workflow_order_details',{p_kind:'individual',p_order:o.id});
     if(balance.error)return balance;
     const due=counterDueCents(balance.data);
