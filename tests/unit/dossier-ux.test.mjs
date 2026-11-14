@@ -88,3 +88,9 @@ test('dossier: grouped navigation preserves every role entitlement',async()=>{
   assert.match(icons,/CloudOff:/);
   assert.match(workspaceJs,/export function allowedRoute/);
 });
+
+test('adding a product to the cart shows no "nel carrello" toast',()=>{
+  assert.doesNotMatch(orders,/toast\([^)]*nel carrello/);
+  assert.doesNotMatch(orders,/\btoast\b/);
+  assert.match(menu,/nel carrello: /);
+});
