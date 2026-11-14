@@ -107,6 +107,31 @@ do $$declare o uuid:=(select o from t);ref jsonb;begin
  if app_private.order_paid_cents('individual',o)<>0 then raise exception 'Full refund after exchange left money: %',ref;end if;
 end;$$;
 
+-- Pagamento con carta abbandonato: il barista lo vede, il cliente no; si chiude solo dal service role.
+do $$declare o uuid;a uuid;r jsonb;begin
+ perform pg_temp.actor('95111111-1111-4111-8111-111111111111');
+ o:=public.submit_individual_order('95000000-0000-4000-8000-000000000002','95000000-0000-4000-8000-000000000009','[{"product_id":"95000000-0000-4000-8000-000000000006","quantity":1}]',gen_random_uuid(),45,9,10,now());
+ reset role;
+ insert into public.payment_attempts(school_id,payer_id,order_id,stripe_account_id,request_key,amount_cents,status,stripe_checkout_session_id)
+  values('95000000-0000-4000-8000-000000000001','95111111-1111-4111-8111-111111111111',o,'acct_test123',gen_random_uuid(),100,'requires_action','cs_test_abc') returning id into a;
+ perform pg_temp.actor('95111111-1111-4111-8111-111111111111');
+ if not pg_temp.denied(format('select public.staff_open_checkout(%L)',o)) then raise exception 'Customer read staff checkout';end if;
+ perform pg_temp.actor('95333333-3333-4333-8333-333333333333');
+ r:=public.staff_open_checkout(o);
+ if not (r->>'open')::boolean or (r->>'amount_cents')::int<>100 or r ? 'session' then raise exception 'Open checkout wrong: %',r;end if;
+ r:=public.staff_checkout_to_cancel(o);
+ if r->>'session'<>'cs_test_abc' or r->>'account'<>'acct_test123' then raise exception 'Cancel data wrong: %',r;end if;
+ if not pg_temp.denied(format('select public.cancel_abandoned_checkout(%L,''cs_test_abc'')',a)) then raise exception 'Barista closed the attempt without Stripe';end if;
+ if not pg_temp.denied(format('select public.collect_workflow_balance(''individual'',%L,''external_pos'',gen_random_uuid())',o)) then raise exception 'Counter payment allowed during open checkout';end if;
+ perform pg_temp.actor('95333333-3333-4333-8333-333333333333','service_role');
+ if not pg_temp.denied(format('select public.cancel_abandoned_checkout(%L,''cs_test_other'')',a)) then raise exception 'Wrong session accepted';end if;
+ if public.cancel_abandoned_checkout(a,'cs_test_abc')<>'cancelled' or public.cancel_abandoned_checkout(a,'cs_test_abc')<>'duplicate' then raise exception 'Cancel not idempotent';end if;
+ perform pg_temp.actor('95333333-3333-4333-8333-333333333333');
+ if (public.staff_open_checkout(o)->>'open')::boolean then raise exception 'Checkout still open';end if;
+ perform public.collect_workflow_balance('individual',o,'external_pos',gen_random_uuid());
+ if (select payment_status from public.orders where id=o)<>'paid' then raise exception 'Counter payment after release failed';end if;
+end;$$;
+
 set local role authenticated;
 do $$begin
  perform set_config('request.jwt.claim.sub','95333333-3333-4333-8333-333333333333',true);
