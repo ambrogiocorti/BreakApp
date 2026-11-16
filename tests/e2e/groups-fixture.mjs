@@ -24,7 +24,9 @@ const data={schools:[{id:school,name:'Scuola dimostrativa',is_active:true}],bars
 const client={auth:{onAuthStateChange(fn){fixture.callbacks.push(fn);},async getUser(){return{data:{user:fixture.user}}}},
  from(name){let rows=data[name]||[];return{select(){return this;},eq(key,value){if(!key.includes('.'))rows=rows.filter(r=>r[key]===value);return this;},gte(){return this;},order(){return this;},limit(){return this;},then(resolve,reject){return Promise.resolve({data:structuredClone(rows),error:null}).then(resolve,reject);}}},
  async rpc(name,args={}){fixture.calls.push({name,args:structuredClone(args)});
-  if(name==='list_my_group_drafts')return{data:fixture.emptyGroups?[]:[{id:group,title:'5A INF',coordinator:true,my_status:'accepted',status:'draft'}]};
+  if(name==='list_my_group_drafts')return{data:fixture.emptyGroups?[]:[{id:group,title:'5A INF',coordinator:true,my_status:'accepted',status:fixture.detail.status}]};
+  if(name==='list_my_confirmed_group_orders')return{data:fixture.order?[{id:fixture.order.id,group_id:group,status:fixture.order.status,coordinator:true}]:[]};
+  if(name==='group_order_details')return{data:structuredClone(fixture.order)};
   if(name==='group_draft_details')return{data:structuredClone(fixture.detail)};
   if(name==='group_payable_lines')return{data:structuredClone(fixture.payable)};
   if(name==='replace_group_personal_cart'){fixture.detail.my_items=structuredClone(args.p_items);fixture.detail.totals={count:args.p_items.reduce((n,i)=>n+i.quantity,0),total_cents:args.p_items.reduce((n,i)=>n+i.quantity*(i.product_id==='product-a'?250:150),0)};return{data:null};}

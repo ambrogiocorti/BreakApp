@@ -12,6 +12,10 @@ const money=c=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).
 const dateRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const groupStatus=status=>({draft:'Bozza',confirmed:'Confermato',preparing:'In preparazione',ready:'Pronto al ritiro',delivered:'Consegnato',no_show:'Non ritirato',approval_pending:'In attesa di approvazione',approval_queued:'In coda per approvazione',approval_active:'In approvazione',awaiting_reschedule:'In attesa di una nuova fascia',expired:'Scaduto',cancelled:'Annullato'})[status]||'Stato da verificare';
 const groupTone=status=>({draft:'brand',confirmed:'info',preparing:'warning',ready:'success',delivered:'neutral',cancelled:'neutral',expired:'neutral',no_show:'danger'})[status]||'warning';
+// Dopo la conferma il gruppo resta «confirmed»: lo stato vero è quello dell'ordine.
+export const shownGroupStatus=(groupState,orderState)=>groupState==='confirmed'&&orderState?orderState:groupState;
+export const finalOrderStatus=status=>['delivered','cancelled','no_show'].includes(status);
+const ORDER_REFRESH_MS=15000;
 const memberStatus=status=>({accepted:'Iscritto',pending:'In attesa',rejected:'Rifiutato',left:'Uscito'})[status]||'Stato da verificare';
 const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato'})[status]||'Stato da verificare';
 // Il server accetta al massimo 50 righe per Checkout.
@@ -79,8 +83,9 @@ export function initializeGroupDrafts(client){
   await selectSchool();
  }
  async function myGroups(){
-  const {data,error}=await client.rpc('list_my_group_drafts');
+  const [{data,error},orders]=await Promise.all([client.rpc('list_my_group_drafts'),client.rpc('list_my_confirmed_group_orders')]);
   if(error)throw error;
+  const orderState=new Map((Array.isArray(orders?.data)?orders.data:[]).map(o=>[o.group_id,o.status]));
   list.replaceChildren();
   if(!Array.isArray(data)||!data.length){
    const guest=Boolean(user?.app_metadata?.guest||user?.is_anonymous);
@@ -91,7 +96,8 @@ export function initializeGroupDrafts(client){
    const text=el('div','','group-draft-text');
    text.append(el('strong',g.title),el('small',
      (g.coordinator?'Coordini tu':'Partecipi')+(g.my_status==='accepted'?'':' · '+memberStatus(g.my_status))));
-   const state=el('span',groupStatus(g.status),'status');state.dataset.tone=groupTone(g.status);
+   const shown=shownGroupStatus(g.status,orderState.get(g.id));
+   const state=el('span',groupStatus(shown),'status');state.dataset.tone=groupTone(shown);
    const open=el('button','Apri','button button-outline button-small group-open');
    open.type='button';open.setAttribute('aria-label','Apri il gruppo '+g.title);
    open.addEventListener('click',()=>void showGroup(g.id,{focus:true}));
@@ -171,7 +177,7 @@ export function initializeGroupDrafts(client){
   byId('group-detail-title').textContent=detail.title;
   const pickup=windows.find(w=>w.id===detail.pickup_window_id);
   const meta=byId('group-detail-meta');meta.replaceChildren();
-  const state=el('span',groupStatus(detail.status),'status');state.dataset.tone=groupTone(detail.status);
+  const state=el('span',groupStatus(detail.status),'status');state.id='group-detail-state';state.dataset.tone=groupTone(detail.status);
   meta.append(state,el('span',(detail.coordinator?'Coordini tu':'Partecipi')+(detail.my_status==='accepted'?'':' · '+memberStatus(detail.my_status))));
   if(pickup)meta.append(el('span','Ritiro '+windowLabel(pickup)));
   byId('group-aggregate').replaceChildren(
@@ -180,7 +186,8 @@ export function initializeGroupDrafts(client){
    el('span',(detail.totals?.count||0)+' prodotti')
   );
   const invite=byId('group-invite');
-  invite.hidden=!detail.coordinator||!detail.invite_token;
+  // Dopo la conferma nessuno può più entrare: l'invito non serve.
+  invite.hidden=!detail.coordinator||!detail.invite_token||detail.status!=='draft';
   if(!invite.hidden){
    const u=new URL(location.href);
    u.searchParams.set('invite',detail.invite_token);u.hash='groups';
@@ -220,6 +227,7 @@ export function initializeGroupDrafts(client){
   byId('group-accept-unready-label').hidden=!unready;
   if(!unready)byId('group-accept-unready').checked=false;
   byId('group-confirmed-panel').hidden=true;
+  stopOrderRefresh();
   if(['confirmed','approval_pending'].includes(detail.status))await loadConfirmedGroup(detail.id,seq);
   const readyButton=byId('group-ready');
   readyButton.textContent=detail.my_ready?'Modifica il mio ordine':'Ho finito';
@@ -441,6 +449,7 @@ export function initializeGroupDrafts(client){
   });
   if(seq!==version)return;
   if(summaryError)return report(summaryError.message,true);
+  showOrderState(summary);
   byId('group-confirmed-panel').hidden=false;
   const facts=el('dl','','group-facts');
   for(const [term,value] of [['Stato',groupStatus(summary.status)],['Totale',money(Number(summary.total_cents||0))],['Pagato',money(Number(summary.paid_cents||0))],['Da pagare',money(Number(summary.due_cents||0))]]){
@@ -462,6 +471,30 @@ export function initializeGroupDrafts(client){
   const cancel=byId('group-cancel-confirmed');
   cancel.hidden=!summary.coordinator||!['confirmed','ready'].includes(summary.status);
   cancel.dataset.orderId=summary.id;
+  if(!finalOrderStatus(summary.status))startOrderRefresh(groupId,summary);
+ }
+ function showOrderState(summary){
+  const state=byId('group-detail-state');
+  if(!state||!detail)return;
+  const shown=shownGroupStatus(detail.status,summary.status);
+  state.textContent=groupStatus(shown);state.dataset.tone=groupTone(shown);
+ }
+ // L'ordine cambia al banco: la pagina lo rilegge finché non è chiuso.
+ let orderTimer=null;
+ function stopOrderRefresh(){clearInterval(orderTimer);orderTimer=null;}
+ function startOrderRefresh(groupId,summary){
+  stopOrderRefresh();
+  const seen=[summary.status,summary.paid_cents,summary.due_cents,summary.total_cents].join('|');
+  const seq=version;
+  orderTimer=setInterval(async()=>{
+   if(seq!==version||detail?.id!==groupId){stopOrderRefresh();return;}
+   if(document.hidden||!navigator.onLine)return;
+   const {data,error}=await client.rpc('group_order_details',{p_group_order_id:summary.id});
+   if(error||seq!==version||detail?.id!==groupId)return;
+   if([data?.status,data?.paid_cents,data?.due_cents,data?.total_cents].join('|')===seen)return;
+   stopOrderRefresh();
+   await showGroup(groupId);void myGroups().catch(()=>{});
+  },ORDER_REFRESH_MS);
  }
  byId('group-confirm').addEventListener('click',async()=>{
   if(!detail?.coordinator||detail.status!=='draft')return;
@@ -568,7 +601,7 @@ export function initializeGroupDrafts(client){
  });
  byId('groups-refresh').addEventListener('click',()=>void reload({announce:true}));
  byId('group-back').addEventListener('click',()=>{
-  version++;detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;report('');
+  version++;stopOrderRefresh();detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;report('');
   byId('groups-heading').focus();
  });
  window.addEventListener('breakapp:workspace-context',event=>{
@@ -588,7 +621,7 @@ export function initializeGroupDrafts(client){
   panel.hidden=!user;
   const guest=Boolean(user?.app_metadata?.guest||user?.is_anonymous);
   byId('groups-create-disclosure').hidden=guest;panel.classList.toggle('group-guest',guest);
-  if(!user){version++;detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;list.replaceChildren();return;}
+  if(!user){version++;stopOrderRefresh();detail=null;detailPanel.hidden=true;overview.hidden=false;pageHeading.hidden=false;list.replaceChildren();return;}
   if(changed)void reload();
   if(changed&&location.search.includes('invite=')){
    const invite=new URLSearchParams(location.search).get('invite');

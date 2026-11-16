@@ -50,6 +50,10 @@ jobs:
         env:
           GROUP_BROWSER: chromium
         run: node tests/e2e/groups.mjs
+      - name: Group tag follows the real order status
+        env:
+          GROUP_BROWSER: chromium
+        run: node tests/e2e/groups-status.mjs
       - name: Booking and cancellable location request
         env:
           CHECKOUT_BROWSER: chromium
