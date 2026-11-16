@@ -51,6 +51,8 @@ jobs:
         run: node tests/e2e/support.mjs
       - name: Test group overview, cart and location controls on three browsers
         run: node tests/e2e/groups.mjs
+      - name: Test group tag follows the real order status on three browsers
+        run: node tests/e2e/groups-status.mjs
       - name: Test booking and cancellable location request on three browsers
         run: node tests/e2e/checkout.mjs
       - name: Test guest creation, verified email binding and recovery controls on three browsers
