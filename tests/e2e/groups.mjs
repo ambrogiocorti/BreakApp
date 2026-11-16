@@ -50,6 +50,27 @@ try{
    const calls=await page.evaluate(()=>window.fixture.calls.filter(x=>['replace_group_personal_cart','set_group_personal_ready'].includes(x.name)));
    assert.deepEqual(calls.map(x=>x.name),['replace_group_personal_cart','set_group_personal_ready']);
    assert.equal(calls[0].args.p_items[0].quantity,2);
+   // «Paga tutto il resto»: solo righe ancora da pagare, importo riletto dal server.
+   await page.getByText('Pagamento online',{exact:true}).click();
+   const payAll=page.getByRole('button',{name:/Paga tutto il resto/});
+   assert.match((await payAll.innerText()).replace(/\s+/g,' '),/Paga tutto il resto · 6,50/);
+   await payAll.click();
+   const dialog=page.getByRole('dialog');
+   await dialog.getByText(/Paghi 6,50.*2 righe ancora da pagare.*pagamento in corso restano escluse/).waitFor();
+   await dialog.getByRole('button',{name:'Indietro'}).click();
+   assert.equal(await page.evaluate(()=>window.fixture.invokes.length),0);
+   await payAll.click();
+   await dialog.getByRole('button',{name:/Paga 6,50/}).click();
+   await page.waitForFunction(()=>window.fixture.invokes.length===1);
+   const invoke=await page.evaluate(()=>window.fixture.invokes[0]);
+   assert.equal(invoke.name,'stripe-checkout-group');
+   assert.deepEqual(invoke.body.line_ids,['e1111111-1111-4111-8111-111111111111','e2222222-2222-4222-8222-222222222222']);
+   await page.getByText('Pagamento non disponibile nel test').waitFor();
+   assert.equal(await payAll.isEnabled(),true);
+   await page.evaluate(()=>{for(const l of window.fixture.payable)l.payment_state='paid';});
+   await payAll.click();
+   await page.getByText('Non resta nulla da pagare.').waitFor();
+   assert.equal(await payAll.isVisible(),false);
    await page.getByText('Impostazioni del gruppo',{exact:true}).click();
    assert.equal(await page.getByRole('button',{name:'Nuovo link di invito'}).isVisible(),true);
    await page.getByRole('button',{name:'← I tuoi gruppi'}).click();
@@ -71,7 +92,7 @@ try{
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
    assert.ok(overflow<=3,'horizontal overflow: '+overflow);
    assert.deepEqual(errors,[]);
-   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'compact group overview, saved cart, settings, guest access without GPS'}));
+   console.log(JSON.stringify({browser:name,viewport,result:'PASS',scenario:'compact group overview, saved cart, pay all remaining, settings, guest access without GPS'}));
    await context.close();
   }
   await browser.close();browser=null;
