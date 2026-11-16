@@ -62,9 +62,10 @@ try{
    await page.getByRole('button',{name:'Crea un account',exact:true}).click();await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='signup'));
    assert.equal(await page.locator('#signed-out-view').isVisible(),true);
    await page.getByLabel('Indirizzo email',{exact:true}).fill('demo@admin.breakapp.it');await page.getByRole('button',{name:'Crea un account',exact:true}).click();
-   await page.locator('#signed-in-view').waitFor();
-   assert.deepEqual(await page.evaluate(()=>window.fixture.calls.filter(c=>['admin-registration','password'].includes(c.name)).map(c=>c.name)),['admin-registration','password']);
-   assert.equal(await page.locator('#mfa-backup-button').count(),0);
+   // La registrazione self-service admin è rimossa: resta disconnesso, nessuna operazione privilegiata.
+   await page.getByText(/Super Admin/).waitFor();
+   assert.equal(await page.locator('#signed-out-view').isVisible(),true);
+   assert.deepEqual(await page.evaluate(()=>window.fixture.calls.filter(c=>['admin-registration','password'].includes(c.name)).map(c=>c.name)),[]);
    assert.deepEqual(errors,[]);await page.close();
    page=await browser.newPage({viewport});page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/__auth-qa?mode=mfa');await page.waitForFunction(()=>window.fixture?.ready);
    assert.equal(await page.evaluate(()=>window.fixture.verified),true);assert.equal(await page.locator('#mfa-enroll-button').isVisible(),false);

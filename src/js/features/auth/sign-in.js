@@ -6,17 +6,12 @@ export function oauthRequest(provider,redirectTo){
 }
 
 export async function registerWithPassword(client,credentials,redirectTo){
- if(!isInternalAdminEmail(credentials.email))return client.auth.signUp({...credentials,options:{emailRedirectTo:redirectTo}});
- // The service applies the exact-domain exception; the browser cannot confirm
- // an email or set app_metadata, memberships or administrator roles.
- const result=await client.functions.invoke('admin-registration',{body:{email:credentials.email.trim().toLowerCase(),password:credentials.password}});
- if(result.error){
-  let message='Registrazione non disponibile. Riprova tra poco.';
-  try{const detail=await result.error.context?.clone().json();if(typeof detail?.error==='string')message=detail.error;}catch{/* No internal response details. */}
-  return {data:null,error:new Error(message)};
- }
- if(result.data?.ok!==true)return {data:null,error:new Error('Registrazione non disponibile. Riprova tra poco.')};
- return client.auth.signInWithPassword(credentials);
+ // La registrazione self-service degli account amministratore è stata rimossa
+ // (scelta del 16/11/2026): gli account Admin sono creati solo dal Super Admin.
+ // Gli indirizzi @admin.breakapp.it non possono più registrarsi da qui.
+ if(isInternalAdminEmail(credentials.email))
+  return {data:null,error:new Error('Gli account amministratore non si registrano da qui: vengono creati dal Super Admin. Accedi con l’email indicata dal Super Admin e inserisci il codice invito nel Profilo.')};
+ return client.auth.signUp({...credentials,options:{emailRedirectTo:redirectTo}});
 }
 
 export async function readOAuthProviders(config,fetcher=fetch){
