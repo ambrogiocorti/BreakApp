@@ -59,13 +59,22 @@ try{
    await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='oauth'&&c.args.provider==='azure'&&c.args.options.scopes==='email'));
    const callbacks=await page.evaluate(()=>window.fixture.calls.filter(c=>c.name==='oauth').map(c=>c.args.options.redirectTo));assert.deepEqual(callbacks,[origin+'/',origin+'/']);
    await page.getByLabel('Indirizzo email',{exact:true}).fill('normal@example.invalid');await page.getByLabel('Password',{exact:true}).fill('fixture-pass');
+   assert.equal(await page.locator('#auth-invite-field').isHidden(),true);
    await page.getByRole('button',{name:'Crea un account',exact:true}).click();await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='signup'));
    assert.equal(await page.locator('#signed-out-view').isVisible(),true);
-   await page.getByLabel('Indirizzo email',{exact:true}).fill('demo@admin.breakapp.it');await page.getByRole('button',{name:'Crea un account',exact:true}).click();
-   // La registrazione self-service admin è rimossa: resta disconnesso, nessuna operazione privilegiata.
-   await page.getByText(/Super Admin/).waitFor();
+   // @admin.breakapp.it: il campo codice di invito compare e senza codice la registrazione è bloccata.
+   await page.getByLabel('Indirizzo email',{exact:true}).fill('demo@admin.breakapp.it');
+   await page.locator('#auth-invite-field:not([hidden])').waitFor();
+   await page.getByRole('button',{name:'Crea un account',exact:true}).click();
+   await page.waitForFunction(()=>document.getElementById('auth-feedback').textContent.toLowerCase().includes('codice di invito'));
    assert.equal(await page.locator('#signed-out-view').isVisible(),true);
    assert.deepEqual(await page.evaluate(()=>window.fixture.calls.filter(c=>['admin-registration','password'].includes(c.name)).map(c=>c.name)),[]);
+   // Con un codice valido la registrazione passa dalla edge function admin-registration e poi effettua l'accesso.
+   await page.getByLabel('Codice di invito',{exact:true}).fill('INV-123');
+   await page.getByRole('button',{name:'Crea un account',exact:true}).click();
+   await page.waitForFunction(()=>window.fixture.calls.some(c=>c.name==='admin-registration')&&window.fixture.calls.some(c=>c.name==='password'));
+   assert.deepEqual(await page.evaluate(()=>window.fixture.calls.find(c=>c.name==='admin-registration').args.body),{email:'demo@admin.breakapp.it',password:'fixture-pass',code:'INV-123'});
+   await page.waitForFunction(()=>document.getElementById('signed-in-view').hidden===false);
    assert.deepEqual(errors,[]);await page.close();
    page=await browser.newPage({viewport});page.on('pageerror',e=>errors.push(e.message));await page.goto(origin+'/__auth-qa?mode=mfa');await page.waitForFunction(()=>window.fixture?.ready);
    assert.equal(await page.evaluate(()=>window.fixture.verified),true);assert.equal(await page.locator('#mfa-enroll-button').isVisible(),false);

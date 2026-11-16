@@ -6,7 +6,7 @@ import { getAdminSchools } from '../catalog/utils.js';
 import { initializeAdminCatalog } from '../catalog/catalog.js';
 import { initializeAdminMfa } from './mfa.js';
 import { initializeAdminOrderSetup } from '../orders/admin-setup.js';
-import {oauthRequest,readOAuthProviders,oauthReturnError,registerWithPassword} from './sign-in.js';
+import {oauthRequest,readOAuthProviders,oauthReturnError,registerWithPassword,isInternalAdminEmail} from './sign-in.js';
 import {renderStaffClaimForm} from '../operations/school-staff.js';
 
 function setFeedback(element, message, isError = false) {
@@ -232,15 +232,26 @@ export function initializeAuth(config,clientFactory=createClient) {
       setBusy(false);
     }
   }
+  const emailInput = document.querySelector('#auth-email');
+  const inviteField = document.querySelector('#auth-invite-field');
+  const inviteInput = document.querySelector('#auth-invite-code');
+  // Il campo codice di invito compare solo per gli indirizzi @admin.breakapp.it,
+  // che si registrano unicamente con un invito del Super Admin.
+  function refreshInviteField() {
+    if (!inviteField) return;
+    inviteField.hidden = !isInternalAdminEmail(emailInput.value);
+  }
+  emailInput.addEventListener('input', refreshInviteField);
+  refreshInviteField();
   function getCredentials() {
     if (!form.reportValidity()) return null;
-    const email = document.querySelector('#auth-email').value.trim();
+    const email = emailInput.value.trim();
     const password = document.querySelector('#auth-password').value;
     if (!email || password.length < 8) {
       setFeedback(feedback, 'Inserisci email e password di almeno 8 caratteri.', true);
       return null;
     }
-    return { email, password };
+    return { email, password, code: inviteInput ? inviteInput.value.trim() : '' };
   }
 
   form.addEventListener('submit', async (event) => {
