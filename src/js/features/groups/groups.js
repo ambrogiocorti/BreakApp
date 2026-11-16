@@ -17,7 +17,7 @@ export const shownGroupStatus=(groupState,orderState)=>groupState==='confirmed'&
 export const finalOrderStatus=status=>['delivered','cancelled','no_show'].includes(status);
 const ORDER_REFRESH_MS=15000;
 const memberStatus=status=>({accepted:'Iscritto',pending:'In attesa',rejected:'Rifiutato',left:'Uscito'})[status]||'Stato da verificare';
-const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato'})[status]||'Stato da verificare';
+const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato',counter_paid:'Pagato al banco',closed:'Ordine chiuso'})[status]||'Stato da verificare';
 // Il server accetta al massimo 50 righe per Checkout.
 const MAX_CHECKOUT_LINES=50;
 export const remainingLines=lines=>(Array.isArray(lines)?lines:[])
@@ -387,7 +387,13 @@ export function initializeGroupDrafts(client){
   }
   if(!data?.length)list.append(el('p','Non ci sono ancora prodotti da pagare.'));
   const open=remainingLines(data);
-  byId('group-pay-selected').disabled=!open.length;
+  // Se non resta nulla da pagare (online o al banco) niente caselle né pulsanti.
+  const settled=!error&&!!data?.length&&!open.length;
+  list.classList.toggle('is-settled',settled);
+  byId('group-pay-title').textContent=settled?'Pagamenti':'Pagamento online';
+  byId('group-pay-help').textContent=settled?'Tutto il gruppo è pagato.':'Paga le tue righe, quelle dei compagni o tutto quello che resta.';
+  const selected=byId('group-pay-selected');
+  selected.disabled=!open.length;selected.hidden=settled;
   const all=byId('group-pay-all');
   all.hidden=!open.length;all.disabled=!open.length;
   byId('group-pay-all-amount').textContent=money(open.reduce((n,line)=>n+Number(line.amount_cents),0));

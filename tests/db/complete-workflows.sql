@@ -138,6 +138,15 @@ begin
  perform public.record_group_counter_payment(go,'cash',gen_random_uuid());
  perform public.advance_group_order(go,'ready');perform public.deliver_group_order(go);
  if (select status from public.group_orders where id=go)<>'delivered' or app_private.order_paid_cents('group',go)<>500 then raise exception 'Group final balance/delivery failed';end if;
+ -- Dopo l'incasso al banco nessuna riga resta «Da pagare» e il Checkout è chiuso.
+ perform pg_temp.actor('81111111-1111-4111-8111-111111111111');
+ if exists(select 1 from jsonb_array_elements(public.group_payable_lines(g)) l where l->>'payment_state'='available')
+  or not exists(select 1 from jsonb_array_elements(public.group_payable_lines(g)) l where l->>'payment_state'='counter_paid')
+  or not exists(select 1 from jsonb_array_elements(public.group_payable_lines(g)) l where l->>'payment_state'='paid')
+ then raise exception 'Counter-paid group lines still look unpaid';end if;
+ select id into line from public.group_cart_items where group_id=g and user_id='81111111-1111-4111-8111-111111111111';
+ denied:=false;begin perform public.begin_group_stripe_checkout(g,array[line],gen_random_uuid());exception when others then denied:=true;end;
+ if not denied then raise exception 'Counter-paid group line could be paid online again';end if;
 end;$$;
 
 do $$declare p uuid;o uuid;k uuid:=gen_random_uuid();denied boolean;j jsonb;

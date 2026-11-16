@@ -67,10 +67,16 @@ try{
    assert.deepEqual(invoke.body.line_ids,['e1111111-1111-4111-8111-111111111111','e2222222-2222-4222-8222-222222222222']);
    await page.getByText('Pagamento non disponibile nel test').waitFor();
    assert.equal(await payAll.isEnabled(),true);
-   await page.evaluate(()=>{for(const l of window.fixture.payable)l.payment_state='paid';});
+   await page.evaluate(()=>{for(const l of window.fixture.payable)l.payment_state='paid';window.fixture.payable[0].payment_state='counter_paid';});
    await payAll.click();
    await page.getByText('Non resta nulla da pagare.').waitFor();
    assert.equal(await payAll.isVisible(),false);
+   // Saldo al banco (contanti o POS): righe «Pagato al banco», niente caselle né pulsanti.
+   await page.locator('#group-payable-list small',{hasText:'Pagato al banco'}).first().waitFor();
+   assert.equal(await page.locator('#group-pay-title').innerText(),'Pagamenti');
+   assert.equal(await page.locator('#group-pay-help').innerText(),'Tutto il gruppo è pagato.');
+   assert.equal(await page.locator('#group-pay-selected').isVisible(),false);
+   assert.equal(await page.locator('#group-payable-list input[type=checkbox]').first().isVisible(),false);
    await page.getByText('Impostazioni del gruppo',{exact:true}).click();
    assert.equal(await page.getByRole('button',{name:'Nuovo link di invito'}).isVisible(),true);
    await page.getByRole('button',{name:'← I tuoi gruppi'}).click();

@@ -96,3 +96,5 @@
 /* Staff view of groups */
 .group-staff-active { display: grid; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius); background: var(--surface-sunken); }
 .group-pay-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.is-settled .group-pay-row:has(input) { grid-template-columns: minmax(0, 1fr) auto; opacity: 1; }
+.is-settled .group-pay-row input { display: none; }
