@@ -400,10 +400,13 @@
             <div id="group-members" class="row-list"></div>
           </details>
           <details id="group-payments-panel" class="disclosure group-disclosure" hidden>
-            <summary>Pagamento online</summary>
-            <p class="help">Puoi pagare per intero le tue righe o quelle dei compagni.</p>
+            <summary id="group-pay-title">Pagamento online</summary>
+            <p id="group-pay-help" class="help">Paga le tue righe, quelle dei compagni o tutto quello che resta.</p>
             <div id="group-payable-list" class="row-list"></div>
-            <button id="group-pay-selected" type="button" class="button button-primary">Paga le righe selezionate</button>
+            <div class="group-pay-actions">
+              <button id="group-pay-all" type="button" class="button button-primary" hidden>Paga tutto il resto · <span id="group-pay-all-amount"></span></button>
+              <button id="group-pay-selected" type="button" class="button button-outline">Paga le righe selezionate</button>
+            </div>
           </details>
           <details id="group-manage" class="disclosure group-disclosure" hidden>
             <summary>Impostazioni del gruppo</summary>

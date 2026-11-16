@@ -7,12 +7,18 @@ for(const match of app.slice(start).matchAll(/<section\b|<\/section>/g)){
  depth+=match[0]==='</section>'?-1:1;
  if(depth===0){end=start+match.index+'</section>'.length;break;}
 }
-const markup=app.slice(start,end);
+const dialogStart=app.indexOf('<dialog id="app-confirm-dialog"');
+const dialogMarkup=app.slice(dialogStart,app.indexOf('</dialog>',dialogStart)+'</dialog>'.length);
+const markup=app.slice(start,end)+dialogMarkup;
 const script=`
 import '/src/css/app.css';
 import {initializeGroupDrafts} from '/src/js/features/groups/groups.js';
 const school='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',bar='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',group='cccccccc-cccc-4ccc-8ccc-cccccccccccc',user='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
-const fixture=window.fixture={calls:[],user:{id:user,email:'studente@example.invalid'},callbacks:[],emptyGroups:false,
+const fixture=window.fixture={calls:[],invokes:[],payable:[
+ {line_id:'e1111111-1111-4111-8111-111111111111',product_name:'Panino',quantity:2,unit_cents:250,amount_cents:500,beneficiary_id:user,payment_state:'available'},
+ {line_id:'e2222222-2222-4222-8222-222222222222',product_name:'Succo',quantity:1,unit_cents:150,amount_cents:150,beneficiary_id:'ffffffff-ffff-4fff-8fff-ffffffffffff',payment_state:'available'},
+ {line_id:'e3333333-3333-4333-8333-333333333333',product_name:'Pizzetta',quantity:1,unit_cents:200,amount_cents:200,beneficiary_id:'ffffffff-ffff-4fff-8fff-ffffffffffff',payment_state:'paid'},
+ {line_id:'e4444444-4444-4444-8444-444444444444',product_name:'Acqua',quantity:1,unit_cents:100,amount_cents:100,beneficiary_id:'ffffffff-ffff-4fff-8fff-ffffffffffff',payment_state:'pending'}],user:{id:user,email:'studente@example.invalid'},callbacks:[],emptyGroups:false,
  detail:{id:group,title:'5A INF',status:'draft',coordinator:true,my_status:'accepted',accepting_members:true,requires_approval:false,max_members:null,school_id:school,bar_id:bar,pickup_window_id:'slot-a',invite_token:'11111111-1111-4111-8111-111111111111',my_ready:false,my_items:[],totals:{count:0,total_cents:0},members:[{member_id:user,status:'accepted',ready:false,line_count:0}]}};
 const data={schools:[{id:school,name:'Scuola dimostrativa',is_active:true}],bars:[{id:bar,school_id:school,name:'Bar della scuola',is_active:true}],pickup_windows:[{id:'slot-a',bar_id:bar,service_date:'2026-11-07',starts_at:'10:00:00',ends_at:'10:15:00',is_active:true}],products:[{id:'product-a',school_id:school,bar_id:bar,category_id:'c',name:'Panino',price_cents:250,is_active:true,categories:{is_active:true}},{id:'product-b',school_id:school,bar_id:bar,category_id:'c',name:'Succo',price_cents:150,is_active:true,categories:{is_active:true}}]};
 const client={auth:{onAuthStateChange(fn){fixture.callbacks.push(fn);},async getUser(){return{data:{user:fixture.user}}}},
@@ -22,11 +28,11 @@ const client={auth:{onAuthStateChange(fn){fixture.callbacks.push(fn);},async get
   if(name==='list_my_confirmed_group_orders')return{data:fixture.order?[{id:fixture.order.id,group_id:group,status:fixture.order.status,coordinator:true}]:[]};
   if(name==='group_order_details')return{data:structuredClone(fixture.order)};
   if(name==='group_draft_details')return{data:structuredClone(fixture.detail)};
-  if(name==='group_payable_lines')return{data:[]};
+  if(name==='group_payable_lines')return{data:structuredClone(fixture.payable)};
   if(name==='replace_group_personal_cart'){fixture.detail.my_items=structuredClone(args.p_items);fixture.detail.totals={count:args.p_items.reduce((n,i)=>n+i.quantity,0),total_cents:args.p_items.reduce((n,i)=>n+i.quantity*(i.product_id==='product-a'?250:150),0)};return{data:null};}
   if(name==='set_group_personal_ready'){fixture.detail.my_ready=args.p_ready;fixture.detail.members[0].ready=args.p_ready;return{data:null};}
   if(name==='join_group_draft'||name==='create_group_draft')return{data:group};
-  return{data:null};},functions:{async invoke(){return{data:{error:'Pagamento non disponibile nel test'}};}}};
+  return{data:null};},functions:{async invoke(name,options){fixture.invokes.push({name,body:structuredClone(options.body)});return{data:{error:'Pagamento non disponibile nel test'}};}}};
 document.body.dataset.authenticated='true';initializeGroupDrafts(client);
 fixture.setGuest=()=>{fixture.user={id:user,app_metadata:{guest:true}};fixture.callbacks.forEach(fn=>fn('SIGNED_IN',{user:fixture.user}));};
 `;

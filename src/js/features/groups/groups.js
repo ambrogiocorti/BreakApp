@@ -17,7 +17,11 @@ export const shownGroupStatus=(groupState,orderState)=>groupState==='confirmed'&
 export const finalOrderStatus=status=>['delivered','cancelled','no_show'].includes(status);
 const ORDER_REFRESH_MS=15000;
 const memberStatus=status=>({accepted:'Iscritto',pending:'In attesa',rejected:'Rifiutato',left:'Uscito'})[status]||'Stato da verificare';
-const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato'})[status]||'Stato da verificare';
+const paymentStatus=status=>({available:'Da pagare',pending:'Pagamento in corso',paid:'Pagato',refund_pending:'Rimborso in corso',refunded:'Rimborsato',counter_paid:'Pagato al banco',closed:'Ordine chiuso'})[status]||'Stato da verificare';
+// Il server accetta al massimo 50 righe per Checkout.
+const MAX_CHECKOUT_LINES=50;
+export const remainingLines=lines=>(Array.isArray(lines)?lines:[])
+ .filter(line=>line?.payment_state==='available'&&Number(line.amount_cents)>0);
 function inviteId(input){
  const value=String(input||'').trim();
  let candidate=value;
@@ -382,14 +386,24 @@ export function initializeGroupDrafts(client){
    list.append(row);
   }
   if(!data?.length)list.append(el('p','Non ci sono ancora prodotti da pagare.'));
-  byId('group-pay-selected').disabled=!(data||[]).some(line=>line.payment_state==='available'&&Number(line.amount_cents)>0);
+  const open=remainingLines(data);
+  // Se non resta nulla da pagare (online o al banco) niente caselle né pulsanti.
+  const settled=!error&&!!data?.length&&!open.length;
+  list.classList.toggle('is-settled',settled);
+  byId('group-pay-title').textContent=settled?'Pagamenti':'Pagamento online';
+  byId('group-pay-help').textContent=settled?'Tutto il gruppo è pagato.':'Paga le tue righe, quelle dei compagni o tutto quello che resta.';
+  const selected=byId('group-pay-selected');
+  selected.disabled=!open.length;selected.hidden=settled;
+  const all=byId('group-pay-all');
+  all.hidden=!open.length;all.disabled=!open.length;
+  byId('group-pay-all-amount').textContent=money(open.reduce((n,line)=>n+Number(line.amount_cents),0));
  }
- byId('group-pay-selected').addEventListener('click',async()=>{
+ async function startGroupCheckout(lines){
   if(!detail||!['draft','confirmed','approval_pending'].includes(detail.status))return;
-  const lines=[...byId('group-payable-list').querySelectorAll('input[type=checkbox]:checked')]
-   .map(n=>n.value).sort();
+  lines=[...lines].sort();
   if(!lines.length)return report('Seleziona almeno una riga disponibile.',true);
-  const button=byId('group-pay-selected');button.disabled=true;
+  const buttons=[byId('group-pay-selected'),byId('group-pay-all')];
+  for(const b of buttons)b.disabled=true;
   const key='breakapp:group-checkout:'+detail.id;
   const signature=lines.join(',');
   let requestKey;
@@ -405,7 +419,29 @@ export function initializeGroupDrafts(client){
    if(!data?.checkout_url||!data.checkout_url.startsWith('https://checkout.stripe.com/'))
     throw new Error(data?.error||'Risposta Checkout incompleta.');
    location.assign(data.checkout_url);
-  }catch(err){report(friendlyError(err,'Checkout non disponibile.'),true);button.disabled=false;}
+  }catch(err){report(friendlyError(err,'Checkout non disponibile.'),true);for(const b of buttons)b.disabled=false;}
+ }
+ byId('group-pay-selected').addEventListener('click',()=>{
+  const lines=[...byId('group-payable-list').querySelectorAll('input[type=checkbox]:checked')].map(n=>n.value);
+  void startGroupCheckout(lines);
+ });
+ byId('group-pay-all').addEventListener('click',async()=>{
+  if(!detail)return;
+  const groupId=detail.id;
+  // Rilegge le righe dal server: l'importo mostrato deve essere quello reale.
+  const {data,error}=await client.rpc('group_payable_lines',{p_group_id:groupId});
+  if(!detail||detail.id!==groupId)return;
+  if(error)return report(error.message,true);
+  const open=remainingLines(data);
+  if(!open.length){await loadPayableLines(groupId,version);return report('Non resta nulla da pagare.');}
+  const batch=open.slice(0,MAX_CHECKOUT_LINES);
+  const total=batch.reduce((n,line)=>n+Number(line.amount_cents),0);
+  const pending=(data||[]).some(line=>line.payment_state==='pending');
+  const extra=open.length>batch.length?' Restano altre '+(open.length-batch.length)+' righe da pagare dopo.':'';
+  if(!await confirmDialog({title:'Pagare tutto il resto?',
+   message:'Paghi '+money(total)+' per '+batch.length+(batch.length===1?' riga ancora da pagare':' righe ancora da pagare')+'. Le righe già pagate non cambiano'+(pending?' e quelle con un pagamento in corso restano escluse':'')+'. Se un prodotto viene rimborsato, i soldi tornano a te.'+extra,
+   confirmLabel:'Paga '+money(total),cancelLabel:'Indietro'}))return;
+  await startGroupCheckout(batch.map(line=>line.line_id));
  });
  let finalConfirmKey=null;
  async function loadConfirmedGroup(groupId,seq){
