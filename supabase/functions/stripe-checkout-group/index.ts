@@ -3,6 +3,7 @@
 // SUPABASE_SERVICE_ROLE_KEY in the Supabase Edge secrets manager.
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
 import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
+import {activeConfiguration,pickPaymentMethodTypes,appendPaymentMethodTypes} from '../_shared/payment-methods.mjs';
 const uid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const required=(name:string)=>{const s=Deno.env.get(name);if(!s)throw Error('Config server incompleta: '+name);return s;};
 async function stripe(endpoint:string,account:string,key:string,init?:RequestInit){
@@ -11,6 +12,17 @@ async function stripe(endpoint:string,account:string,key:string,init?:RequestIni
  const out=await res.json() as Record<string,any>;
  if(!res.ok)throw Error('Stripe: '+String(out.error?.message||'Checkout non disponibile'));
  return out;
+}
+// Only the payment methods chosen for BreakApp, and only if the bar's
+// Stripe account has them active. If the configuration cannot be read,
+// card (with Apple Pay / Google Pay) is the safe fallback.
+async function paymentMethodTypes(account:string,key:string){
+ try{
+  const list=await stripe('payment_method_configurations?limit=20',account,key);
+  return pickPaymentMethodTypes(activeConfiguration(list));
+ }catch{
+  return ['card'];
+ }
 }
 Deno.serve(async req=>{
  const site=resolveAllowedSite(req.headers.get('Origin'),Deno.env.get('BREAKAPP_ALLOWED_SITE_URLS'));
@@ -62,10 +74,11 @@ Deno.serve(async req=>{
     expires_at:String(Math.floor(Date.now()/1000)+35*60),
     success_url:site.baseUrl+'#groups',cancel_url:site.baseUrl+'#groups'
    });
+   appendPaymentMethodTypes(form,await paymentMethodTypes(attempt.stripe_account_id,key));
    checkout=await stripe('checkout/sessions',attempt.stripe_account_id,key,{
     method:'POST',
     headers:{'content-type':'application/x-www-form-urlencoded',
-     'Idempotency-Key':'breakapp-group-'+attempt.attempt_id},
+     'Idempotency-Key':'breakapp-group-v2-'+attempt.attempt_id},
     body:form
    });
    const admin=createClient(url,required('SUPABASE_SERVICE_ROLE_KEY'),{
