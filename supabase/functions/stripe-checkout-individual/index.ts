@@ -3,6 +3,7 @@
 // SUPABASE_SERVICE_ROLE_KEY (Edge Function secrets; never frontend).
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0';
 import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';
+import {activeConfiguration,pickPaymentMethodTypes,appendPaymentMethodTypes} from '../_shared/payment-methods.mjs';
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function required(name:string){
@@ -20,6 +21,17 @@ async function stripe(endpoint:string,account:string,key:string,init?:RequestIni
  const data=await response.json() as Record<string,unknown>;
  if(!response.ok)throw new Error('Stripe: '+stripeError(data));
  return data;
+}
+// Only the payment methods chosen for BreakApp, and only if the bar's
+// Stripe account has them active. If the configuration cannot be read,
+// card (with Apple Pay / Google Pay) is the safe fallback.
+async function paymentMethodTypes(account:string,key:string){
+ try{
+  const list=await stripe('payment_method_configurations?limit=20',account,key);
+  return pickPaymentMethodTypes(activeConfiguration(list));
+ }catch{
+  return ['card'];
+ }
 }
 Deno.serve(async(req)=>{
  const site=resolveAllowedSite(req.headers.get('Origin'),Deno.env.get('BREAKAPP_ALLOWED_SITE_URLS'));
@@ -73,9 +85,10 @@ Deno.serve(async(req)=>{
     success_url:site.baseUrl+'#orders',
     cancel_url:site.baseUrl+'#orders'
    });
+   appendPaymentMethodTypes(body,await paymentMethodTypes(account,stripeKey));
    checkout=await stripe('checkout/sessions',account,stripeKey,{
     method:'POST',headers:{'content-type':'application/x-www-form-urlencoded',
-      'Idempotency-Key':'breakapp-checkout-'+attempt.attempt_id},body
+      'Idempotency-Key':'breakapp-checkout-v2-'+attempt.attempt_id},body
    });
    const admin=createClient(url,required('SUPABASE_SERVICE_ROLE_KEY'),{
     auth:{persistSession:false,autoRefreshToken:false}

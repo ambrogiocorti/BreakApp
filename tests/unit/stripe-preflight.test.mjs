@@ -4,18 +4,22 @@ import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 import {stripTypeScriptTypes} from 'node:module';
 import {resolveAllowedSite,corsHeaders} from '../../supabase/functions/_shared/allowed-sites.mjs';
+import * as paymentHelpers from '../../supabase/functions/_shared/payment-methods.mjs';
 
 for(const name of ['stripe-checkout-individual','stripe-checkout-group','stripe-full-refund']){
  test(name+' returns a valid bodyless CORS preflight for Supabase browser requests',async()=>{
   const source=await readFile('supabase/functions/'+name+'/index.ts','utf8');
   const isolated=source.replace(/^import\s*\{[^}]+\}\s*from\s*'npm:@supabase\/supabase-js@2\.118\.0';\s*/m,'')
    .replace("import {resolveAllowedSite,corsHeaders} from '../_shared/allowed-sites.mjs';",
-    'const {resolveAllowedSite,corsHeaders}=globalThis.__siteHelpers;');
+    'const {resolveAllowedSite,corsHeaders}=globalThis.__siteHelpers;')
+   .replace(/^import\s*\{[^}]+\}\s*from\s*'\.\.\/_shared\/payment-methods\.mjs';\s*/m,
+    'const {activeConfiguration,pickPaymentMethodTypes,appendPaymentMethodTypes}=globalThis.__paymentHelpers;');
   let handler;
   const context={
    Response,Request,URL,URLSearchParams,JSON,
    Deno:{serve(callback){handler=callback;},env:{get(){return null;}}},
    __siteHelpers:{resolveAllowedSite,corsHeaders},
+   __paymentHelpers:paymentHelpers,
    fetch(){throw Error('Network must not be called on OPTIONS');}
   };
   context.globalThis=context;
