@@ -13,6 +13,17 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+      - name: Refuse to run on a public repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # I backup dello Storage non devono MAI essere prodotti in un repo pubblico:
+          # gli artifact di Actions sono scaricabili da chiunque abbia accesso in lettura.
+          private=$(gh api "repos/${{ github.repository }}" --jq '.private')
+          if [ "$private" != "true" ]; then
+            echo "::error::Repository PUBBLICO: backup dello Storage disattivato. Sposta questo workflow in un repository privato prima di rieseguirlo."
+            exit 1
+          fi
       - name: Validate backup prerequisites
         run: |
           for tool in aws jq gpg tar python3 sha256sum; do command -v "$tool"; done

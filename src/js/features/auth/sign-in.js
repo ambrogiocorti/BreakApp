@@ -6,17 +6,21 @@ export function oauthRequest(provider,redirectTo){
 }
 
 export async function registerWithPassword(client,credentials,redirectTo){
- if(!isInternalAdminEmail(credentials.email))return client.auth.signUp({...credentials,options:{emailRedirectTo:redirectTo}});
- // The service applies the exact-domain exception; the browser cannot confirm
- // an email or set app_metadata, memberships or administrator roles.
- const result=await client.functions.invoke('admin-registration',{body:{email:credentials.email.trim().toLowerCase(),password:credentials.password}});
- if(result.error){
-  let message='Registrazione non disponibile. Riprova tra poco.';
-  try{const detail=await result.error.context?.clone().json();if(typeof detail?.error==='string')message=detail.error;}catch{/* No internal response details. */}
-  return {data:null,error:new Error(message)};
+ const {email,password,code}=credentials;
+ // Gli account @admin.breakapp.it si registrano solo con un codice di invito
+ // valido emesso dal Super Admin: l'edge function crea l'account e assegna il
+ // ruolo solo se il codice corrisponde a un invito pendente. Gli altri indirizzi
+ // seguono la normale registrazione con conferma via email.
+ if(isInternalAdminEmail(email)){
+  const invite=(code||'').trim();
+  if(!invite)
+   return {data:null,error:new Error('Inserisci il codice di invito ricevuto dal Super Admin per creare l’account amministratore.')};
+  const registration=await client.functions.invoke('admin-registration',{body:{email,password,code:invite}});
+  if(registration.error)
+   return {data:null,error:new Error('Registrazione non riuscita: codice di invito non valido o già usato. Contatta il Super Admin.')};
+  return client.auth.signInWithPassword({email,password});
  }
- if(result.data?.ok!==true)return {data:null,error:new Error('Registrazione non disponibile. Riprova tra poco.')};
- return client.auth.signInWithPassword(credentials);
+ return client.auth.signUp({email,password,options:{emailRedirectTo:redirectTo}});
 }
 
 export async function readOAuthProviders(config,fetcher=fetch){
